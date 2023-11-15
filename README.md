@@ -11,4 +11,4 @@ port = 80
 steam_key = "saus"
 ```
 
-To connect, use the latest Wavebreaker client with ``forceInsecure`` set to ``true`` in its config.
+To connect, use the latest Wavebreaker client with ``forceInsecure`` set to ``true`` in its config. This is only intended for local testing.

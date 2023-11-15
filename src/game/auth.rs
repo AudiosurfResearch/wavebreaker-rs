@@ -1,4 +1,5 @@
-use actix_web::{web, HttpResponse, Responder};
+use crate::util::errors::IntoHttpError;
+use actix_web::{post, web, Result};
 use quick_xml::se;
 use serde::{Deserialize, Serialize};
 
@@ -21,7 +22,12 @@ struct SteamLoginResponse {
     steamid: i32,
 }
 
-pub async fn steam_login(web::Form(form): web::Form<SteamLoginRequest>) -> impl Responder {
+#[post("/game_AttemptLoginSteamVerified.php")]
+pub async fn steam_login(
+    web::Form(form): web::Form<SteamLoginRequest>,
+) -> Result<String, actix_web::Error> {
+    log::info!("Log in request from {} ({})", form.steamusername, form.s64);
+
     let response = SteamLoginResponse {
         status: "allgood".to_owned(),
         userid: 1,
@@ -30,5 +36,5 @@ pub async fn steam_login(web::Form(form): web::Form<SteamLoginRequest>) -> impl 
         steamid: form.snum,
     };
 
-    HttpResponse::Ok().body(se::to_string(&response).unwrap())
+    se::to_string(&response).http_internal_error("Error serializing response")
 }

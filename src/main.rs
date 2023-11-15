@@ -2,7 +2,7 @@
     clippy::pedantic,
     clippy::nursery,
     clippy::unwrap_used,
-    clippy::expect_used,
+    //clippy::expect_used,
     clippy::correctness,
     clippy::style,
     clippy::perf,
@@ -17,6 +17,7 @@
 )]
 
 mod game;
+mod util;
 
 use crate::game::service::game_config;
 use actix_web::{web, App, HttpResponse, HttpServer};
@@ -42,10 +43,13 @@ struct External {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+
     //Read config
     let filename = "config.toml";
     let contents = fs::read_to_string(filename)?;
-    let wavebreaker_config: Config = toml::from_str(&contents).unwrap();
+    let wavebreaker_config: Config =
+        toml::from_str(&contents).expect("The config should be in a valid format");
 
     HttpServer::new(|| {
         App::new()

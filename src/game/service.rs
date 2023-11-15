@@ -3,9 +3,7 @@ use actix_web::web;
 
 pub fn steamlogin_config(cfg: &mut web::ServiceConfig) {
     //auth
-    cfg.service(
-        web::resource("/game_AttemptLoginSteamVerified.php").route(web::post().to(steam_login)),
-    );
+    cfg.service(steam_login);
 }
 
 pub fn game_config(cfg: &mut web::ServiceConfig) {
