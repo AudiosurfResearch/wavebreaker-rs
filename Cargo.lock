@@ -1399,8 +1399,7 @@ dependencies = [
 [[package]]
 name = "steam-rs"
 version = "0.3.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d496da26f5895ac5f84de70177f20bf0a412fa60cd110400f2c6bfa59ebd5345"
+source = "git+https://github.com/garhow/steam-rs.git#f10c3c6c11af08b4ba60db713ebc705a746cdce8"
 dependencies = [
  "rayon",
  "reqwest",

@@ -12,5 +12,5 @@ log = "0.4.20"
 quick-xml = { version = "0.31.0", features = ["serialize"] }
 serde = { version = "1.0.192", features = ["derive"] }
 serde_json = "1.0.108"
-steam-rs = "0.3.1"
+steam-rs = { git = "https://github.com/garhow/steam-rs.git" }
 toml = "0.8.8"
