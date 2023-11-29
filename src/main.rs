@@ -23,6 +23,7 @@ use crate::game::service::game_config;
 use actix_web::{web, App, HttpResponse, HttpServer};
 use serde::Deserialize;
 use std::fs;
+use steam_rs::Steam;
 
 #[derive(Deserialize)]
 struct Config {
@@ -41,18 +42,25 @@ struct External {
     steam_key: String,
 }
 
+pub struct AppGlobals {
+    steam_api: Steam,
+}
+
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
     env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
 
     //Read config
-    let filename = "config.toml";
-    let contents = fs::read_to_string(filename)?;
+    let contents = fs::read_to_string("config.toml")?;
     let wavebreaker_config: Config =
         toml::from_str(&contents).expect("The config should be in a valid format");
 
-    HttpServer::new(|| {
+    HttpServer::new(move || {
         App::new()
+            //Initialize global app stuff, like the Steam API
+            .app_data(web::Data::new(AppGlobals {
+                steam_api: Steam::new(&wavebreaker_config.external.steam_key),
+            }))
             .route(
                 "/",
                 web::get().to(|| async {

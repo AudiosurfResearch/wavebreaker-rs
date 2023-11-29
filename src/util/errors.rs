@@ -30,6 +30,13 @@ pub trait IntoHttpError<T> {
     {
         self.http_error(message, StatusCode::INTERNAL_SERVER_ERROR)
     }
+
+    fn http_internal_error_default(self) -> core::result::Result<T, actix_web::Error>
+    where
+        Self: std::marker::Sized,
+    {
+        self.http_error("An internal error occurred.", StatusCode::INTERNAL_SERVER_ERROR)
+    }
 }
 
 impl<T, E: std::fmt::Debug> IntoHttpError<T> for core::result::Result<T, E> {
