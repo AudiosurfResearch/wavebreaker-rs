@@ -80,12 +80,7 @@ struct SteamSyncResponse {
 }
 
 /// Endpoint used by the game to sync the friend list and achievements with the game server.
-/// **Not yet unimplemented!**
-/// 
-/// # Errors
-///
-/// This will fail if:
-/// - The response fails to serialize
+/// **Not yet implemented!**
 #[post("/game_SteamSyncSteamVerified.php")]
 pub async fn steam_sync(
     web::Form(form): web::Form<SteamSyncRequest>,
