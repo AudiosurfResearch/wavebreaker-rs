@@ -1,2 +1,2 @@
-mod auth;
+mod user;
 pub mod service;

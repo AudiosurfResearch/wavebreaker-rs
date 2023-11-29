@@ -60,3 +60,43 @@ pub async fn steam_login(
 
     se::to_string(&response).http_internal_error_default()
 }
+
+#[derive(Deserialize)]
+pub struct SteamSyncRequest {
+    steamusername: String,
+    //snum: u32,
+    s64: u64,
+    ticket: String,
+    snums: String, //comma-seperated list of friend SteamID32s
+    achstates: String, //comma-seperated list of achievement unlock states
+}
+
+//response usually has three root tags and two with THE SAME NAME but I've elected to not care 
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename = "RESULTS")]
+struct SteamSyncResponse {
+    #[serde(rename = "@status")]
+    status: String, //usually "added x of y friends"
+}
+
+/// Endpoint used by the game to sync the friend list and achievements with the game server.
+/// **Not yet unimplemented!**
+/// 
+/// # Errors
+///
+/// This will fail if:
+/// - The response fails to serialize
+#[post("/game_SteamSyncSteamVerified.php")]
+pub async fn steam_sync(
+    web::Form(form): web::Form<SteamSyncRequest>,
+) -> Result<String, actix_web::Error> {
+    todo!("Yeah");
+
+    log::info!("Doing steam sync for {} ({})", form.steamusername, form.s64);
+
+    let response = SteamSyncResponse {
+        status: "allgood".to_owned(),
+    };
+
+    se::to_string(&response).http_internal_error_default()
+}

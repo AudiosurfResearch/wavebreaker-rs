@@ -1,9 +1,9 @@
-use crate::game::auth::steam_login;
+use super::user::{steam_login, steam_sync};
 use actix_web::web;
 
 pub fn steamlogin_config(cfg: &mut web::ServiceConfig) {
     //auth
-    cfg.service(steam_login);
+    cfg.service(steam_login).service(steam_sync);
 }
 
 pub fn game_config(cfg: &mut web::ServiceConfig) {
