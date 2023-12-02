@@ -30,6 +30,12 @@ struct LoginSteamResponse {
     steam_id: u32,
 }
 
+/// Attempts to authenticate a user through Steam.
+/// 
+/// # Errors
+/// This fails if:
+/// - The response fails to serialize
+/// - Authenticating with Steam fails
 #[post("/game_AttemptLoginSteamVerified.php", data = "<form>")]
 pub async fn login_steam(
     form: Form<LoginSteamRequest>,

@@ -10,6 +10,7 @@ use rocket::{
 use serde::Serialize;
 use serde_json::{json, to_string_pretty};
 
+/// Error type used for Wavebreaker's routes, supplying a message and status to return in the error response.
 #[derive(Debug, Serialize)]
 pub struct Error {
     message: String,
@@ -29,8 +30,14 @@ impl Display for Error {
 
 //shamelessly stolen from https://www.reddit.com/r/rust/comments/ozc0m8/an_actixanyhow_compatible_error_helper_i_found/
 pub trait IntoHttp<T> {
+    /// Converts any error type to one that causes a response with a custom status and message.
+    /// 
+    /// Useful for any kind of user-facing error.
     fn http_error(self, message: &str, status_code: Status) -> core::result::Result<T, Error>;
 
+    /// Converts any error type to one that causes a response with status 500 and a custom message.
+    /// 
+    /// Useful for explaining internal errors to the user, like Steam auth failing, without giving them the full details.
     fn http_internal_error(self, message: &str) -> core::result::Result<T, Error>
     where
         Self: std::marker::Sized,
@@ -38,6 +45,9 @@ pub trait IntoHttp<T> {
         self.http_error(message, Status::InternalServerError)
     }
 
+    /// Converts any error type to one that causes a response with status 500 and a generic error message.
+    /// 
+    /// Useful for handling internal errors that shouldn't be exposed to users, like database errors, etc.
     fn http_internal_error_default(self) -> core::result::Result<T, Error>
     where
         Self: std::marker::Sized,
