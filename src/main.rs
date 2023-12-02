@@ -2,7 +2,6 @@
     clippy::pedantic,
     clippy::nursery,
     clippy::unwrap_used,
-    //clippy::expect_used,
     clippy::correctness,
     clippy::style,
     clippy::perf,
@@ -15,10 +14,11 @@
     clippy::todo,
     //clippy::all  //for extra anger
 )]
-#![allow(clippy::no_effect_underscore_binding)]
+#![allow(clippy::no_effect_underscore_binding, clippy::module_name_repetitions)]
 
 mod error;
 mod game;
+mod util;
 
 use figment::{
     providers::{Env, Format, Toml},
