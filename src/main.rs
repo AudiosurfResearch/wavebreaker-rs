@@ -15,11 +15,16 @@
     clippy::todo,
     //clippy::all  //for extra anger
 )]
+#![allow(clippy::no_effect_underscore_binding)]
+
+mod error;
+mod game;
 
 use figment::{
     providers::{Env, Format, Toml},
     Figment,
 };
+use game::routes_steam;
 use rocket::launch;
 use serde::Deserialize;
 use steam_rs::Steam;
@@ -44,5 +49,7 @@ fn rocket() -> _ {
         .extract()
         .expect("Config should be valid!");
 
-    rocket::build().manage(Steam::new(&wavebreaker_config.external.steam_key))
+    rocket::build()
+        .manage(Steam::new(&wavebreaker_config.external.steam_key))
+        .mount("/as_steamlogin", routes_steam())
 }
