@@ -1,4 +1,4 @@
-use crate::error::{Error, IntoHttp};
+use crate::error::{IntoHttp, RouteError};
 use quick_xml::se;
 use rocket::{
     form::Form,
@@ -31,7 +31,7 @@ struct LoginSteamResponse {
 }
 
 /// Attempts to authenticate a user through Steam.
-/// 
+///
 /// # Errors
 /// This fails if:
 /// - The response fails to serialize
@@ -40,7 +40,7 @@ struct LoginSteamResponse {
 pub async fn login_steam(
     form: Form<LoginSteamRequest>,
     steam: &State<Steam>,
-) -> Result<RawXml<String>, Error> {
+) -> Result<RawXml<String>, RouteError> {
     let form = form.into_inner();
 
     let steam_result = steam

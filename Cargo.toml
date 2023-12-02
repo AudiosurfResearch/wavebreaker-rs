@@ -6,12 +6,12 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.75"
+anyhow = {version = "1.0.75", features = ["backtrace"]}
 env_logger = "0.10.1"
-figment = { version = "0.10.12", features = ["toml"]}
+figment = { version = "0.10.12", features = ["toml"] }
 log = "0.4.20"
 quick-xml = { version = "0.31.0", features = ["serialize"] }
-rocket = { version = "0.5.0", features = ["json"]}
+rocket = { version = "0.5.0", features = ["json"] }
 serde = { version = "1.0.192", features = ["derive"] }
 serde_json = "1.0.108"
 steam-rs = { git = "https://github.com/RubberDuckShobe/steam-rs.git" }
