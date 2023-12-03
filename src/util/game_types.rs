@@ -1,6 +1,7 @@
 use num_enum::TryFromPrimitive;
 use rocket::form::{self, FromFormField, ValueField};
 
+/// Represents the three skill levels represented on the leaderboard.
 #[derive(Debug, Eq, PartialEq, TryFromPrimitive)]
 #[repr(u8)]
 pub enum League {
@@ -17,5 +18,36 @@ impl<'r> FromFormField<'r> for League {
             _ => Err(form::Error::validation("failed to convert to League enum"))?,
         };
         Ok(league)
+    }
+}
+
+#[derive(Debug, Eq, PartialEq, TryFromPrimitive)]
+#[repr(u8)]
+pub enum Character {
+    PointmanPro = 0,
+    DoubleVisionPro = 1,
+    Vegas = 2,
+    Pusher = 3,
+    Eraser = 4,
+    //5-8 are unused
+    DoubleVision = 9,
+    PointmanElite = 10,
+    MonoPro = 11,
+    EraserElite = 12,
+    NinjaMono = 13,
+    DoubleVisionElite = 14,
+    Pointman = 15,
+    PusherElite = 16,
+    Mono = 17,
+}
+
+impl<'r> FromFormField<'r> for Character {
+    fn from_value(field: ValueField<'r>) -> form::Result<'r, Self> {
+        let num: u8 = field.value.parse()?;
+        let character = match Self::try_from(num) {
+            Ok(res) => res,
+            _ => Err(form::Error::validation("failed to convert to Character enum"))?,
+        };
+        Ok(character)
     }
 }

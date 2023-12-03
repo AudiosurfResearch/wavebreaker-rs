@@ -1,5 +1,6 @@
 use crate::error::{IntoHttp, RouteError};
 use crate::util::xml::XmlSerializableResponse;
+use log::info;
 use rocket::{form::Form, post, response::content::RawXml, FromForm, State};
 use serde::{Deserialize, Serialize};
 use steam_rs::{steam_id::SteamId, Steam};
@@ -43,6 +44,8 @@ pub async fn login_steam(
         .await
         .http_internal_error("Failed to authenticate with Steam.")?;
     let player_steam_id = SteamId::from(steam_result.steam_id);
+
+    info!("Login request from {} (Steam)", player_steam_id);
 
     LoginSteamResponse {
         status: "allgood".to_owned(),
