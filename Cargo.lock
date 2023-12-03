@@ -1935,6 +1935,7 @@ dependencies = [
  "env_logger",
  "figment",
  "log",
+ "num_enum",
  "quick-xml",
  "rocket",
  "serde",
