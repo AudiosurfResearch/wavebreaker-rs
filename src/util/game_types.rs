@@ -22,6 +22,7 @@ impl<'r> FromFormField<'r> for League {
     }
 }
 
+/// Represents a character/vehicle in the game.
 #[derive(Serialize_repr, Deserialize_repr, Debug, Eq, PartialEq, TryFromPrimitive)]
 #[repr(u8)]
 pub enum Character {
@@ -53,4 +54,13 @@ impl<'r> FromFormField<'r> for Character {
         };
         Ok(character)
     }
+}
+
+/// Represents the three kinds of leaderboards available in the game.
+#[derive(Serialize_repr, Deserialize_repr, Debug, Eq, PartialEq, TryFromPrimitive)]
+#[repr(u8)]
+pub enum Leaderboard {
+    Friend,
+    Global,
+    Nearby
 }
