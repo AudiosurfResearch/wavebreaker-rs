@@ -1,4 +1,3 @@
-use crate::error::IntoHttp;
 use crate::util::game_types::{Character, Leaderboard};
 use crate::util::xml::XmlSerializableResponse;
 use crate::{error::RouteError, util::game_types::League};
@@ -6,8 +5,9 @@ use log::info;
 use rocket::State;
 use rocket::{form::Form, post, response::content::RawXml, FromForm};
 use serde::{Deserialize, Serialize};
-use steam_rs::steam_id::SteamId;
 use steam_rs::Steam;
+
+use super::helpers::ticket_auth;
 
 #[derive(FromForm)]
 pub struct SongIdRequest {
@@ -94,15 +94,11 @@ pub async fn send_ride(
 ) -> Result<RawXml<String>, RouteError> {
     let form = form.into_inner();
 
-    let steam_result = steam
-        .authenticate_user_ticket(12900, &form.ticket)
-        .await
-        .http_internal_error("Failed to authenticate with Steam.")?;
-    let player_steam_id = SteamId::from(steam_result.steam_id);
+    let steam_player = ticket_auth(&form.ticket, steam).await?;
 
     info!(
         "Score received on {} from {} (Steam) with score {}, using {:?}",
-        form.song_id, player_steam_id, form.score, form.vehicle
+        form.song_id, steam_player, form.score, form.vehicle
     );
 
     SendRideResponse {
@@ -180,10 +176,7 @@ pub async fn get_rides(
 ) -> Result<RawXml<String>, RouteError> {
     let form = form.into_inner();
 
-    steam
-        .authenticate_user_ticket(12900, &form.ticket)
-        .await
-        .http_internal_error("Failed to authenticate with Steam.")?;
+    ticket_auth(&form.ticket, steam).await?;
 
     GetRidesResponse {
         status: "allgood".to_owned(),

@@ -1,9 +1,10 @@
-use crate::error::{IntoHttp, RouteError};
+use crate::error::RouteError;
+use crate::game::helpers::ticket_auth;
 use crate::util::xml::XmlSerializableResponse;
 use log::info;
 use rocket::{form::Form, post, response::content::RawXml, FromForm, State};
 use serde::{Deserialize, Serialize};
-use steam_rs::{steam_id::SteamId, Steam};
+use steam_rs::Steam;
 
 #[derive(FromForm)]
 pub struct LoginSteamRequest {
@@ -39,20 +40,16 @@ pub async fn login_steam(
 ) -> Result<RawXml<String>, RouteError> {
     let form = form.into_inner();
 
-    let steam_result = steam
-        .authenticate_user_ticket(12900, &form.ticket)
-        .await
-        .http_internal_error("Failed to authenticate with Steam.")?;
-    let player_steam_id = SteamId::from(steam_result.steam_id);
+    let steam_player = ticket_auth(&form.ticket, steam).await?;
 
-    info!("Login request from {} (Steam)", player_steam_id);
+    info!("Login request from {} (Steam)", steam_player);
 
     LoginSteamResponse {
         status: "allgood".to_owned(),
         user_id: 143,
         username: form.steam_username,
         location_id: 143,
-        steam_id: player_steam_id.get_account_id(),
+        steam_id: steam_player.get_account_id(),
     }
     .to_xml_response()
 }
