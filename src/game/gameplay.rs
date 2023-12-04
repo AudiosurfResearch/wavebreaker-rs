@@ -75,10 +75,14 @@ struct BeatScore {
     dethroned: bool,
     #[serde(rename = "@friend")]
     friend: bool,
-    rivalname: String,
-    rivalscore: u64,
-    myscore: u64,
-    reignseconds: u64,
+    #[serde(rename = "rivalname")]
+    rival_name: String,
+    #[serde(rename = "rivalscore")]
+    rival_score: u64,
+    #[serde(rename = "myscore")]
+    my_score: u64,
+    #[serde(rename = "reignseconds")]
+    reign_seconds: u64,
 }
 
 /// Accepts score submissions by the client.
@@ -107,10 +111,10 @@ pub async fn send_ride(
         beat_score: BeatScore {
             dethroned: true,
             friend: true,
-            rivalname: "test".to_owned(),
-            rivalscore: 143,
-            myscore: 143,
-            reignseconds: 143,
+            rival_name: "test".to_owned(),
+            rival_score: 143,
+            my_score: 143,
+            reign_seconds: 143,
         },
     }
     .to_xml_response()
@@ -176,7 +180,9 @@ pub async fn get_rides(
 ) -> Result<RawXml<String>, RouteError> {
     let form = form.into_inner();
 
-    ticket_auth(&form.ticket, steam).await?;
+    let steam_player = ticket_auth(&form.ticket, steam).await?;
+
+    info!("Player {} (Steam) requesting rides of song {}", steam_player, form.song_id);
 
     GetRidesResponse {
         status: "allgood".to_owned(),
@@ -188,14 +194,14 @@ pub async fn get_rides(
                     username: "frien :)".to_owned(),
                     score: 143,
                     vehicle_id: Character::PointmanElite,
-                    ride_time: 1_701_633_900,
+                    ride_time: 143,
                     feats: "Stealth, I guess?".to_owned(),
                     song_length: 14300,
                     traffic_count: 143,
                 }],
             }],
         }],
-        server_time: 1_701_634_291,
+        server_time: 143,
     }
     .to_xml_response()
 }
