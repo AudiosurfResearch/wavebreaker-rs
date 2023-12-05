@@ -1,21 +1,21 @@
-use crate::error::RouteError;
 use crate::game::helpers::ticket_auth;
-use crate::util::xml::XmlSerializableResponse;
-use log::info;
-use rocket::{form::Form, post, response::content::RawXml, FromForm, State};
+use crate::AppState;
+use axum_route_error::RouteError;
+use axum::{extract::State, Form};
+use axum_serde::Xml;
 use serde::{Deserialize, Serialize};
-use steam_rs::Steam;
+use tracing::info;
 
-#[derive(FromForm)]
+#[derive(Deserialize)]
 pub struct LoginSteamRequest {
-    #[field(name = "steamusername")]
+    #[serde(rename = "steamusername")]
     steam_username: String,
     ticket: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename = "RESULT")]
-struct LoginSteamResponse {
+pub struct LoginSteamResponse {
     #[serde(rename = "@status")]
     status: String,
     #[serde(rename = "userid")]
@@ -33,23 +33,19 @@ struct LoginSteamResponse {
 /// This fails if:
 /// - The response fails to serialize
 /// - Authenticating with Steam fails
-#[post("/game_AttemptLoginSteamVerified.php", data = "<form>")]
 pub async fn login_steam(
-    form: Form<LoginSteamRequest>,
-    steam: &State<Steam>,
-) -> Result<RawXml<String>, RouteError> {
-    let form = form.into_inner();
-
-    let steam_player = ticket_auth(&form.ticket, steam).await?;
+    State(state): State<AppState>,
+    Form(payload): Form<LoginSteamRequest>,
+) -> Result<Xml<LoginSteamResponse>, RouteError> {
+    let steam_player = ticket_auth(&payload.ticket, &state.steam_api).await?;
 
     info!("Login request from {} (Steam)", steam_player);
 
-    LoginSteamResponse {
+    Ok(Xml(LoginSteamResponse {
         status: "allgood".to_owned(),
         user_id: 143,
-        username: form.steam_username,
+        username: payload.steam_username,
         location_id: 143,
         steam_id: steam_player.get_account_id(),
-    }
-    .to_xml_response()
+    }))
 }

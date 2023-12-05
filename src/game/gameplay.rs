@@ -1,15 +1,16 @@
+use crate::util::game_types::League;
 use crate::util::game_types::{Character, Leaderboard};
-use crate::util::xml::XmlSerializableResponse;
-use crate::{error::RouteError, util::game_types::League};
-use log::info;
-use rocket::State;
-use rocket::{form::Form, post, response::content::RawXml, FromForm};
+use crate::AppState;
+use axum::extract::State;
+use axum::Form;
+use axum_route_error::RouteError;
+use axum_serde::Xml;
 use serde::{Deserialize, Serialize};
-use steam_rs::Steam;
+use tracing::info;
 
 use super::helpers::ticket_auth;
 
-#[derive(FromForm)]
+#[derive(Deserialize)]
 pub struct SongIdRequest {
     artist: String,
     song: String,
@@ -19,7 +20,7 @@ pub struct SongIdRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename = "RESULT")]
-struct SongIdResponse {
+pub struct SongIdResponse {
     #[serde(rename = "@status")]
     status: String,
     #[serde(rename = "songid")]
@@ -32,25 +33,23 @@ struct SongIdResponse {
 /// # Errors
 /// This fails if:
 /// - The response fails to serialize
-#[post("/game_fetchsongid_unicode.php", data = "<form>")]
-pub async fn fetch_song_id(form: Form<SongIdRequest>) -> Result<RawXml<String>, RouteError> {
-    let form = form.into_inner();
-
+pub async fn fetch_song_id(
+    Form(payload): Form<SongIdRequest>,
+) -> Result<Xml<SongIdResponse>, RouteError> {
     info!(
         "Song {} - {} registered by {}, league {:?}",
-        form.artist, form.song, form.uid, form.league
+        payload.artist, payload.song, payload.uid, payload.league
     );
 
-    SongIdResponse {
+    Ok(Xml(SongIdResponse {
         status: "allgood".to_owned(),
         song_id: 143,
-    }
-    .to_xml_response()
+    }))
 }
 
-#[derive(FromForm)]
+#[derive(Deserialize)]
 pub struct SendRideRequest {
-    #[field(name = "songid")]
+    #[serde(rename = "songid")]
     song_id: u64,
     score: u64,
     vehicle: Character,
@@ -59,7 +58,7 @@ pub struct SendRideRequest {
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename = "RESULT")]
-struct SendRideResponse {
+pub struct SendRideResponse {
     #[serde(rename = "@status")]
     status: String,
     #[serde(rename = "songid")]
@@ -91,21 +90,18 @@ struct BeatScore {
 /// This fails if:
 /// - The response fails to serialize
 /// - Authenticating with Steam fails
-#[post("/game_SendRideSteamVerified.php", data = "<form>")]
 pub async fn send_ride(
-    form: Form<SendRideRequest>,
-    steam: &State<Steam>,
-) -> Result<RawXml<String>, RouteError> {
-    let form = form.into_inner();
-
-    let steam_player = ticket_auth(&form.ticket, steam).await?;
+    State(state): State<AppState>,
+    Form(payload): Form<SendRideRequest>,
+) -> Result<Xml<SendRideResponse>, RouteError> {
+    let steam_player = ticket_auth(&payload.ticket, &state.steam_api).await?;
 
     info!(
         "Score received on {} from {} (Steam) with score {}, using {:?}",
-        form.song_id, steam_player, form.score, form.vehicle
+        payload.song_id, steam_player, payload.score, payload.vehicle
     );
 
-    SendRideResponse {
+    Ok(Xml(SendRideResponse {
         status: "allgood".to_owned(),
         song_id: 143,
         beat_score: BeatScore {
@@ -116,20 +112,19 @@ pub async fn send_ride(
             my_score: 143,
             reign_seconds: 143,
         },
-    }
-    .to_xml_response()
+    }))
 }
 
-#[derive(FromForm)]
+#[derive(Deserialize)]
 pub struct GetRidesRequest {
-    #[field(name = "songid")]
+    #[serde(rename = "songid")]
     song_id: u64,
     ticket: String,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename = "RESULTS")]
-struct GetRidesResponse {
+pub struct GetRidesResponse {
     #[serde(rename = "@status")]
     status: String,
     scores: Vec<Score>,
@@ -173,18 +168,18 @@ struct Ride {
 /// This fails if:
 /// - The response fails to serialize
 /// - Authenticating with Steam fails
-#[post("/game_GetRidesSteamVerified.php", data = "<form>")]
 pub async fn get_rides(
-    form: Form<GetRidesRequest>,
-    steam: &State<Steam>,
-) -> Result<RawXml<String>, RouteError> {
-    let form = form.into_inner();
+    State(state): State<AppState>,
+    Form(payload): Form<GetRidesRequest>,
+) -> Result<Xml<GetRidesResponse>, RouteError> {
+    let steam_player = ticket_auth(&payload.ticket, &state.steam_api).await?;
 
-    let steam_player = ticket_auth(&form.ticket, steam).await?;
+    info!(
+        "Player {} (Steam) requesting rides of song {}",
+        steam_player, payload.song_id
+    );
 
-    info!("Player {} (Steam) requesting rides of song {}", steam_player, form.song_id);
-
-    GetRidesResponse {
+    Ok(Xml(GetRidesResponse {
         status: "allgood".to_owned(),
         scores: vec![Score {
             score_type: Leaderboard::Friend,
@@ -202,6 +197,5 @@ pub async fn get_rides(
             }],
         }],
         server_time: 143,
-    }
-    .to_xml_response()
+    }))
 }

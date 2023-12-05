@@ -16,22 +16,29 @@
 )]
 #![allow(clippy::no_effect_underscore_binding, clippy::module_name_repetitions)]
 
-mod error;
 mod game;
 mod util;
 
+use std::sync::Arc;
+
+use axum::Router;
 use figment::{
     providers::{Env, Format, Toml},
     Figment,
 };
 use game::routes_steam;
-use rocket::launch;
 use serde::Deserialize;
 use steam_rs::Steam;
 
 #[derive(Deserialize)]
 struct Config {
+    main: Main,
     external: External,
+}
+
+#[derive(Deserialize)]
+struct Main {
+    address: String,
 }
 
 #[derive(Deserialize)]
@@ -39,9 +46,18 @@ struct External {
     steam_key: String,
 }
 
-#[launch]
-fn rocket() -> _ {
-    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+#[derive(Clone)]
+pub struct AppState {
+    steam_api: Arc<Steam>,
+}
+
+#[tokio::main]
+async fn main() {
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::DEBUG)
+        .init();
+
+    tracing::info!("Wavebreaker starting.");
 
     let wavebreaker_config: Config = Figment::new()
         .merge(Toml::file("Wavebreaker.toml"))
@@ -49,7 +65,18 @@ fn rocket() -> _ {
         .extract()
         .expect("Config should be valid!");
 
-    rocket::build()
-        .manage(Steam::new(&wavebreaker_config.external.steam_key))
-        .mount("/as_steamlogin", routes_steam())
+    let state = AppState {
+        steam_api: Arc::new(Steam::new(&wavebreaker_config.external.steam_key)),
+    };
+
+    let app = Router::new()
+        .nest("/as_steamlogin", routes_steam())
+        .with_state(state);
+
+    let listener = tokio::net::TcpListener::bind(wavebreaker_config.main.address)
+        .await
+        .expect("Listener should always be able to listen!");
+    axum::serve(listener, app)
+        .await
+        .expect("Server should always be able to... well, serve!");
 }
