@@ -9,6 +9,7 @@ pub enum League {
     Pro,
     Elite,
 }
+
 /// Represents a character/vehicle in the game.
 #[derive(Serialize_repr, Deserialize_repr, Debug, Eq, PartialEq, TryFromPrimitive)]
 #[repr(u8)]
@@ -36,5 +37,5 @@ pub enum Character {
 pub enum Leaderboard {
     Friend,
     Global,
-    Nearby
+    Nearby,
 }

@@ -7,8 +7,6 @@ use steam_rs::{steam_id::SteamId, Steam};
 ///
 /// This function will return an error if it fails to authenticate with Steam.
 pub async fn ticket_auth(ticket: &str, steam: &Steam) -> Result<SteamId, Error> {
-    let steam_result = steam
-        .authenticate_user_ticket(12900, ticket)
-        .await?;
+    let steam_result = steam.authenticate_user_ticket(12900, ticket).await?;
     Ok(SteamId::from(steam_result.steam_id))
 }
