@@ -3,6 +3,7 @@ Wavebreaker.toml
 Rocket.toml
 
 # VSC-specific
+.vscode
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json
