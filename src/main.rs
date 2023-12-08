@@ -19,6 +19,7 @@
 mod game;
 mod util;
 
+use anyhow::Context;
 use axum::Router;
 use figment::{
     providers::{Env, Format, Toml},
@@ -55,21 +56,26 @@ pub struct AppState {
 }
 
 #[tokio::main]
-async fn main() {
+async fn main() -> anyhow::Result<()> {
     let wavebreaker_config: Config = Figment::new()
         .merge(Toml::file("Wavebreaker.toml"))
         .merge(Env::prefixed("WAVEBREAKER_"))
         .extract()
-        .expect("Config should be valid!");
+        .context("Config should be valid!")?;
 
     let pool = PgPoolOptions::new()
         .max_connections(5)
         .connect(&wavebreaker_config.main.database)
-        .await.expect("Database should always be able to connect!");
+        .await
+        .context("Database should always be able to connect")?;
+
+    let listener = tokio::net::TcpListener::bind(&wavebreaker_config.main.address)
+        .await
+        .context("Listener should always be able to listen!")?;
 
     let state = AppState {
         steam_api: Arc::new(Steam::new(&wavebreaker_config.external.steam_key)),
-        config: Arc::new(wavebreaker_config.clone()),
+        config: Arc::new(wavebreaker_config),
         db: pool,
     };
 
@@ -77,10 +83,7 @@ async fn main() {
         .nest("/as_steamlogin", routes_steam())
         .with_state(state);
 
-    let listener = tokio::net::TcpListener::bind(&wavebreaker_config.main.address)
-        .await
-        .expect("Listener should always be able to listen!");
     axum::serve(listener, app)
         .await
-        .expect("Server should always be able to... well, serve!");
+        .context("Server should be able to... well, serve!")
 }
