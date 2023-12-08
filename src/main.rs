@@ -28,8 +28,10 @@ use figment::{
 use game::routes_steam;
 use serde::Deserialize;
 use sqlx::{postgres::PgPoolOptions, PgPool};
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use std::sync::Arc;
 use steam_rs::Steam;
+use tracing::info;
 
 #[derive(Deserialize, Clone)]
 struct Config {
@@ -57,6 +59,19 @@ pub struct AppState {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+                // axum logs rejections from built-in extractors with the `axum::rejection`
+                // target, at `TRACE` level. `axum::rejection=trace` enables showing those events
+                "wavebreaker=debug,tower_http=debug,axum::rejection=trace".into()
+            }),
+        )
+        .with(tracing_subscriber::fmt::layer())
+        .init();
+
+    info!("Wavebreaker starting...");
+
     let wavebreaker_config: Config = Figment::new()
         .merge(Toml::file("Wavebreaker.toml"))
         .merge(Env::prefixed("WAVEBREAKER_"))
