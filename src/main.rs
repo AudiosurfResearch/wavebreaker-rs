@@ -28,10 +28,10 @@ use figment::{
 use game::routes_steam;
 use serde::Deserialize;
 use sqlx::{postgres::PgPoolOptions, PgPool};
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 use std::sync::Arc;
 use steam_rs::Steam;
 use tracing::info;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 #[derive(Deserialize, Clone)]
 struct Config {
@@ -83,6 +83,9 @@ async fn main() -> anyhow::Result<()> {
         .connect(&wavebreaker_config.main.database)
         .await
         .context("Database should always be able to connect")?;
+
+    // Auto-run migrations
+    sqlx::migrate!().run(&pool).await?;
 
     let listener = tokio::net::TcpListener::bind(&wavebreaker_config.main.address)
         .await
