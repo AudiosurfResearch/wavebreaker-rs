@@ -1,6 +1,5 @@
-/target
+**/target
 Wavebreaker.toml
-Rocket.toml
 .sqlx
 
 # VSC-specific

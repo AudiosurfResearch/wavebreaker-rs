@@ -12,9 +12,7 @@
     clippy::question_mark,
     clippy::suspicious,
     clippy::todo,
-    //clippy::all  //for extra anger
 )]
-#![allow(clippy::no_effect_underscore_binding, clippy::module_name_repetitions)]
 
 mod game;
 mod util;
@@ -26,8 +24,9 @@ use figment::{
     Figment,
 };
 use game::routes_steam;
+use migration::{Migrator, MigratorTrait};
+use sea_orm::{Database, DatabaseConnection};
 use serde::Deserialize;
-use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::sync::Arc;
 use steam_rs::Steam;
 use tracing::info;
@@ -54,7 +53,7 @@ struct External {
 pub struct AppState {
     steam_api: Arc<Steam>,
     config: Arc<Config>,
-    db: PgPool,
+    db: DatabaseConnection,
 }
 
 #[tokio::main]
@@ -76,25 +75,23 @@ async fn main() -> anyhow::Result<()> {
         .merge(Toml::file("Wavebreaker.toml"))
         .merge(Env::prefixed("WAVEBREAKER_"))
         .extract()
-        .context("Config should be valid!")?;
+        .context("Failed to load config. Check if it exists and is valid!")?;
 
-    let pool = PgPoolOptions::new()
-        .max_connections(5)
-        .connect(&wavebreaker_config.main.database)
+    let db: DatabaseConnection = Database::connect(&wavebreaker_config.main.database)
         .await
-        .context("Database should always be able to connect")?;
+        .context("Database failed to connect!")?;
 
-    // Auto-run migrations
-    sqlx::migrate!().run(&pool).await?;
+    //Automatically apply migrations
+    Migrator::up(&db, None).await?;
 
     let listener = tokio::net::TcpListener::bind(&wavebreaker_config.main.address)
         .await
-        .context("Listener should always be able to listen!")?;
+        .context("TCP listener failed to bind!")?;
 
     let state = AppState {
         steam_api: Arc::new(Steam::new(&wavebreaker_config.external.steam_key)),
         config: Arc::new(wavebreaker_config),
-        db: pool,
+        db,
     };
 
     let app = Router::new()
@@ -103,5 +100,5 @@ async fn main() -> anyhow::Result<()> {
 
     axum::serve(listener, app)
         .await
-        .context("Server should be able to... well, serve!")
+        .context("Server failed to... well, serve!")
 }
