@@ -11,7 +11,7 @@
     clippy::len_zero,
     clippy::question_mark,
     clippy::suspicious,
-    clippy::todo,
+    clippy::todo
 )]
 
 mod game;
@@ -24,13 +24,16 @@ use figment::{
     Figment,
 };
 use game::routes_steam;
-use migration::{Migrator, MigratorTrait};
-use sea_orm::{Database, DatabaseConnection};
 use serde::Deserialize;
 use std::sync::Arc;
 use steam_rs::Steam;
 use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+
+// Stops the client from outputting a huge number of warnings during compilation.
+#[allow(warnings, unused)]
+mod prisma;
+use prisma::PrismaClient;
 
 #[derive(Deserialize, Clone)]
 struct Config {
@@ -53,7 +56,7 @@ struct External {
 pub struct AppState {
     steam_api: Arc<Steam>,
     config: Arc<Config>,
-    db: DatabaseConnection,
+    db: Arc<PrismaClient>,
 }
 
 #[tokio::main]
@@ -77,12 +80,10 @@ async fn main() -> anyhow::Result<()> {
         .extract()
         .context("Failed to load config. Check if it exists and is valid!")?;
 
-    let db: DatabaseConnection = Database::connect(&wavebreaker_config.main.database)
+    let client = PrismaClient::_builder()
+        .build()
         .await
-        .context("Database failed to connect!")?;
-
-    //Automatically apply migrations
-    Migrator::up(&db, None).await?;
+        .context("Failed to initialize Prisma client")?;
 
     let listener = tokio::net::TcpListener::bind(&wavebreaker_config.main.address)
         .await
@@ -91,7 +92,7 @@ async fn main() -> anyhow::Result<()> {
     let state = AppState {
         steam_api: Arc::new(Steam::new(&wavebreaker_config.external.steam_key)),
         config: Arc::new(wavebreaker_config),
-        db,
+        db: Arc::new(client),
     };
 
     let app = Router::new()

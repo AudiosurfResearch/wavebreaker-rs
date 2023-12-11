@@ -1,6 +1,7 @@
 **/target
 Wavebreaker.toml
 .sqlx
+prisma.rs
 
 # VSC-specific
 .vscode
