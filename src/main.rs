@@ -21,13 +21,14 @@ mod util;
 
 use anyhow::Context;
 use axum::Router;
+use diesel_async::pooled_connection::deadpool::Pool;
+use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use figment::{
     providers::{Env, Format, Toml},
     Figment,
 };
 use game::routes_steam;
 use serde::Deserialize;
-use sqlx::{postgres::PgPoolOptions, PgPool};
 use std::sync::Arc;
 use steam_rs::Steam;
 use tracing::info;
@@ -54,7 +55,7 @@ struct External {
 pub struct AppState {
     steam_api: Arc<Steam>,
     config: Arc<Config>,
-    db: PgPool,
+    db: Pool<diesel_async::AsyncPgConnection>,
 }
 
 #[tokio::main]
@@ -78,18 +79,14 @@ async fn main() -> anyhow::Result<()> {
         .extract()
         .context("Config should be valid!")?;
 
-    let pool = PgPoolOptions::new()
-        .max_connections(5)
-        .connect(&wavebreaker_config.main.database)
-        .await
-        .context("Database should always be able to connect")?;
-
-    // Auto-run migrations
-    sqlx::migrate!().run(&pool).await?;
-
     let listener = tokio::net::TcpListener::bind(&wavebreaker_config.main.address)
         .await
         .context("Listener should always be able to listen!")?;
+
+    let diesel_manager = AsyncDieselConnectionManager::<diesel_async::AsyncPgConnection>::new(
+        &wavebreaker_config.main.database,
+    );
+    let pool = Pool::builder(diesel_manager).build()?;
 
     let state = AppState {
         steam_api: Arc::new(Steam::new(&wavebreaker_config.external.steam_key)),
