@@ -14,7 +14,6 @@
     clippy::todo,
     //clippy::all  //for extra anger
 )]
-#![allow(clippy::no_effect_underscore_binding, clippy::module_name_repetitions)]
 
 mod game;
 mod util;
