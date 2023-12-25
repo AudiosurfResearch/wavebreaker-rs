@@ -1,9 +1,9 @@
+use crate::util::errors::RouteError;
 use crate::util::game_types::League;
 use crate::util::game_types::{Character, Leaderboard};
 use crate::AppState;
 use axum::extract::State;
 use axum::Form;
-use axum_route_error::RouteError;
 use axum_serde::Xml;
 use serde::{Deserialize, Serialize};
 use tracing::info;
@@ -153,7 +153,7 @@ struct Ride {
     #[serde(rename = "vehicleid")]
     vehicle_id: Character,
     #[serde(rename = "ridetime")]
-    ride_time: u64,
+    time: u64,
     feats: String,
     /// In centiseconds (milliseconds / 10)
     #[serde(rename = "songlength")]
@@ -189,7 +189,7 @@ pub async fn get_rides(
                     username: "frien :)".to_owned(),
                     score: 143,
                     vehicle_id: Character::PointmanElite,
-                    ride_time: 143,
+                    time: 143,
                     feats: "Stealth, I guess?".to_owned(),
                     song_length: 14300,
                     traffic_count: 143,
