@@ -1,7 +1,11 @@
 /target
-config.toml
+Wavebreaker.toml
+Rocket.toml
+.sqlx
+.env
 
 # VSC-specific
+.vscode
 .vscode/*
 !.vscode/settings.json
 !.vscode/tasks.json

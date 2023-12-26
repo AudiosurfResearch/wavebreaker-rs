@@ -2,7 +2,6 @@
     clippy::pedantic,
     clippy::nursery,
     clippy::unwrap_used,
-    //clippy::expect_used,
     clippy::correctness,
     clippy::style,
     clippy::perf,
@@ -17,59 +16,93 @@
 )]
 
 mod game;
+pub mod models;
+pub mod schema;
 mod util;
 
-use crate::game::service::game_config;
-use actix_web::{web, App, HttpResponse, HttpServer};
+use anyhow::Context;
+use axum::Router;
+use diesel_async::pooled_connection::deadpool::Pool;
+use diesel_async::pooled_connection::AsyncDieselConnectionManager;
+use figment::{
+    providers::{Env, Format, Toml},
+    Figment,
+};
+use game::routes_steam;
 use serde::Deserialize;
-use std::fs;
+use std::sync::Arc;
 use steam_rs::Steam;
+use tracing::info;
+use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 struct Config {
     main: Main,
     external: External,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 struct Main {
-    ip: String,
-    port: u16,
+    address: String,
+    database: String,
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Clone)]
 struct External {
     steam_key: String,
 }
 
-pub struct AppGlobals {
-    steam_api: Steam,
+#[derive(Clone)]
+pub struct AppState {
+    steam_api: Arc<Steam>,
+    config: Arc<Config>,
+    db: Pool<diesel_async::AsyncPgConnection>,
 }
 
-#[actix_web::main]
-async fn main() -> std::io::Result<()> {
-    env_logger::init_from_env(env_logger::Env::new().default_filter_or("info"));
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+                // axum logs rejections from built-in extractors with the `axum::rejection`
+                // target, at `TRACE` level. `axum::rejection=trace` enables showing those events
+                "wavebreaker=debug,tower_http=debug,axum::rejection=trace".into()
+            }),
+        )
+        .with(tracing_subscriber::fmt::layer())
+        .init();
 
-    //Read config
-    let contents = fs::read_to_string("config.toml")?;
-    let wavebreaker_config: Config =
-        toml::from_str(&contents).expect("The config should be in a valid format");
+    info!("Wavebreaker starting...");
 
-    HttpServer::new(move || {
-        App::new()
-            //Initialize global app stuff, like the Steam API
-            .app_data(web::Data::new(AppGlobals {
-                steam_api: Steam::new(&wavebreaker_config.external.steam_key),
-            }))
-            .route(
-                "/",
-                web::get().to(|| async {
-                    HttpResponse::Ok().body("I've never felt so incredible going my way!")
-                }),
-            )
-            .configure(game_config)
-    })
-    .bind((wavebreaker_config.main.ip, wavebreaker_config.main.port))?
-    .run()
-    .await
+    let wavebreaker_config: Config = Figment::new()
+        .merge(Toml::file("Wavebreaker.toml"))
+        .merge(Env::prefixed("WAVEBREAKER_"))
+        .extract()
+        .context("Config should be valid!")?;
+
+    let listener = tokio::net::TcpListener::bind(&wavebreaker_config.main.address)
+        .await
+        .context("Listener should always be able to listen!")?;
+    info!("Listening on {}", wavebreaker_config.main.address);
+
+    let diesel_manager = AsyncDieselConnectionManager::<diesel_async::AsyncPgConnection>::new(
+        &wavebreaker_config.main.database,
+    );
+    let pool = Pool::builder(diesel_manager)
+        .build()
+        .context("Failed to build DB pool!")?;
+
+    let state = AppState {
+        steam_api: Arc::new(Steam::new(&wavebreaker_config.external.steam_key)),
+        config: Arc::new(wavebreaker_config),
+        db: pool,
+    };
+
+    let app = Router::new()
+        .nest("/as_steamlogin", routes_steam())
+        .with_state(state);
+
+    axum::serve(listener, app)
+        .await
+        .context("Server should be able to... well, serve!")
 }

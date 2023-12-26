@@ -3,10 +3,6 @@
 
 Config example:
 ```toml
-[main]
-ip = "127.0.0.1"
-port = 80
-
 [external]
 steam_key = "saus"
 ```
