@@ -4,13 +4,12 @@ CREATE TABLE
         id SERIAL PRIMARY KEY,
         username VARCHAR(32) NOT NULL,
         steam_id TEXT NOT NULL UNIQUE,
+        steam_account_num INTEGER NOT NULL UNIQUE,
         location_id INTEGER NOT NULL DEFAULT 1,
         account_type SMALLINT NOT NULL DEFAULT 1,
         joined_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
         avatar_url TEXT NOT NULL
     );
-
-CREATE UNIQUE INDEX player_steam_id_key ON players (steam_id);
 
 -- Rivalries
 CREATE TABLE

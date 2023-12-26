@@ -6,6 +6,7 @@ diesel::table! {
         #[max_length = 32]
         username -> Varchar,
         steam_id -> Text,
+        steam_account_num -> Int4,
         location_id -> Int4,
         account_type -> Int2,
         joined_at -> Timestamp,
@@ -21,7 +22,4 @@ diesel::table! {
     }
 }
 
-diesel::allow_tables_to_appear_in_same_query!(
-    players,
-    rivalries,
-);
+diesel::allow_tables_to_appear_in_same_query!(players, rivalries,);

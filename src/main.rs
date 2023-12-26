@@ -16,9 +16,9 @@
 )]
 
 mod game;
-mod util;
 pub mod models;
 pub mod schema;
+mod util;
 
 use anyhow::Context;
 use axum::Router;
@@ -83,11 +83,14 @@ async fn main() -> anyhow::Result<()> {
     let listener = tokio::net::TcpListener::bind(&wavebreaker_config.main.address)
         .await
         .context("Listener should always be able to listen!")?;
+    info!("Listening on {}", wavebreaker_config.main.address);
 
     let diesel_manager = AsyncDieselConnectionManager::<diesel_async::AsyncPgConnection>::new(
         &wavebreaker_config.main.database,
     );
-    let pool = Pool::builder(diesel_manager).build().context("Failed to build DB pool!")?;   
+    let pool = Pool::builder(diesel_manager)
+        .build()
+        .context("Failed to build DB pool!")?;
 
     let state = AppState {
         steam_api: Arc::new(Steam::new(&wavebreaker_config.external.steam_key)),

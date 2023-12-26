@@ -42,6 +42,7 @@ pub struct Player {
     pub id: i32,
     pub username: String,
     pub steam_id: SteamIdWrapper,
+    pub steam_account_num: i32,
     pub location_id: i32,
     pub account_type: i16,
     pub joined_at: time::PrimitiveDateTime,
@@ -53,6 +54,7 @@ pub struct Player {
 pub struct NewPlayer<'a> {
     pub username: &'a str,
     pub steam_id: SteamIdWrapper,
+    pub steam_account_num: i32,
     pub avatar_url: &'a str,
 }
 

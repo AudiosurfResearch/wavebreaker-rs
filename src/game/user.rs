@@ -10,8 +10,6 @@ use tracing::info;
 
 #[derive(Deserialize)]
 pub struct LoginSteamRequest {
-    #[serde(rename = "steamusername")]
-    steam_username: String,
     ticket: String,
 }
 
@@ -55,6 +53,7 @@ pub async fn login_steam(
     let new_player = NewPlayer {
         username: &summary[0].persona_name,
         steam_id: SteamIdWrapper(steam_player),
+        steam_account_num: i32::try_from(steam_player.get_account_id())?,
         avatar_url: &summary[0].avatar,
     };
 
