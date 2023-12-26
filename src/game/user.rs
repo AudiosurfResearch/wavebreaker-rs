@@ -1,12 +1,14 @@
 use crate::models::{NewPlayer, Player, SteamIdWrapper};
+#[allow(clippy::wildcard_imports)]
+use crate::schema::players::dsl::*;
 use crate::schema::players::steam_account_num;
 use crate::util::errors::{IntoRouteError, RouteError};
 use crate::AppState;
 use crate::{game::helpers::ticket_auth, schema::players};
 use axum::{extract::State, Form};
 use axum_serde::Xml;
-use diesel::query_dsl::methods::FilterDsl;
 use diesel::ExpressionMethods;
+use diesel::QueryDsl;
 use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
 use tracing::info;
@@ -35,6 +37,7 @@ pub struct LoginSteamResponse {
 /// # Errors
 /// This fails if:
 /// - The response fails to serialize
+
 /// - Authenticating with Steam fails
 pub async fn login_steam(
     State(state): State<AppState>,
@@ -98,8 +101,6 @@ pub async fn steam_sync(
     State(state): State<AppState>,
     Form(payload): Form<SteamSyncRequest>,
 ) -> Result<Xml<SteamSyncResponse>, RouteError> {
-    use crate::schema::players::dsl::*;
-
     //Split the string of steam account numbers into a vector
     let friend_nums: Vec<i32> = payload
         .snums

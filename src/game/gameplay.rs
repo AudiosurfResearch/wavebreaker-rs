@@ -1,3 +1,4 @@
+use super::helpers::ticket_auth;
 use crate::util::errors::RouteError;
 use crate::util::game_types::League;
 use crate::util::game_types::{Character, Leaderboard};
@@ -7,8 +8,6 @@ use axum::Form;
 use axum_serde::Xml;
 use serde::{Deserialize, Serialize};
 use tracing::info;
-
-use super::helpers::ticket_auth;
 
 #[derive(Deserialize)]
 pub struct SongIdRequest {

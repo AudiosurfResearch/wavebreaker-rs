@@ -22,7 +22,16 @@ diesel::table! {
     }
 }
 
+diesel::table! {
+    songs (id) {
+        id -> Int4,
+        title -> Text,
+        artist -> Text,
+    }
+}
+
 diesel::allow_tables_to_appear_in_same_query!(
     players,
     rivalries,
+    songs,
 );
