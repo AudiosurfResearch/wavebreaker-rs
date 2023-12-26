@@ -1,5 +1,5 @@
 use crate::models::{NewPlayer, Player, SteamIdWrapper};
-use crate::schema::players::dsl::*;
+use crate::schema::players::steam_account_num;
 use crate::util::errors::{IntoRouteError, RouteError};
 use crate::AppState;
 use crate::{game::helpers::ticket_auth, schema::players};
@@ -63,7 +63,12 @@ pub async fn login_steam(
     //Insert new player into table if they don't exist
     let player = diesel::insert_into(players::table)
         .values(&new_player)
-        .on_conflict_do_nothing()
+        .on_conflict(steam_account_num)
+        .do_update()
+        .set((
+            players::username.eq(&new_player.username),
+            players::avatar_url.eq(&new_player.avatar_url),
+        ))
         .get_result::<Player>(&mut conn)
         .await?;
 
@@ -93,6 +98,8 @@ pub async fn steam_sync(
     State(state): State<AppState>,
     Form(payload): Form<SteamSyncRequest>,
 ) -> Result<Xml<SteamSyncResponse>, RouteError> {
+    use crate::schema::players::dsl::*;
+
     //Split the string of steam account numbers into a vector
     let friend_nums: Vec<i32> = payload
         .snums
@@ -115,6 +122,7 @@ pub async fn steam_sync(
 
     //Add new rivalry for each friend
     for friend in &friends {
+        // TODO: turn rival adding into a reusable thing
         diesel::insert_into(crate::schema::rivalries::table)
             .values((
                 crate::schema::rivalries::player_id

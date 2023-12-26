@@ -227,6 +227,8 @@ where
     S: Serialize + for<'a> Deserialize<'a> + Debug,
 {
     fn into_response(self) -> Response {
+        tracing::error!("Route error: {:?}", self.error);
+
         let status = self.status_code();
         let extra_data = self.extra_data;
         let error = self.public_error_message.map_or_else(
@@ -318,7 +320,6 @@ impl<T, E: Into<AnyhowError> + std::fmt::Debug> IntoRouteError<T> for Result<T, 
         status_code: StatusCode,
     ) -> core::result::Result<T, RouteError> {
         self.map_err(|err| {
-            tracing::error!("Route error: {:?}", err);
             RouteError::from(err)
                 .set_public_error_message(message)
                 .set_status_code(status_code)
