@@ -1,4 +1,4 @@
-use crate::schema::{players, rivalries};
+use crate::schema::players;
 use diesel::backend::Backend;
 use diesel::deserialize::{self, FromSql, FromSqlRow};
 use diesel::expression::AsExpression;
@@ -56,14 +56,4 @@ pub struct NewPlayer<'a> {
     pub steam_id: SteamIdWrapper,
     pub steam_account_num: i32,
     pub avatar_url: &'a str,
-}
-
-#[derive(Identifiable, Selectable, Queryable, Associations, Debug)]
-#[diesel(belongs_to(Player))]
-#[diesel(table_name = rivalries)]
-#[diesel(primary_key(player_id, rival_id))]
-pub struct Rivalry {
-    pub player_id: i32,
-    pub rival_id: i32,
-    pub established_at: time::PrimitiveDateTime,
 }

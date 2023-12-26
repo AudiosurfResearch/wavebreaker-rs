@@ -1,4 +1,4 @@
-use crate::models::{NewPlayer, Player, SteamIdWrapper};
+use crate::models::players::{NewPlayer, Player, SteamIdWrapper};
 #[allow(clippy::wildcard_imports)]
 use crate::schema::players::dsl::*;
 use crate::schema::players::steam_account_num;
