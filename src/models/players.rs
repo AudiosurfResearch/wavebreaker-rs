@@ -98,7 +98,7 @@ impl<'a> NewPlayer<'a> {
     ///
     /// This fails if:
     /// - The player fails to be inserted/updated in the database
-    pub async fn create_or_update(&self, mut conn: &mut AsyncPgConnection) -> QueryResult<Player> {
+    pub async fn create_or_update(&self, conn: &mut AsyncPgConnection) -> QueryResult<Player> {
         diesel::insert_into(players::table)
             .values(self)
             .on_conflict(players::steam_account_num)
@@ -107,7 +107,7 @@ impl<'a> NewPlayer<'a> {
                 players::username.eq(&self.username),
                 players::avatar_url.eq(&self.avatar_url),
             ))
-            .get_result::<Player>(&mut conn)
+            .get_result::<Player>(conn)
             .await
     }
 }
