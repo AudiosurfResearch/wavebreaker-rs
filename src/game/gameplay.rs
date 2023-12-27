@@ -43,7 +43,7 @@ pub async fn fetch_song_id(
     let song = NewSong::new(&payload.song, &payload.artist).find_or_create(&mut conn).await?;
 
     info!(
-        "Song {} - {} looked up/registered by {}, league {:?}",
+        "Song {} - {} looked up by {}, league {:?}",
         song.artist, song.title, payload.uid, payload.league
     );
 
