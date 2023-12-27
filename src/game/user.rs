@@ -1,10 +1,10 @@
+use crate::game::helpers::ticket_auth;
 use crate::models::players::{NewPlayer, Player, SteamIdWrapper};
 #[allow(clippy::wildcard_imports)]
 use crate::schema::players::dsl::*;
 use crate::schema::players::steam_account_num;
 use crate::util::errors::{IntoRouteError, RouteError};
 use crate::AppState;
-use crate::{game::helpers::ticket_auth, schema::players};
 use axum::{extract::State, Form};
 use axum_serde::Xml;
 use diesel::ExpressionMethods;
@@ -37,7 +37,6 @@ pub struct LoginSteamResponse {
 /// # Errors
 /// This fails if:
 /// - The response fails to serialize
-
 /// - Authenticating with Steam fails
 pub async fn login_steam(
     State(state): State<AppState>,
@@ -56,24 +55,14 @@ pub async fn login_steam(
 
     let mut conn = state.db.get().await?;
 
-    let new_player = NewPlayer {
-        username: &summary[0].persona_name,
-        steam_id: SteamIdWrapper(steam_player),
-        steam_account_num: i32::try_from(steam_player.get_account_id())?,
-        avatar_url: &summary[0].avatar,
-    };
-
-    //Insert new player into table if they don't exist
-    let player = diesel::insert_into(players::table)
-        .values(&new_player)
-        .on_conflict(steam_account_num)
-        .do_update()
-        .set((
-            players::username.eq(&new_player.username),
-            players::avatar_url.eq(&new_player.avatar_url),
-        ))
-        .get_result::<Player>(&mut conn)
-        .await?;
+    let player = NewPlayer::new(
+        &summary[0].persona_name,
+        SteamIdWrapper(steam_player),
+        i32::try_from(steam_player.get_account_id())?,
+        &summary[0].avatar_full,
+    )
+    .create_or_update(&mut conn)
+    .await?;
 
     Ok(Xml(LoginSteamResponse {
         status: "allgood".to_owned(),
