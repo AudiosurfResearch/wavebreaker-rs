@@ -70,7 +70,7 @@ impl<'a> NewPlayer<'a> {
     /// # Arguments
     ///
     /// * `username` - The username of the player.
-    /// * `steam_id` - The Steam ID of the player.
+    /// * `steam_id` - The `SteamId` of the player.
     /// * `steam_account_num` - The Steam account number of the player.
     /// * `avatar_url` - The avatar URL of the player.
     ///
@@ -80,13 +80,13 @@ impl<'a> NewPlayer<'a> {
     #[must_use]
     pub const fn new(
         username: &'a str,
-        steam_id: SteamIdWrapper,
+        steam_id: SteamId,
         steam_account_num: i32,
         avatar_url: &'a str,
     ) -> Self {
         Self {
             username,
-            steam_id,
+            steam_id: SteamIdWrapper(steam_id),
             steam_account_num,
             avatar_url,
         }

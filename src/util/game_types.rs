@@ -39,3 +39,13 @@ pub enum Leaderboard {
     Global,
     Nearby,
 }
+
+/// Split a string with values separated by 'x' into a vector of the values.
+pub fn split_x_separated<T>(s: &str) -> Result<Vec<T>, T::Err>
+where
+    T: std::str::FromStr,
+{
+    s.split('x')
+        .map(str::parse::<T>)
+        .collect::<Result<Vec<T>, T::Err>>()
+}

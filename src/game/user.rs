@@ -4,6 +4,7 @@ use crate::models::players::{NewPlayer, Player, SteamIdWrapper};
 use crate::schema::players::dsl::*;
 use crate::schema::players::steam_account_num;
 use crate::util::errors::{IntoRouteError, RouteError};
+use crate::util::game_types::split_x_separated;
 use crate::AppState;
 use axum::{extract::State, Form};
 use axum_serde::Xml;
@@ -57,7 +58,7 @@ pub async fn login_steam(
 
     let player = NewPlayer::new(
         &summary[0].persona_name,
-        SteamIdWrapper(steam_player),
+        steam_player,
         i32::try_from(steam_player.get_account_id())?,
         &summary[0].avatar_full,
     )
@@ -91,12 +92,8 @@ pub async fn steam_sync(
     Form(payload): Form<SteamSyncRequest>,
 ) -> Result<Xml<SteamSyncResponse>, RouteError> {
     //Split the string of steam account numbers into a vector
-    let friend_nums: Vec<i32> = payload
-        .snums
-        .split('x')
-        .map(str::parse)
-        .collect::<Result<Vec<i32>, _>>()
-        .http_status_error(axum::http::StatusCode::BAD_REQUEST)?;
+    let friend_nums: Vec<i32> =
+        split_x_separated(&payload.snums).http_status_error(axum::http::StatusCode::BAD_REQUEST)?;
 
     let steam_player = ticket_auth(&payload.ticket, &state.steam_api)
         .await
