@@ -6,7 +6,8 @@ CREATE TABLE
         song_id INTEGER NOT NULL REFERENCES songs (id) ON DELETE CASCADE,
         player_id INTEGER NOT NULL REFERENCES players (id) ON DELETE CASCADE,
         league INTEGER NOT NULL,
-        submitted_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP play_count INTEGER NOT NULL DEFAULT 0,
+        submitted_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        play_count INTEGER NOT NULL DEFAULT 0,
         -- Here we go
         score INTEGER NOT NULL,
         track_shape INTEGER[256] NOT NULL,
