@@ -109,7 +109,6 @@ pub async fn steam_sync(
 
     //Add new rivalry for each friend
     for friend in &friends {
-        // TODO: turn rival adding into a reusable thing
         diesel::insert_into(crate::schema::rivalries::table)
             .values((
                 crate::schema::rivalries::player_id

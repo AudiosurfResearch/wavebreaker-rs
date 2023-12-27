@@ -1,4 +1,5 @@
 use super::helpers::ticket_auth;
+use crate::models::songs::NewSong;
 use crate::util::errors::RouteError;
 use crate::util::game_types::League;
 use crate::util::game_types::{Character, Leaderboard};
@@ -23,26 +24,32 @@ pub struct SongIdResponse {
     #[serde(rename = "@status")]
     status: String,
     #[serde(rename = "songid")]
-    song_id: u64,
+    song_id: i32,
 }
 
 /// Attempts to get a song ID from the server.
 /// If the song isn't registered on the server yet, it will be created.
 ///
 /// # Errors
+/// 
 /// This fails if:
 /// - The response fails to serialize
+/// - The song fails to be created/retrieved
 pub async fn fetch_song_id(
+    State(state): State<AppState>,
     Form(payload): Form<SongIdRequest>,
 ) -> Result<Xml<SongIdResponse>, RouteError> {
+    let mut conn = state.db.get().await?;
+    let song = NewSong::new(&payload.song, &payload.artist).find_or_create(&mut conn).await?;
+
     info!(
-        "Song {} - {} registered by {}, league {:?}",
-        payload.artist, payload.song, payload.uid, payload.league
+        "Song {} - {} looked up/registered by {}, league {:?}",
+        song.artist, song.title, payload.uid, payload.league
     );
 
     Ok(Xml(SongIdResponse {
         status: "allgood".to_owned(),
-        song_id: 143,
+        song_id: song.id,
     }))
 }
 

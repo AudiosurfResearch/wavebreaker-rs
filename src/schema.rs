@@ -27,6 +27,7 @@ diesel::table! {
         id -> Int4,
         title -> Text,
         artist -> Text,
+        created_at -> Timestamp,
     }
 }
 

@@ -16,15 +16,15 @@ pub struct Rivalry {
 
 #[derive(Insertable)]
 #[diesel(table_name = rivalries)]
+/// Represents a new rivalry between two players.
+///
+/// This struct is used to create a new rivalry by specifying the player ID and rival ID.
+/// It provides a method to asynchronously create the rivalry in the database.
 pub struct NewRivalry {
     pub player_id: i32,
     pub rival_id: i32,
 }
 
-/// Represents a new rivalry between two players.
-///
-/// This struct is used to create a new rivalry by specifying the player ID and rival ID.
-/// It provides a method to asynchronously create the rivalry in the database.
 impl NewRivalry {
     /// Creates a new `NewRivalry` instance.
     ///
