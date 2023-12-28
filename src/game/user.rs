@@ -1,5 +1,5 @@
 use crate::game::helpers::ticket_auth;
-use crate::models::players::{NewPlayer, Player, SteamIdWrapper};
+use crate::models::players::{NewPlayer, Player};
 #[allow(clippy::wildcard_imports)]
 use crate::schema::players::dsl::*;
 use crate::schema::players::steam_account_num;

@@ -1,9 +1,23 @@
-use num_enum::TryFromPrimitive;
+use diesel::{deserialize::FromSqlRow, expression::AsExpression};
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 
 /// Represents the three skill levels represented on the leaderboard.
-#[derive(Serialize_repr, Deserialize_repr, Debug, Eq, PartialEq, TryFromPrimitive)]
-#[repr(u8)]
+#[derive(
+    AsExpression,
+    FromSqlRow,
+    Serialize_repr,
+    Deserialize_repr,
+    Debug,
+    Eq,
+    PartialEq,
+    Clone,
+    Copy,
+    TryFromPrimitive,
+    IntoPrimitive,
+)]
+#[diesel(sql_type = diesel::sql_types::SmallInt)]
+#[repr(i16)]
 pub enum League {
     Casual,
     Pro,
@@ -11,8 +25,21 @@ pub enum League {
 }
 
 /// Represents a character/vehicle in the game.
-#[derive(Serialize_repr, Deserialize_repr, Debug, Eq, PartialEq, TryFromPrimitive)]
-#[repr(u8)]
+#[derive(
+    AsExpression,
+    FromSqlRow,
+    Serialize_repr,
+    Deserialize_repr,
+    Debug,
+    Eq,
+    PartialEq,
+    Clone,
+    Copy,
+    TryFromPrimitive,
+    IntoPrimitive,
+)]
+#[diesel(sql_type = diesel::sql_types::SmallInt)]
+#[repr(i16)]
 pub enum Character {
     PointmanPro = 0,
     DoubleVisionPro = 1,
@@ -32,7 +59,7 @@ pub enum Character {
 }
 
 /// Represents the three kinds of leaderboards available in the game.
-#[derive(Serialize_repr, Deserialize_repr, Debug, Eq, PartialEq, TryFromPrimitive)]
+#[derive(Deserialize_repr, Serialize_repr, Debug, Eq, PartialEq, TryFromPrimitive)]
 #[repr(u8)]
 pub enum Leaderboard {
     Friend,
@@ -45,6 +72,8 @@ pub fn split_x_separated<T>(s: &str) -> Result<Vec<T>, T::Err>
 where
     T: std::str::FromStr,
 {
+    //If string ends with 'x', remove it
+    let s = s.strip_suffix('x').unwrap_or(s);
     s.split('x')
         .map(str::parse::<T>)
         .collect::<Result<Vec<T>, T::Err>>()

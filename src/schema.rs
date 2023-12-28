@@ -23,6 +23,27 @@ diesel::table! {
 }
 
 diesel::table! {
+    scores (id) {
+        id -> Int4,
+        song_id -> Int4,
+        player_id -> Int4,
+        league -> Int2,
+        submitted_at -> Timestamp,
+        play_count -> Int4,
+        score -> Int4,
+        track_shape -> Array<Nullable<Int4>>,
+        xstats -> Array<Nullable<Int4>>,
+        density -> Int4,
+        vehicle -> Int2,
+        feats -> Array<Nullable<Text>>,
+        song_length -> Int4,
+        gold_threshold -> Int4,
+        iss -> Int4,
+        isj -> Int4,
+    }
+}
+
+diesel::table! {
     songs (id) {
         id -> Int4,
         title -> Text,
@@ -31,8 +52,12 @@ diesel::table! {
     }
 }
 
+diesel::joinable!(scores -> players (player_id));
+diesel::joinable!(scores -> songs (song_id));
+
 diesel::allow_tables_to_appear_in_same_query!(
     players,
     rivalries,
+    scores,
     songs,
 );

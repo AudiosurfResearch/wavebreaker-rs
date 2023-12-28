@@ -1,7 +1,9 @@
 use super::helpers::ticket_auth;
+use crate::models::players::Player;
+use crate::models::scores::NewScore;
 use crate::models::songs::NewSong;
 use crate::util::errors::RouteError;
-use crate::util::game_types::League;
+use crate::util::game_types::{split_x_separated, League};
 use crate::util::game_types::{Character, Leaderboard};
 use crate::AppState;
 use axum::extract::State;
@@ -31,7 +33,7 @@ pub struct SongIdResponse {
 /// If the song isn't registered on the server yet, it will be created.
 ///
 /// # Errors
-/// 
+///
 /// This fails if:
 /// - The response fails to serialize
 /// - The song fails to be created/retrieved
@@ -40,7 +42,9 @@ pub async fn fetch_song_id(
     Form(payload): Form<SongIdRequest>,
 ) -> Result<Xml<SongIdResponse>, RouteError> {
     let mut conn = state.db.get().await?;
-    let song = NewSong::new(&payload.song, &payload.artist).find_or_create(&mut conn).await?;
+    let song = NewSong::new(&payload.song, &payload.artist)
+        .find_or_create(&mut conn)
+        .await?;
 
     info!(
         "Song {} - {} looked up by {}, league {:?}",
@@ -55,11 +59,23 @@ pub async fn fetch_song_id(
 
 #[derive(Deserialize)]
 pub struct SendRideRequest {
-    #[serde(rename = "songid")]
-    song_id: u64,
-    score: u64,
-    vehicle: Character,
     ticket: String,
+    #[serde(rename = "songid")]
+    song_id: i32,
+    score: i32,
+    vehicle: Character,
+    league: League,
+    feats: String,
+    #[serde(rename = "songlength")]
+    song_length: i32,
+    #[serde(rename = "trackshape")]
+    track_shape: String,
+    density: i32,
+    xstats: String,
+    #[serde(rename = "goldthreshold")]
+    gold_threshold: i32,
+    iss: i32,
+    isj: i32,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -68,7 +84,7 @@ pub struct SendRideResponse {
     #[serde(rename = "@status")]
     status: String,
     #[serde(rename = "songid")]
-    song_id: u64,
+    song_id: i32,
     #[serde(rename = "beatscore")]
     beat_score: BeatScore,
 }
@@ -83,11 +99,11 @@ struct BeatScore {
     #[serde(rename = "rivalname")]
     rival_name: String,
     #[serde(rename = "rivalscore")]
-    rival_score: u64,
+    rival_score: i32,
     #[serde(rename = "myscore")]
-    my_score: u64,
+    my_score: i32,
     #[serde(rename = "reignseconds")]
-    reign_seconds: u64,
+    reign_seconds: u32,
 }
 
 /// Accepts score submissions by the client.
@@ -96,6 +112,7 @@ struct BeatScore {
 /// This fails if:
 /// - The response fails to serialize
 /// - Authenticating with Steam fails
+/// - The score fails to be inserted
 pub async fn send_ride(
     State(state): State<AppState>,
     Form(payload): Form<SendRideRequest>,
@@ -104,18 +121,44 @@ pub async fn send_ride(
 
     info!(
         "Score received on {} from {} (Steam) with score {}, using {:?}",
-        payload.song_id, steam_player, payload.score, payload.vehicle
+        &payload.song_id, &steam_player, &payload.score, &payload.vehicle
     );
 
+    let mut conn = state.db.get().await?;
+
+    let player = Player::find_by_steam_id(steam_player, &mut conn).await?;
+    let score = NewScore::new(
+        player.id,
+        payload.song_id,
+        payload.league,
+        payload.score,
+        &split_x_separated::<i32>(&payload.track_shape)?,
+        &payload
+            .xstats
+            .split(',')
+            .map(str::parse)
+            .collect::<Result<Vec<_>, _>>()?,
+        payload.density,
+        payload.vehicle,
+        &payload.feats.split(", ").collect::<Vec<&str>>(),
+        payload.song_length,
+        payload.gold_threshold,
+        payload.iss,
+        payload.isj,
+    )
+    .create_or_update(&mut conn)
+    .await?;
+
+    // TODO: Properly implement dethroning
     Ok(Xml(SendRideResponse {
         status: "allgood".to_owned(),
-        song_id: 143,
+        song_id: score.song_id,
         beat_score: BeatScore {
             dethroned: true,
             friend: true,
             rival_name: "test".to_owned(),
             rival_score: 143,
-            my_score: 143,
+            my_score: score.score,
             reign_seconds: 143,
         },
     }))

@@ -51,6 +51,35 @@ pub struct Player {
     pub avatar_url: String,
 }
 
+impl Player {
+    /// Finds a player by their Steam ID.
+    ///
+    /// # Arguments
+    ///
+    /// * `id_to_find` - The Steam ID of the player to find.
+    /// * `conn` - A mutable reference to an `AsyncPgConnection`.
+    ///
+    /// # Returns
+    ///
+    /// Returns a `QueryResult` containing the found player.
+    ///
+    /// # Errors
+    /// This fails if:
+    /// - The player fails to be found in the database
+    /// - The database connection fails
+    pub async fn find_by_steam_id(
+        id_to_find: SteamId,
+        conn: &mut AsyncPgConnection,
+    ) -> QueryResult<Self> {
+        use crate::schema::players::dsl::*;
+
+        players
+            .filter(steam_id.eq(SteamIdWrapper(id_to_find)))
+            .first(conn)
+            .await
+    }
+}
+
 #[derive(Insertable)]
 #[diesel(table_name = players)]
 pub struct NewPlayer<'a> {

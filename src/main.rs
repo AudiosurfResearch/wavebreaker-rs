@@ -14,6 +14,7 @@
     clippy::todo,
     //clippy::all  //for extra anger
 )]
+#![allow(clippy::wildcard_imports)]
 
 mod game;
 pub mod models;
