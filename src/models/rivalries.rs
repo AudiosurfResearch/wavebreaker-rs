@@ -5,13 +5,27 @@ use diesel_async::AsyncPgConnection;
 use diesel_async::RunQueryDsl;
 
 #[derive(Identifiable, Selectable, Queryable, Associations, Debug)]
-#[diesel(belongs_to(Player))]
-#[diesel(table_name = rivalries)]
-#[diesel(primary_key(player_id, rival_id))]
+#[diesel(belongs_to(Player, foreign_key = challenger_id))]
+#[diesel(table_name = rivalries, check_for_backend(diesel::pg::Pg))]
+#[diesel(primary_key(challenger_id, rival_id))]
 pub struct Rivalry {
-    pub player_id: i32,
+    pub challenger_id: i32,
     pub rival_id: i32,
     pub established_at: time::PrimitiveDateTime,
+}
+
+impl Rivalry {
+    /// Find out whether or not the rivalry is mutual.
+    pub async fn is_mutual(&self, conn: &mut AsyncPgConnection) -> bool {
+        use crate::schema::rivalries::dsl::*;
+
+        rivalries
+            .filter(challenger_id.eq(self.rival_id))
+            .filter(rival_id.eq(self.challenger_id))
+            .get_result::<Self>(conn)
+            .await
+            .is_ok()
+    }
 }
 
 #[derive(Insertable)]
@@ -21,7 +35,7 @@ pub struct Rivalry {
 /// This struct is used to create a new rivalry by specifying the player ID and rival ID.
 /// It provides a method to asynchronously create the rivalry in the database.
 pub struct NewRivalry {
-    pub player_id: i32,
+    pub challenger_id: i32,
     pub rival_id: i32,
 }
 
@@ -37,9 +51,9 @@ impl NewRivalry {
     ///
     /// A new `NewRivalry` instance.
     #[must_use]
-    pub const fn new(player_id: i32, rival_id: i32) -> Self {
+    pub const fn new(challenger_id: i32, rival_id: i32) -> Self {
         Self {
-            player_id,
+            challenger_id,
             rival_id,
         }
     }

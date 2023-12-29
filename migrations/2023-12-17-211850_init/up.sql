@@ -14,10 +14,10 @@ CREATE TABLE
 -- Rivalries
 CREATE TABLE
     rivalries (
-        player_id INTEGER NOT NULL REFERENCES players (id) ON DELETE CASCADE,
+        challenger_id INTEGER NOT NULL REFERENCES players (id) ON DELETE CASCADE,
         rival_id INTEGER NOT NULL REFERENCES players (id) ON DELETE CASCADE,
         established_at TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-        PRIMARY KEY (player_id, rival_id)
+        PRIMARY KEY (challenger_id, rival_id)
     );
 
-CREATE UNIQUE INDEX rivalries_AB_unique ON rivalries (player_id, rival_id);
+CREATE UNIQUE INDEX rivalries_AB_unique ON rivalries (challenger_id, rival_id);

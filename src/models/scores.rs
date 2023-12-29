@@ -10,7 +10,6 @@ use diesel::sql_types::SmallInt;
 use diesel::{prelude::*, serialize};
 use diesel_async::AsyncPgConnection;
 use diesel_async::RunQueryDsl;
-use num_enum::TryFromPrimitive;
 use time::{OffsetDateTime, PrimitiveDateTime};
 
 impl ToSql<SmallInt, Pg> for League
@@ -30,7 +29,7 @@ where
 {
     fn from_sql(bytes: DB::RawValue<'_>) -> deserialize::Result<Self> {
         let league_num = i16::from_sql(bytes)?;
-        Ok(Self::try_from_primitive(league_num)?)
+        Ok(Self::try_from(league_num)?)
     }
 }
 
@@ -51,19 +50,19 @@ where
 {
     fn from_sql(bytes: DB::RawValue<'_>) -> deserialize::Result<Self> {
         let league_num = i16::from_sql(bytes)?;
-        Ok(Self::try_from_primitive(league_num)?)
+        Ok(Self::try_from(league_num)?)
     }
 }
 
 #[derive(Identifiable, Selectable, Queryable, Associations, Debug)]
 #[diesel(belongs_to(Player))]
 #[diesel(belongs_to(Song))]
-#[diesel(table_name = scores)]
+#[diesel(table_name = scores, check_for_backend(diesel::pg::Pg))]
 #[diesel(primary_key(id))]
 pub struct Score {
     pub id: i32,
-    pub player_id: i32,
     pub song_id: i32,
+    pub player_id: i32,
     pub league: League,
     pub submitted_at: time::PrimitiveDateTime,
     pub play_count: i32,

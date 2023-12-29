@@ -15,8 +15,8 @@ diesel::table! {
 }
 
 diesel::table! {
-    rivalries (player_id, rival_id) {
-        player_id -> Int4,
+    rivalries (challenger_id, rival_id) {
+        challenger_id -> Int4,
         rival_id -> Int4,
         established_at -> Timestamp,
     }

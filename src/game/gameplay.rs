@@ -1,6 +1,7 @@
 use super::helpers::ticket_auth;
 use crate::models::players::Player;
-use crate::models::scores::NewScore;
+use crate::models::rivalries::Rivalry;
+use crate::models::scores::{NewScore, Score};
 use crate::models::songs::NewSong;
 use crate::util::errors::RouteError;
 use crate::util::game_types::{split_x_separated, League};
@@ -9,7 +10,11 @@ use crate::AppState;
 use axum::extract::State;
 use axum::Form;
 use axum_serde::Xml;
+use diesel::associations::HasTable;
+use diesel::prelude::*;
+use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
+use time::OffsetDateTime;
 use tracing::info;
 
 #[derive(Deserialize)]
@@ -103,7 +108,7 @@ struct BeatScore {
     #[serde(rename = "myscore")]
     my_score: i32,
     #[serde(rename = "reignseconds")]
-    reign_seconds: u32,
+    reign_seconds: i64,
 }
 
 /// Accepts score submissions by the client.
@@ -117,6 +122,10 @@ pub async fn send_ride(
     State(state): State<AppState>,
     Form(payload): Form<SendRideRequest>,
 ) -> Result<Xml<SendRideResponse>, RouteError> {
+    use crate::schema::players::dsl::*;
+    use crate::schema::rivalries::dsl::*;
+    use crate::schema::scores::dsl::*;
+
     let steam_player = ticket_auth(&payload.ticket, &state.steam_api).await?;
 
     info!(
@@ -125,9 +134,64 @@ pub async fn send_ride(
     );
 
     let mut conn = state.db.get().await?;
+    let player: Player = Player::find_by_steam_id(steam_player)
+        .first::<Player>(&mut conn)
+        .await?;
 
-    let player = Player::find_by_steam_id(steam_player, &mut conn).await?;
-    let score = NewScore::new(
+    let current_top: QueryResult<(Score, Player)> = scores
+        .inner_join(players::table())
+        .filter(song_id.eq(payload.song_id))
+        .filter(league.eq(payload.league))
+        .filter(player_id.ne(player.id))
+        .order(score.desc())
+        .first::<(Score, Player)>(&mut conn)
+        .await;
+
+    let beat_score = if let Ok(current_top) = current_top {
+        if current_top.0.score < payload.score {
+            info!(
+                "Player {} (Steam) dethroned {} on {} with score {}",
+                steam_player, current_top.1.id, current_top.0.song_id, payload.score
+            );
+        }
+
+        let reign_duration = OffsetDateTime::now_utc() - current_top.0.submitted_at.assume_utc();
+
+        let rivalry = rivalries
+            .find((player.id, player.id))
+            .first::<Rivalry>(&mut conn)
+            .await;
+        //If rivalry exists, check if rivalry is mutual
+        let mutual = if let Ok(rivalry) = rivalry {
+            rivalry.is_mutual(&mut conn).await
+        } else {
+            false
+        };
+
+        BeatScore {
+            dethroned: current_top.0.score < payload.score,
+            friend: mutual,
+            rival_name: current_top.1.username,
+            rival_score: current_top.0.score,
+            my_score: payload.score,
+            reign_seconds: reign_duration.whole_seconds(),
+        }
+    } else {
+        info!(
+            "Player {} (Steam) got a new top score of {}",
+            steam_player, payload.score
+        );
+        BeatScore {
+            dethroned: false,
+            friend: false,
+            rival_name: "No one".to_owned(),
+            rival_score: 143,
+            my_score: 0,
+            reign_seconds: 0,
+        }
+    };
+
+    let new_score = NewScore::new(
         player.id,
         payload.song_id,
         payload.league,
@@ -152,15 +216,8 @@ pub async fn send_ride(
     // TODO: Properly implement dethroning
     Ok(Xml(SendRideResponse {
         status: "allgood".to_owned(),
-        song_id: score.song_id,
-        beat_score: BeatScore {
-            dethroned: true,
-            friend: true,
-            rival_name: "test".to_owned(),
-            rival_score: 143,
-            my_score: score.score,
-            reign_seconds: 143,
-        },
+        song_id: new_score.song_id,
+        beat_score,
     }))
 }
 
@@ -176,13 +233,13 @@ pub struct GetRidesRequest {
 pub struct GetRidesResponse {
     #[serde(rename = "@status")]
     status: String,
-    scores: Vec<Score>,
+    scores: Vec<ResponseScore>,
     #[serde(rename = "servertime")]
     server_time: u64,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
-struct Score {
+struct ResponseScore {
     #[serde(rename = "@scoretype")]
     score_type: Leaderboard,
     league: Vec<LeagueRides>,
@@ -230,7 +287,7 @@ pub async fn get_rides(
 
     Ok(Xml(GetRidesResponse {
         status: "allgood".to_owned(),
-        scores: vec![Score {
+        scores: vec![ResponseScore {
             score_type: Leaderboard::Friend,
             league: vec![LeagueRides {
                 league_id: League::Casual,

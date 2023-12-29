@@ -111,7 +111,7 @@ pub async fn steam_sync(
     for friend in &friends {
         diesel::insert_into(crate::schema::rivalries::table)
             .values((
-                crate::schema::rivalries::player_id
+                crate::schema::rivalries::challenger_id
                     .eq(i32::try_from(steam_player.get_account_id())?),
                 crate::schema::rivalries::rival_id.eq(friend.steam_account_num),
             ))

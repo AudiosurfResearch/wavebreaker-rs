@@ -3,6 +3,7 @@ Wavebreaker.toml
 Rocket.toml
 .sqlx
 .env
+.cargo
 
 # VSC-specific
 .vscode

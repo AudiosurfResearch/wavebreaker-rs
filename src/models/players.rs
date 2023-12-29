@@ -39,7 +39,7 @@ where
 }
 
 #[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug)]
-#[diesel(table_name = players)]
+#[diesel(table_name = players, check_for_backend(diesel::pg::Pg))]
 pub struct Player {
     pub id: i32,
     pub username: String,
@@ -51,6 +51,10 @@ pub struct Player {
     pub avatar_url: String,
 }
 
+type All = diesel::dsl::Select<players::table, diesel::dsl::AsSelect<Player, diesel::pg::Pg>>;
+type WithSteamId = diesel::dsl::Eq<players::steam_id, SteamIdWrapper>;
+type BySteamId = diesel::dsl::Filter<All, WithSteamId>;
+
 impl Player {
     /// Finds a player by their Steam ID.
     ///
@@ -61,22 +65,22 @@ impl Player {
     ///
     /// # Returns
     ///
-    /// Returns a `QueryResult` containing the found player.
+    /// Returns a query fragment
     ///
     /// # Errors
     /// This fails if:
     /// - The player fails to be found in the database
     /// - The database connection fails
-    pub async fn find_by_steam_id(
-        id_to_find: SteamId,
-        conn: &mut AsyncPgConnection,
-    ) -> QueryResult<Self> {
+    #[must_use]
+    pub fn find_by_steam_id(id_to_find: SteamId) -> BySteamId {
         use crate::schema::players::dsl::*;
 
-        players
-            .filter(steam_id.eq(SteamIdWrapper(id_to_find)))
-            .first(conn)
-            .await
+        Self::all().filter(steam_id.eq(SteamIdWrapper(id_to_find)))
+    }
+
+    #[must_use]
+    pub fn all() -> All {
+        players::table.select(Self::as_select())
     }
 }
 

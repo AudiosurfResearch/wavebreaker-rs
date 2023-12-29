@@ -4,7 +4,7 @@ use diesel_async::AsyncPgConnection;
 use diesel_async::RunQueryDsl;
 
 #[derive(Identifiable, Selectable, Queryable, Debug)]
-#[diesel(table_name = songs)]
+#[diesel(table_name = songs, check_for_backend(diesel::pg::Pg))]
 #[diesel(primary_key(id))]
 pub struct Song {
     pub id: i32,
