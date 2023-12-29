@@ -12,9 +12,19 @@ steam_key = "music_bokura_zutto_so_hype"
 ```
 
 To connect, use the latest Wavebreaker client with ``forceInsecure`` set to ``true`` in its config. This is only intended for local testing.
-*The end goal of this endeavour is to have feature parity with the TypeScript version!*
+*The end goal of this endeavour is to have feature parity with the [TypeScript version!](https://github.com/AudiosurfResearch/Wavebreaker)*
 
 ## What works currently?
 - Logging in/registering via Steam
 - Automatically adding Steam friends as rivals
 - Creating and retrieving songs from the DB
+- Submitting scores
+- **Proper dethrones and the Brutus achievement!** (not present in TypeScript version)
+
+## What still needs to be done?
+- Score retrieval
+- Audiosurf Radio
+
+# Contributing
+
+*See [CONTRIBUTING.md](https://github.com/AudiosurfResearch/wavebreaker-rs/blob/master/CONTRIBUTING.md).*
