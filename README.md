@@ -24,7 +24,9 @@ To connect, use the latest Wavebreaker client with ``forceInsecure`` set to ``tr
 ## What still needs to be done?
 - Score retrieval
 - Audiosurf Radio
+- MusicBrainz sync
+- Non-game API (for the frontend)
 
-# Contributing
+## Contributing
 
 *See [CONTRIBUTING.md](https://github.com/AudiosurfResearch/wavebreaker-rs/blob/master/CONTRIBUTING.md).*
