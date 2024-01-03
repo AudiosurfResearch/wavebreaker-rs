@@ -1,3 +1,4 @@
+use crate::models::rivalries::Rivalry;
 use crate::schema::players;
 use diesel::backend::Backend;
 use diesel::deserialize::{self, FromSql, FromSqlRow};
@@ -10,10 +11,11 @@ use diesel::{
 };
 use diesel_async::AsyncPgConnection;
 use diesel_async::RunQueryDsl;
+use serde::Serialize;
 use std::str::FromStr;
 use steam_rs::steam_id::SteamId;
 
-#[derive(AsExpression, FromSqlRow, Debug, PartialEq, Eq)]
+#[derive(Serialize, AsExpression, FromSqlRow, Debug, PartialEq, Eq)]
 #[diesel(sql_type = diesel::sql_types::Text)]
 pub struct SteamIdWrapper(pub SteamId);
 
@@ -38,7 +40,7 @@ where
     }
 }
 
-#[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug)]
+#[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Serialize)]
 #[diesel(table_name = players, check_for_backend(diesel::pg::Pg))]
 pub struct Player {
     pub id: i32,
@@ -78,9 +80,41 @@ impl Player {
         Self::all().filter(steam_id.eq(SteamIdWrapper(id_to_find)))
     }
 
+    /// Returns a query fragment that selects all players.
     #[must_use]
     pub fn all() -> All {
         players::table.select(Self::as_select())
+    }
+
+    /// Retrieves the rivals of a player.
+    ///
+    /// # Arguments
+    ///
+    /// * `conn` - A mutable reference to an `AsyncPgConnection`.
+    ///
+    /// # Returns
+    ///
+    /// Returns a `QueryResult` containing a vector of players.
+    ///
+    /// # Errors
+    ///
+    /// This fails if the database connection fails
+    pub async fn get_rivals(&self, conn: &mut AsyncPgConnection) -> QueryResult<Vec<Self>> {
+        use crate::schema::players::dsl::*;
+        use crate::schema::rivalries::dsl::*;
+
+        let rival_ids = rivalries
+            .filter(challenger_id.eq(self.id))
+            .load::<Rivalry>(conn)
+            .await?
+            .into_iter()
+            .map(|rivalry| rivalry.rival_id)
+            .collect::<Vec<i32>>();
+
+        players
+            .filter(id.eq_any(rival_ids))
+            .load::<Self>(conn)
+            .await
     }
 }
 

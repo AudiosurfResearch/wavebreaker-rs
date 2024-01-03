@@ -2,6 +2,7 @@ use crate::models::players::Player;
 use crate::models::songs::Song;
 use crate::schema::scores;
 use crate::util::game_types::{Character, League};
+use diesel::associations::HasTable;
 use diesel::backend::Backend;
 use diesel::deserialize::{self, FromSql};
 use diesel::pg::Pg;
@@ -10,6 +11,7 @@ use diesel::sql_types::SmallInt;
 use diesel::{prelude::*, serialize};
 use diesel_async::AsyncPgConnection;
 use diesel_async::RunQueryDsl;
+use serde::Serialize;
 use time::{OffsetDateTime, PrimitiveDateTime};
 
 impl ToSql<SmallInt, Pg> for League
@@ -54,7 +56,7 @@ where
     }
 }
 
-#[derive(Identifiable, Selectable, Queryable, Associations, Debug)]
+#[derive(Identifiable, Selectable, Queryable, Associations, Debug, Serialize)]
 #[diesel(belongs_to(Player))]
 #[diesel(belongs_to(Song))]
 #[diesel(table_name = scores, check_for_backend(diesel::pg::Pg))]
@@ -76,6 +78,54 @@ pub struct Score {
     pub gold_threshold: i32,
     pub iss: i32,
     pub isj: i32,
+}
+
+impl Score {
+    /// Retrieves the scores for a specific song and league, for display in-game.
+    ///
+    /// # Arguments
+    ///
+    /// * `find_song_id` - The ID of the song to find scores for.
+    /// * `find_league` - The league to filter scores by.
+    /// * `conn` - The database connection.
+    ///
+    /// # Returns
+    ///
+    /// A vector of `ScoreWithPlayer` structs.
+    ///
+    /// # Errors
+    ///
+    /// This fails if the database query fails.
+    pub async fn get_for_game(
+        find_song_id: i32,
+        find_league: League,
+        conn: &mut AsyncPgConnection,
+    ) -> QueryResult<Vec<ScoreWithPlayer>> {
+        use crate::schema::players::dsl::*;
+        use crate::schema::scores::dsl::*;
+
+        Ok(scores
+            .inner_join(players::table())
+            .filter(song_id.eq(find_song_id))
+            .filter(league.eq(find_league))
+            .order(score.desc())
+            .limit(15)
+            .load::<(Self, Player)>(conn)
+            .await?
+            .into_iter()
+            .map(|(curr_score, player)| ScoreWithPlayer {
+                score: curr_score,
+                player,
+            })
+            .collect::<Vec<ScoreWithPlayer>>())
+    }
+}
+
+#[derive(Serialize)]
+pub struct ScoreWithPlayer {
+    #[serde(flatten)]
+    pub score: Score,
+    pub player: Player,
 }
 
 #[derive(Insertable)]

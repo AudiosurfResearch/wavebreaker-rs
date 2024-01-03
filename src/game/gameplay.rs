@@ -224,7 +224,7 @@ pub async fn send_ride(
 #[derive(Deserialize)]
 pub struct GetRidesRequest {
     #[serde(rename = "songid")]
-    song_id: u64,
+    song_id: i32,
     ticket: String,
 }
 
@@ -252,20 +252,26 @@ struct LeagueRides {
     ride: Vec<Ride>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 struct Ride {
+    /// Player ID is for internal use only
+    #[serde(skip)]
+    player_id: i32,
+    /// Location is for internal use only
+    #[serde(skip)]
+    location_id: i32,
     username: String,
-    score: u64,
+    score: i32,
     #[serde(rename = "vehicleid")]
     vehicle_id: Character,
     #[serde(rename = "ridetime")]
-    time: u64,
+    time: i64,
     feats: String,
     /// In centiseconds (milliseconds / 10)
     #[serde(rename = "songlength")]
-    song_length: u64,
+    song_length: i32,
     #[serde(rename = "trafficcount")]
-    traffic_count: u64,
+    traffic_count: i32,
 }
 
 /// Returns scores for a given song.
@@ -285,23 +291,104 @@ pub async fn get_rides(
         steam_player, payload.song_id
     );
 
+    let mut conn = state.db.get().await?;
+
+    let player: Player = Player::find_by_steam_id(steam_player)
+        .first::<Player>(&mut conn)
+        .await?;
+    let mut rival_ids: Vec<i32> = player
+        .get_rivals(&mut conn)
+        .await?
+        .iter()
+        .map(|r| r.id)
+        .collect();
+    rival_ids.push(player.id); // Include self in rival scores
+
+    let mut global_rides: Vec<LeagueRides> = vec![];
+
+    // Get all scores on the song for each league
+    for league in [League::Casual, League::Pro, League::Elite] {
+        let scores = Score::get_for_game(payload.song_id, league, &mut conn).await?;
+
+        let mut league_rides = LeagueRides {
+            league_id: league,
+            ride: vec![],
+        };
+
+        for with_player in scores {
+            league_rides.ride.push(Ride {
+                player_id: with_player.player.id,
+                location_id: with_player.player.location_id,
+                username: with_player.player.username,
+                score: with_player.score.score,
+                vehicle_id: with_player.score.vehicle,
+                time: with_player.score.submitted_at.assume_utc().unix_timestamp(),
+                feats: with_player
+                    .score
+                    .feats
+                    .iter()
+                    .filter_map(std::clone::Clone::clone)
+                    .collect::<Vec<String>>()
+                    .join(", "),
+                song_length: with_player.score.song_length,
+                traffic_count: with_player.score.density,
+            });
+        }
+
+        global_rides.push(league_rides);
+    }
+
+    // Scan through every ride in the global rides
+    // If the ride is by a rival, add it to the rival rides
+    // If the ride is from someone with the same location ID, add it to the nearby rides
+    let mut rival_rides: Vec<LeagueRides> = vec![];
+    let mut nearby_rides: Vec<LeagueRides> = vec![];
+
+    for league_ride in &global_rides {
+        let mut rival_league_rides = LeagueRides {
+            league_id: league_ride.league_id,
+            ride: vec![],
+        };
+        let mut nearby_league_rides = LeagueRides {
+            league_id: league_ride.league_id,
+            ride: vec![],
+        };
+
+        for ride in &league_ride.ride {
+            if rival_ids.contains(&ride.player_id) {
+                rival_league_rides.ride.push(ride.clone());
+            }
+
+            if ride.location_id == player.location_id {
+                nearby_league_rides.ride.push(ride.clone());
+            }
+        }
+
+        if !rival_league_rides.ride.is_empty() {
+            rival_rides.push(rival_league_rides);
+        }
+
+        if !nearby_league_rides.ride.is_empty() {
+            nearby_rides.push(nearby_league_rides);
+        }
+    }
+
     Ok(Xml(GetRidesResponse {
         status: "allgood".to_owned(),
-        scores: vec![ResponseScore {
-            score_type: Leaderboard::Friend,
-            league: vec![LeagueRides {
-                league_id: League::Casual,
-                ride: vec![Ride {
-                    username: "frien :)".to_owned(),
-                    score: 143,
-                    vehicle_id: Character::PointmanElite,
-                    time: 143,
-                    feats: "Stealth, I guess?".to_owned(),
-                    song_length: 14300,
-                    traffic_count: 143,
-                }],
-            }],
-        }],
+        scores: vec![
+            ResponseScore {
+                score_type: Leaderboard::Global,
+                league: global_rides,
+            },
+            ResponseScore {
+                score_type: Leaderboard::Friend,
+                league: rival_rides,
+            },
+            ResponseScore {
+                score_type: Leaderboard::Nearby,
+                league: nearby_rides,
+            },
+        ],
         server_time: 143,
     }))
 }

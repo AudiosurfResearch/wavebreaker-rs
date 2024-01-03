@@ -55,9 +55,4 @@ diesel::table! {
 diesel::joinable!(scores -> players (player_id));
 diesel::joinable!(scores -> songs (song_id));
 
-diesel::allow_tables_to_appear_in_same_query!(
-    players,
-    rivalries,
-    scores,
-    songs,
-);
+diesel::allow_tables_to_appear_in_same_query!(players, rivalries, scores, songs,);
