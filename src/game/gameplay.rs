@@ -1,7 +1,7 @@
 use super::helpers::ticket_auth;
 use crate::models::players::Player;
 use crate::models::rivalries::Rivalry;
-use crate::models::scores::{NewScore, Score};
+use crate::models::scores::{NewScore, Score, ScoreWithPlayer};
 use crate::models::songs::NewSong;
 use crate::util::errors::RouteError;
 use crate::util::game_types::{split_x_separated, League};
@@ -15,6 +15,7 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
+use tokio::try_join;
 use tracing::info;
 
 #[derive(Deserialize)]
@@ -254,12 +255,6 @@ struct LeagueRides {
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 struct Ride {
-    /// Player ID is for internal use only
-    #[serde(skip)]
-    player_id: i32,
-    /// Location is for internal use only
-    #[serde(skip)]
-    location_id: i32,
     username: String,
     score: i32,
     #[serde(rename = "vehicleid")]
@@ -274,6 +269,33 @@ struct Ride {
     traffic_count: i32,
 }
 
+fn create_league_rides(league: League, scores: Vec<ScoreWithPlayer>) -> LeagueRides {
+    let mut league_rides = LeagueRides {
+        league_id: league,
+        ride: vec![],
+    };
+
+    for with_player in scores {
+        league_rides.ride.push(Ride {
+            username: with_player.player.username,
+            score: with_player.score.score,
+            vehicle_id: with_player.score.vehicle,
+            time: with_player.score.submitted_at.assume_utc().unix_timestamp(),
+            feats: with_player
+                .score
+                .feats
+                .iter()
+                .filter_map(std::clone::Clone::clone)
+                .collect::<Vec<String>>()
+                .join(", "),
+            song_length: with_player.score.song_length,
+            traffic_count: with_player.score.density,
+        });
+    }
+
+    league_rides
+}
+
 /// Returns scores for a given song.
 ///
 /// # Errors
@@ -284,8 +306,9 @@ pub async fn get_rides(
     State(state): State<AppState>,
     Form(payload): Form<GetRidesRequest>,
 ) -> Result<Xml<GetRidesResponse>, RouteError> {
-    let steam_player = ticket_auth(&payload.ticket, &state.steam_api).await?;
+    const ALL_LEAGUES: [League; 3] = [League::Casual, League::Pro, League::Elite];
 
+    let steam_player = ticket_auth(&payload.ticket, &state.steam_api).await?;
     info!(
         "Player {} (Steam) requesting rides of song {}",
         steam_player, payload.song_id
@@ -296,81 +319,35 @@ pub async fn get_rides(
     let player: Player = Player::find_by_steam_id(steam_player)
         .first::<Player>(&mut conn)
         .await?;
+
     let mut rival_ids: Vec<i32> = player
         .get_rivals(&mut conn)
         .await?
         .iter()
         .map(|r| r.id)
         .collect();
-    rival_ids.push(player.id); // Include self in rival scores
+    rival_ids.push(player.id); // So the player can see themself in rival scores
 
     let mut global_rides: Vec<LeagueRides> = vec![];
-
-    // Get all scores on the song for each league
-    for league in [League::Casual, League::Pro, League::Elite] {
-        let scores = Score::get_for_game(payload.song_id, league, &mut conn).await?;
-
-        let mut league_rides = LeagueRides {
-            league_id: league,
-            ride: vec![],
-        };
-
-        for with_player in scores {
-            league_rides.ride.push(Ride {
-                player_id: with_player.player.id,
-                location_id: with_player.player.location_id,
-                username: with_player.player.username,
-                score: with_player.score.score,
-                vehicle_id: with_player.score.vehicle,
-                time: with_player.score.submitted_at.assume_utc().unix_timestamp(),
-                feats: with_player
-                    .score
-                    .feats
-                    .iter()
-                    .filter_map(std::clone::Clone::clone)
-                    .collect::<Vec<String>>()
-                    .join(", "),
-                song_length: with_player.score.song_length,
-                traffic_count: with_player.score.density,
-            });
-        }
-
-        global_rides.push(league_rides);
-    }
-
-    // Scan through every ride in the global rides
-    // If the ride is by a rival, add it to the rival rides
-    // If the ride is from someone with the same location ID, add it to the nearby rides
     let mut rival_rides: Vec<LeagueRides> = vec![];
     let mut nearby_rides: Vec<LeagueRides> = vec![];
 
-    for league_ride in &global_rides {
-        let mut rival_league_rides = LeagueRides {
-            league_id: league_ride.league_id,
-            ride: vec![],
-        };
-        let mut nearby_league_rides = LeagueRides {
-            league_id: league_ride.league_id,
-            ride: vec![],
-        };
+    for league in ALL_LEAGUES {
+        // can't borrow that one connection as mutable multiple times, so we need more
+        let mut conn1 = state.db.get().await?;
+        let mut conn2 = state.db.get().await?;
 
-        for ride in &league_ride.ride {
-            if rival_ids.contains(&ride.player_id) {
-                rival_league_rides.ride.push(ride.clone());
-            }
+        let global_future = Score::game_get_global(payload.song_id, league, &mut conn);
+        let rival_future = Score::game_get_rivals(payload.song_id, league, &rival_ids, &mut conn1);
+        let nearby_future =
+            Score::game_get_nearby(payload.song_id, league, player.location_id, &mut conn2);
 
-            if ride.location_id == player.location_id {
-                nearby_league_rides.ride.push(ride.clone());
-            }
-        }
+        let (global_scores, rival_scores, nearby_scores) =
+            try_join!(global_future, rival_future, nearby_future)?;
 
-        if !rival_league_rides.ride.is_empty() {
-            rival_rides.push(rival_league_rides);
-        }
-
-        if !nearby_league_rides.ride.is_empty() {
-            nearby_rides.push(nearby_league_rides);
-        }
+        global_rides.push(create_league_rides(league, global_scores));
+        rival_rides.push(create_league_rides(league, rival_scores));
+        nearby_rides.push(create_league_rides(league, nearby_scores));
     }
 
     Ok(Xml(GetRidesResponse {

@@ -96,7 +96,7 @@ impl Score {
     /// # Errors
     ///
     /// This fails if the database query fails.
-    pub async fn get_for_game(
+    pub async fn game_get_global(
         find_song_id: i32,
         find_league: League,
         conn: &mut AsyncPgConnection,
@@ -109,7 +109,91 @@ impl Score {
             .filter(song_id.eq(find_song_id))
             .filter(league.eq(find_league))
             .order(score.desc())
-            .limit(15)
+            .limit(11)
+            .load::<(Self, Player)>(conn)
+            .await?
+            .into_iter()
+            .map(|(curr_score, player)| ScoreWithPlayer {
+                score: curr_score,
+                player,
+            })
+            .collect::<Vec<ScoreWithPlayer>>())
+    }
+
+    /// Retrieves all rivals' scores for a specific song and league, for display in-game.
+    ///
+    /// # Arguments
+    ///
+    /// * `find_song_id` - The ID of the song to find scores for.
+    /// * `find_league` - The league to filter scores by.
+    /// *  `rival_ids` - The IDs of the rivals to filter scores by.
+    /// * `conn` - The database connection.
+    ///
+    /// # Returns
+    ///
+    /// A vector of `ScoreWithPlayer` structs.
+    ///
+    /// # Errors
+    ///
+    /// This fails if the database query fails.
+    pub async fn game_get_rivals(
+        find_song_id: i32,
+        find_league: League,
+        rival_ids: &Vec<i32>,
+        conn: &mut AsyncPgConnection,
+    ) -> QueryResult<Vec<ScoreWithPlayer>> {
+        use crate::schema::players::dsl::*;
+        use crate::schema::scores::dsl::*;
+
+        Ok(scores
+            .inner_join(players::table())
+            .filter(song_id.eq(find_song_id))
+            .filter(league.eq(find_league))
+            .filter(player_id.eq_any(rival_ids))
+            .order(score.desc())
+            .limit(11)
+            .load::<(Self, Player)>(conn)
+            .await?
+            .into_iter()
+            .map(|(curr_score, player)| ScoreWithPlayer {
+                score: curr_score,
+                player,
+            })
+            .collect::<Vec<ScoreWithPlayer>>())
+    }
+
+    /// Retrieves the scores of everyone with a certain location
+    /// for a specific song and league, for display in-game.
+    ///
+    /// # Arguments
+    ///
+    /// * `find_song_id` - The ID of the song to find scores for.
+    /// * `find_league` - The league to filter scores by.
+    /// * `conn` - The database connection.
+    ///
+    /// # Returns
+    ///
+    /// A vector of `ScoreWithPlayer` structs.
+    ///
+    /// # Errors
+    ///
+    /// This fails if the database query fails.
+    pub async fn game_get_nearby(
+        find_song_id: i32,
+        find_league: League,
+        find_location_id: i32,
+        conn: &mut AsyncPgConnection,
+    ) -> QueryResult<Vec<ScoreWithPlayer>> {
+        use crate::schema::players::dsl::*;
+        use crate::schema::scores::dsl::*;
+
+        Ok(scores
+            .inner_join(players::table())
+            .filter(song_id.eq(find_song_id))
+            .filter(league.eq(find_league))
+            .filter(location_id.eq(find_location_id))
+            .order(score.desc())
+            .limit(11)
             .load::<(Self, Player)>(conn)
             .await?
             .into_iter()
