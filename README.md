@@ -1,5 +1,5 @@
 # wavebreaker-rs
-**EXTREMELY WIP!!!!!** (Yes, so much so that it's worth five exclamation marks!!!!!)
+**EXTREMELY WIP!!!** (Yes, so much so that it's worth three exclamation marks!!!)
 
 Config example:
 ```toml
@@ -16,16 +16,17 @@ To connect, use the latest Wavebreaker client with ``forceInsecure`` set to ``tr
 
 ## What works currently?
 - Logging in/registering via Steam
+- Leaderboards
 - Automatically adding Steam friends as rivals
 - Creating and retrieving songs from the DB
 - Submitting scores
 - **Proper dethrones and the Brutus achievement!** (not present in TypeScript version)
 
 ## What still needs to be done?
-- Score retrieval
 - Audiosurf Radio
 - MusicBrainz integration
 - Non-game API (for the frontend)
+- Miscellaneous things (shouts, custom news, etc.)
 
 ## Contributing
 
