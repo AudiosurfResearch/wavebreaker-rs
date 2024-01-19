@@ -4,6 +4,7 @@ Rocket.toml
 .sqlx
 .env
 .cargo
+radio/*
 
 # VSC-specific
 .vscode

@@ -16,7 +16,7 @@ use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 use tokio::try_join;
-use tracing::info;
+use tracing::{info, instrument};
 
 #[derive(Deserialize)]
 pub struct SongIdRequest {
@@ -43,6 +43,7 @@ pub struct SongIdResponse {
 /// This fails if:
 /// - The response fails to serialize
 /// - The song fails to be created/retrieved
+#[instrument(skip_all)]
 pub async fn fetch_song_id(
     State(state): State<AppState>,
     Form(payload): Form<SongIdRequest>,
@@ -119,6 +120,7 @@ struct BeatScore {
 /// - The response fails to serialize
 /// - Authenticating with Steam fails
 /// - The score fails to be inserted
+#[instrument(skip_all)]
 pub async fn send_ride(
     State(state): State<AppState>,
     Form(payload): Form<SendRideRequest>,
@@ -302,6 +304,7 @@ fn create_league_rides(league: League, scores: Vec<ScoreWithPlayer>) -> LeagueRi
 /// This fails if:
 /// - The response fails to serialize
 /// - Authenticating with Steam fails
+#[instrument(skip_all)]
 pub async fn get_rides(
     State(state): State<AppState>,
     Form(payload): Form<GetRidesRequest>,

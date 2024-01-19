@@ -12,7 +12,7 @@ use diesel::ExpressionMethods;
 use diesel::QueryDsl;
 use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
-use tracing::info;
+use tracing::{info, instrument};
 
 #[derive(Deserialize)]
 pub struct LoginSteamRequest {
@@ -39,6 +39,8 @@ pub struct LoginSteamResponse {
 /// This fails if:
 /// - The response fails to serialize
 /// - Authenticating with Steam fails
+/// - Something goes wrong with the database
+#[instrument(skip_all)]
 pub async fn login_steam(
     State(state): State<AppState>,
     Form(payload): Form<LoginSteamRequest>,
@@ -87,6 +89,14 @@ pub struct SteamSyncResponse {
     status: String,
 }
 
+/// Attempts to sync rivals with user's Steam friends.
+///
+/// # Errors
+/// This fails if:
+/// - The response fails to serialize
+/// - Authenticating with Steam fails
+/// - Something goes wrong with the database
+#[instrument(skip_all)]
 pub async fn steam_sync(
     State(state): State<AppState>,
     Form(payload): Form<SteamSyncRequest>,

@@ -36,9 +36,12 @@ use steam_rs::Steam;
 use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
+use crate::game::routes_as;
+
 #[derive(Deserialize, Clone)]
 struct Config {
     main: Main,
+    radio: Radio,
     external: External,
 }
 
@@ -46,6 +49,21 @@ struct Config {
 struct Main {
     address: String,
     database: String,
+}
+
+#[derive(Deserialize, Clone)]
+struct Radio {
+    cgr_location: String,
+    songs: Vec<RadioSong>,
+}
+
+#[derive(Deserialize, Clone)]
+struct RadioSong {
+    id: u32,
+    title: String,
+    artist: String,
+    buy_url: String,
+    cgr_url: String,
 }
 
 #[derive(Deserialize, Clone)]
@@ -101,6 +119,7 @@ async fn main() -> anyhow::Result<()> {
 
     let app = Router::new()
         .nest("/as_steamlogin", routes_steam())
+        .nest("/as", routes_as(&state.config.radio.cgr_location))
         .with_state(state);
 
     axum::serve(listener, app)
