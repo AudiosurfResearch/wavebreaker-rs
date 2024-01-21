@@ -36,7 +36,7 @@ use steam_rs::Steam;
 use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-use crate::game::routes_as;
+use crate::game::{routes_as, routes_steam_doubleslash};
 
 #[derive(Deserialize, Clone)]
 struct Config {
@@ -109,6 +109,7 @@ async fn main() -> anyhow::Result<()> {
 
     let app = Router::new()
         .nest("/as_steamlogin", routes_steam())
+        .nest("//as_steamlogin", routes_steam_doubleslash()) // for that one edge case
         .nest("/as", routes_as(&state.config.radio.cgr_location))
         .with_state(state);
 

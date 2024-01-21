@@ -1,9 +1,11 @@
 mod gameplay;
 mod helpers;
+mod misc;
 mod radio;
 mod user;
 
 use self::gameplay::{fetch_song_id, get_rides, send_ride};
+use self::misc::get_custom_news;
 use self::radio::get_radio_list;
 use self::user::{login_steam, steam_sync};
 use crate::AppState;
@@ -19,6 +21,13 @@ pub fn routes_steam() -> Router<AppState> {
         .route("/game_fetchsongid_unicode.php", post(fetch_song_id))
         .route("/game_SendRideSteamVerified.php", post(send_ride))
         .route("/game_GetRidesSteamVerified.php", post(get_rides))
+}
+
+/// Returns all routes used for everything under ``//as_steamlogin``
+/// beware the double slash
+pub fn routes_steam_doubleslash() -> Router<AppState> {
+    Router::new()
+        .route("/game_CustomNews.php", post(get_custom_news))
 }
 
 /// Returns all routes used for everything under ``/as``
