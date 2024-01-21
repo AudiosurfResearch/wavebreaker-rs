@@ -1,5 +1,6 @@
 /target
 Wavebreaker.toml
+WavebreakerRadio.toml
 Rocket.toml
 .sqlx
 .env

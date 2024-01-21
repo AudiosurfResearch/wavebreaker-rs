@@ -20,10 +20,10 @@ To connect, use the latest Wavebreaker client with ``forceInsecure`` set to ``tr
 - Automatically adding Steam friends as rivals
 - Creating and retrieving songs from the DB
 - Submitting scores
+- **Audiosurf Radio!**
 - **Proper dethrones and the Brutus achievement!** (not present in TypeScript version)
 
 ## What still needs to be done?
-- Audiosurf Radio
 - MusicBrainz integration
 - Non-game API (for the frontend)
 - Miscellaneous things (shouts, custom news, etc.)

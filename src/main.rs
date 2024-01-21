@@ -54,16 +54,6 @@ struct Main {
 #[derive(Deserialize, Clone)]
 struct Radio {
     cgr_location: String,
-    songs: Vec<RadioSong>,
-}
-
-#[derive(Deserialize, Clone)]
-struct RadioSong {
-    id: u32,
-    title: String,
-    artist: String,
-    buy_url: String,
-    cgr_url: String,
 }
 
 #[derive(Deserialize, Clone)]
