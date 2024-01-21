@@ -11,7 +11,7 @@
     clippy::len_zero,
     clippy::question_mark,
     clippy::suspicious,
-    clippy::todo,
+    clippy::todo
 )]
 #![allow(clippy::wildcard_imports)]
 

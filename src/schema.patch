@@ -1,0 +1,25 @@
+diff --git a/src/schema.rs b/src/schema.rs
+index 0944390..58a4ee2 100644
+--- a/src/schema.rs
++++ b/src/schema.rs
+@@ -28,17 +28,17 @@ diesel::table! {
+         song_id -> Int4,
+         player_id -> Int4,
+         league -> Int2,
+         submitted_at -> Timestamp,
+         play_count -> Int4,
+         score -> Int4,
+-        track_shape -> Array<Nullable<Int4>>,
+-        xstats -> Array<Nullable<Int4>>,
++        track_shape -> Array<Int4>,
++        xstats -> Array<Int4>,
+         density -> Int4,
+         vehicle -> Int2,
+-        feats -> Array<Nullable<Text>>,
++        feats -> Array<Text>,
+         song_length -> Int4,
+         gold_threshold -> Int4,
+         iss -> Int4,
+         isj -> Int4,
+     }
+ }

@@ -5,7 +5,7 @@ mod radio;
 mod user;
 
 use self::gameplay::{fetch_song_id, get_rides, send_ride};
-use self::misc::get_custom_news;
+use self::misc::{fetch_track_shape, get_custom_news};
 use self::radio::get_radio_list;
 use self::user::{login_steam, steam_sync};
 use crate::AppState;
@@ -26,13 +26,13 @@ pub fn routes_steam() -> Router<AppState> {
 /// Returns all routes used for everything under ``//as_steamlogin``
 /// beware the double slash
 pub fn routes_steam_doubleslash() -> Router<AppState> {
-    Router::new()
-        .route("/game_CustomNews.php", post(get_custom_news))
+    Router::new().route("/game_CustomNews.php", post(get_custom_news))
 }
 
 /// Returns all routes used for everything under ``/as``
 pub fn routes_as(cgr_path: &str) -> Router<AppState> {
     Router::new()
+        .route("/game_fetchtrackshape2.php", post(fetch_track_shape))
         .route("/asradio/game_asradiolist5.php", post(get_radio_list))
         .nest_service("/asradio", ServeDir::new(cgr_path))
 }

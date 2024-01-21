@@ -78,3 +78,16 @@ where
         .map(str::parse::<T>)
         .collect::<Result<Vec<T>, T::Err>>()
 }
+
+pub fn join_x_separated<T>(v: &[T]) -> String
+where
+    T: std::fmt::Display,
+{
+    let mut result = v
+        .iter()
+        .map(std::string::ToString::to_string)
+        .collect::<Vec<String>>()
+        .join("x");
+    result.push('x');
+    result
+}
