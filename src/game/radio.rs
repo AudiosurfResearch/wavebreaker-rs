@@ -8,10 +8,13 @@ use crate::util::{errors::RouteError, radio::get_radio_songs};
 #[instrument]
 pub async fn get_radio_list() -> Result<String, RouteError> {
     let radio_songs = match get_radio_songs() {
-        Ok(songs) => songs,
+        Ok(Some(songs)) => songs,
+        Ok(None) => {
+            return Ok("no radio songs-:*x-This server has-:*x-none-:*x-https://github.com/AudiosurfResearch-:*x-".to_owned());
+        }
         Err(e) => {
             tracing::error!("Failed to get radio songs: {}", e);
-            return Ok("no radio songs-:*x-This server has-:*x-none-:*x-https://github.com/AudiosurfResearch-:*x-".to_owned());
+            return Err(RouteError::new_internal_server());
         }
     };
 

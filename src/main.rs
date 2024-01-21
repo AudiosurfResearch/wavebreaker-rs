@@ -12,7 +12,6 @@
     clippy::question_mark,
     clippy::suspicious,
     clippy::todo,
-    //clippy::all  //for extra anger
 )]
 #![allow(clippy::wildcard_imports)]
 

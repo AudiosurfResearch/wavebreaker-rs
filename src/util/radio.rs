@@ -3,7 +3,7 @@ use std::fs;
 
 #[derive(Deserialize, Clone)]
 struct RadioConfig {
-    radio_songs: Vec<RadioSong>,
+    radio_songs: Option<Vec<RadioSong>>,
 }
 
 #[derive(Deserialize, Clone)]
@@ -17,7 +17,7 @@ pub struct RadioSong {
     pub cgr_url: String,
 }
 
-pub fn get_radio_songs() -> anyhow::Result<Vec<RadioSong>> {
+pub fn get_radio_songs() -> anyhow::Result<Option<Vec<RadioSong>>> {
     let config_string = fs::read_to_string("WavebreakerRadio.toml")?;
     let radio_config: RadioConfig = toml::from_str(&config_string)?;
     Ok(radio_config.radio_songs)
