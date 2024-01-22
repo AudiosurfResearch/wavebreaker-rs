@@ -1,0 +1,25 @@
+name: Rust
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+    - name: Build
+      run: cargo build --verbose
+    - uses: actions/upload-artifact@v4
+    - name: debug ${{ matrix.target }}
+      with:
+        name: wavebreaker-linux-debug
+        path: ./target/debug/wavebreaker
