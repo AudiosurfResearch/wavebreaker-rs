@@ -227,7 +227,7 @@ where
     S: Serialize + for<'a> Deserialize<'a> + Debug,
 {
     fn into_response(self) -> Response {
-        tracing::error!("Route error: {:?}", self.error);
+        tracing::error!("Error occurred in route: {:?}", self.error);
 
         let status = self.status_code();
         let extra_data = self.extra_data;
@@ -313,7 +313,7 @@ pub trait IntoRouteError<T> {
     }
 }
 
-impl<T, E: Into<AnyhowError> + std::fmt::Debug> IntoRouteError<T> for Result<T, E> {
+impl<T: std::fmt::Debug, E: Into<AnyhowError> + std::fmt::Debug> IntoRouteError<T> for Result<T, E> {
     fn http_error(
         self,
         message: &str,

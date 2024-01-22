@@ -21,13 +21,14 @@ pub mod schema;
 mod util;
 
 use anyhow::Context;
-use axum::Router;
+use axum::{Router, extract::{Request, MatchedPath}};
 use diesel_async::pooled_connection::deadpool::Pool;
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use figment::{
     providers::{Env, Format, Toml},
     Figment,
 };
+use tower_http::trace::TraceLayer;
 use game::routes_steam;
 use serde::Deserialize;
 use std::sync::Arc;
@@ -110,6 +111,26 @@ async fn main() -> anyhow::Result<()> {
         .nest("/as_steamlogin", routes_steam())
         .nest("//as_steamlogin", routes_steam_doubleslash()) // for that one edge case
         .nest("/as", routes_as(&state.config.radio.cgr_location))
+        .layer(
+            // TAKEN FROM: https://github.com/tokio-rs/axum/blob/d1fb14ead1063efe31ae3202e947ffd569875c0b/examples/error-handling/src/main.rs#L60-L77
+            TraceLayer::new_for_http() // Create our own span for the request and include the matched path. The matched
+                // path is useful for figuring out which handler the request was routed to.
+                .make_span_with(|req: &Request| {
+                    let method = req.method();
+                    let uri = req.uri();
+
+                    // axum automatically adds this extension.
+                    let matched_path = req
+                        .extensions()
+                        .get::<MatchedPath>()
+                        .map(axum::extract::MatchedPath::as_str);
+
+                    tracing::debug_span!("request", %method, %uri, matched_path)
+                })
+                // By default `TraceLayer` will log 5xx responses but we're doing our specific
+                // logging of errors so disable that
+                .on_failure(()),
+        )
         .with_state(state);
 
     axum::serve(listener, app)
