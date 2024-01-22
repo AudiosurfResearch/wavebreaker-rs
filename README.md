@@ -17,7 +17,7 @@ steam_key = "music_bokura_zutto_so_hype"
 Radio song list example (``WavebreakerRadio.toml``):
 ```toml
 [[radio_songs]]
-id = 1
+id = 1 # ID of the song on the server (song has to be known to the server already!)
 title = "Dear Music." # Don't use non-ASCII characters
 artist = "A4." # here too!
 external_url = "https://www.youtube.com/watch?v=XeVrdjZSceA" # Put a link to buy (not stream!) the song here, if possible!
@@ -35,11 +35,12 @@ To connect, use the latest Wavebreaker client with ``forceInsecure`` set to ``tr
 - Submitting scores
 - **Audiosurf Radio!**
 - **Proper dethrones and the Brutus achievement!** (not present in TypeScript version)
+- Miscellaneous stuff (e.g. custom news)
 
 ## What still needs to be done?
 - MusicBrainz integration
 - Non-game API (for the frontend)
-- Miscellaneous things (shouts, custom news, etc.)
+- Shouts
 
 ## Contributing
 
