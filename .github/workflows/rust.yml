@@ -19,7 +19,6 @@ jobs:
     - name: Build
       run: cargo build --verbose
     - uses: actions/upload-artifact@v4
-    - name: debug ${{ matrix.target }}
       with:
         name: wavebreaker-linux-debug
         path: ./target/debug/wavebreaker
