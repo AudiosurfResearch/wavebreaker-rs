@@ -75,7 +75,7 @@ async fn main() -> anyhow::Result<()> {
             tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
                 // axum logs rejections from built-in extractors with the `axum::rejection`
                 // target, at `TRACE` level. `axum::rejection=trace` enables showing those events
-                "wavebreaker=debug,tower_http=debug,axum::rejection=trace".into()
+                "wavebreaker=info,tower_http=error,axum::rejection=trace".into()
             }),
         )
         .with(tracing_subscriber::fmt::layer())

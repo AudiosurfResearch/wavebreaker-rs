@@ -13,7 +13,7 @@ pub struct RadioSong {
     pub id: u32,
     pub title: String,
     pub artist: String,
-    pub buy_url: String,
+    pub external_url: String,
     pub cgr_url: String,
 }
 

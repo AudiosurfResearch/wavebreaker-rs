@@ -24,7 +24,7 @@ pub async fn get_radio_list() -> Result<String, RouteError> {
     for song in radio_songs {
         joined_string.push_str(&format!(
             "{}-:*x-{}-:*x-{}-:*x-{}-:*x-",
-            song.artist, song.title, song.cgr_url, song.buy_url
+            song.artist, song.title, song.cgr_url, song.external_url
         ));
     }
 

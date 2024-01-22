@@ -1,14 +1,27 @@
 # wavebreaker-rs
 **EXTREMELY WIP!!!** (Yes, so much so that it's worth three exclamation marks!!!)
 
-Config example:
+Config example (``Wavebreaker.toml``):
 ```toml
 [main]
 address = "localhost:1337"
 database = "postgres://user:owaranai_future_sound_o@localhost/wavebreaker"
 
+[radio]
+cgr_location = "./radio"
+
 [external]
 steam_key = "music_bokura_zutto_so_hype"
+```
+
+Radio song list example (``WavebreakerRadio.toml``):
+```toml
+[[radio_songs]]
+id = 1
+title = "Dear Music." # Don't use non-ASCII characters
+artist = "A4." # here too!
+external_url = "https://www.youtube.com/watch?v=XeVrdjZSceA" # Put a link to buy (not stream!) the song here, if possible!
+cgr_url = "http://localhost/as/asradio/WVBR_A4_DearMusic.cgr" # URL for the .cgr file containing the song,
 ```
 
 To connect, use the latest Wavebreaker client with ``forceInsecure`` set to ``true`` in its config. This is only intended for local testing.
