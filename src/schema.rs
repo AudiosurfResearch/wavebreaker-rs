@@ -44,6 +44,17 @@ diesel::table! {
 }
 
 diesel::table! {
+    shouts (id) {
+        id -> Int4,
+        author_id -> Int4,
+        song_id -> Int4,
+        posted_at -> Timestamp,
+        #[max_length = 240]
+        content -> Varchar,
+    }
+}
+
+diesel::table! {
     songs (id) {
         id -> Int4,
         title -> Text,
@@ -54,5 +65,7 @@ diesel::table! {
 
 diesel::joinable!(scores -> players (player_id));
 diesel::joinable!(scores -> songs (song_id));
+diesel::joinable!(shouts -> players (author_id));
+diesel::joinable!(shouts -> songs (song_id));
 
-diesel::allow_tables_to_appear_in_same_query!(players, rivalries, scores, songs,);
+diesel::allow_tables_to_appear_in_same_query!(players, rivalries, scores, shouts, songs,);

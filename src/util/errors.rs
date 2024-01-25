@@ -313,7 +313,9 @@ pub trait IntoRouteError<T> {
     }
 }
 
-impl<T: std::fmt::Debug, E: Into<AnyhowError> + std::fmt::Debug> IntoRouteError<T> for Result<T, E> {
+impl<T: std::fmt::Debug, E: Into<AnyhowError> + std::fmt::Debug> IntoRouteError<T>
+    for Result<T, E>
+{
     fn http_error(
         self,
         message: &str,

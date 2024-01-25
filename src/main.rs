@@ -21,18 +21,21 @@ pub mod schema;
 mod util;
 
 use anyhow::Context;
-use axum::{Router, extract::{Request, MatchedPath}};
+use axum::{
+    extract::{MatchedPath, Request},
+    Router,
+};
 use diesel_async::pooled_connection::deadpool::Pool;
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use figment::{
     providers::{Env, Format, Toml},
     Figment,
 };
-use tower_http::trace::TraceLayer;
 use game::routes_steam;
 use serde::Deserialize;
 use std::sync::Arc;
 use steam_rs::Steam;
+use tower_http::trace::TraceLayer;
 use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
