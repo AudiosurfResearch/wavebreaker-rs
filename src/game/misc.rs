@@ -1,6 +1,6 @@
 use super::helpers::ticket_auth;
 use crate::models::players::Player;
-use crate::models::shouts::Shout;
+use crate::models::shouts::{NewShout, Shout};
 use crate::util::game_types::join_x_separated;
 use crate::AppState;
 use crate::{models::scores::Score, util::errors::RouteError};
@@ -111,6 +111,63 @@ pub async fn fetch_shouts(
 
     let mut conn = state.db.get().await?;
 
+    let shouts_with_player = Shout::find_by_song_id(payload.songid)
+        .order(posted_at.desc())
+        .inner_join(crate::schema::players::table)
+        .select((Shout::as_select(), Player::as_select()))
+        .load::<(Shout, Player)>(&mut conn)
+        .await?;
+    if shouts_with_player.is_empty() {
+        return Ok(
+            "This song has no shouts yet. Let's change that!\n'Cause we're gonna shout it loud!"
+                .to_owned(),
+        );
+    }
+
+    let mut shout_string = String::new();
+    for shout in shouts_with_player {
+        shout_string.push_str(&format!(
+            "{} (at {}): {}\n",
+            shout.1.username, shout.0.posted_at, shout.0.content
+        ));
+    }
+
+    Ok(shout_string)
+}
+
+#[derive(Deserialize)]
+pub struct SendShoutRequest {
+    ticket: String,
+    songid: i32,
+    shout: String,
+}
+
+/// Sends a shout to the game
+///
+/// # Errors
+/// This fails if:
+/// - The response fails to serialize
+/// - Something goes wrong with the database
+/// - The shout didn't validate
+#[instrument(skip_all)]
+pub async fn send_shout(
+    State(state): State<AppState>,
+    Form(payload): Form<SendShoutRequest>,
+) -> Result<String, RouteError> {
+    use crate::schema::shouts::dsl::*;
+
+    let steam_player = ticket_auth(&payload.ticket, &state.steam_api).await?;
+
+    let mut conn = state.db.get().await?;
+
+    let player: Player = Player::find_by_steam_id(steam_player)
+        .first::<Player>(&mut conn)
+        .await?;
+
+    let shout = NewShout::new(payload.songid, player.id, &payload.shout);
+    shout.insert(&mut conn).await?;
+
+    // TODO: Maybe seperate this into a reusable function?
     let shouts_with_player = Shout::find_by_song_id(payload.songid)
         .order(posted_at.desc())
         .inner_join(crate::schema::players::table)

@@ -33,6 +33,7 @@ To connect, use the latest Wavebreaker client with ``forceInsecure`` set to ``tr
 - Automatically adding Steam friends as rivals
 - Creating and retrieving songs from the DB
 - Submitting scores
+- Shouts (Song comments)
 - **Audiosurf Radio!**
 - **Proper dethrones and the Brutus achievement!** (not present in TypeScript version)
 - Miscellaneous stuff (e.g. custom news)
@@ -40,7 +41,6 @@ To connect, use the latest Wavebreaker client with ``forceInsecure`` set to ``tr
 ## What still needs to be done?
 - MusicBrainz integration
 - Non-game API (for the frontend)
-- Shouts
 
 ## Contributing
 

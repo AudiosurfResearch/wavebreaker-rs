@@ -5,7 +5,7 @@ mod radio;
 mod user;
 
 use self::gameplay::{fetch_song_id, get_rides, send_ride};
-use self::misc::{fetch_shouts, fetch_track_shape, get_custom_news};
+use self::misc::{fetch_shouts, fetch_track_shape, get_custom_news, send_shout};
 use self::radio::get_radio_list;
 use self::user::{login_steam, steam_sync};
 use crate::AppState;
@@ -22,6 +22,7 @@ pub fn routes_steam() -> Router<AppState> {
         .route("/game_SendRideSteamVerified.php", post(send_ride))
         .route("/game_GetRidesSteamVerified.php", post(get_rides))
         .route("/game_fetchshouts_unicode.php", post(fetch_shouts))
+        .route("/game_sendShoutSteamVerified.php", post(send_shout))
 }
 
 /// Returns all routes used for everything under ``//as_steamlogin``
