@@ -9,7 +9,7 @@ use axum::Form;
 use axum_extra::extract::Form as ExtraForm;
 use axum_serde::Xml;
 use diesel::{ExpressionMethods, QueryDsl, SelectableHelper};
-use diesel_async::RunQueryDsl;
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
@@ -80,7 +80,8 @@ pub async fn fetch_track_shape(
 }
 
 // This literally just exists because the shout fetching endpoint gets two song IDs from the game.
-pub fn take_first<'de, D, T>(deserializer: D) -> Result<T, D::Error>
+// Credit to https://github.com/tokio-rs/axum/discussions/2380#discussioncomment-7705720
+fn take_first<'de, D, T>(deserializer: D) -> Result<T, D::Error>
 where
     D: serde::de::Deserializer<'de>,
     T: Deserialize<'de> + Default,
@@ -89,33 +90,17 @@ where
     Ok(vec.into_iter().next().unwrap_or_default())
 }
 
-#[derive(Deserialize)]
-pub struct FetchShoutsRequest {
-    #[serde(default, deserialize_with = "take_first")]
-    songid: i32,
-}
-
-/// Sends track shape to the game as x-seperated string
-///
-/// # Errors
-///
-/// This fails if:
-/// - The response fails to serialize
-/// - Something goes wrong with the database
-#[instrument(skip_all)]
-pub async fn fetch_shouts(
-    State(state): State<AppState>,
-    ExtraForm(payload): ExtraForm<FetchShoutsRequest>,
-) -> Result<String, RouteError> {
+async fn shouts_to_string(
+    conn: &mut AsyncPgConnection,
+    target_song_id: i32,
+) -> diesel::QueryResult<String> {
     use crate::schema::shouts::dsl::*;
 
-    let mut conn = state.db.get().await?;
-
-    let shouts_with_player = Shout::find_by_song_id(payload.songid)
+    let shouts_with_player = Shout::find_by_song_id(target_song_id)
         .order(posted_at.desc())
         .inner_join(crate::schema::players::table)
         .select((Shout::as_select(), Player::as_select()))
-        .load::<(Shout, Player)>(&mut conn)
+        .load::<(Shout, Player)>(conn)
         .await?;
     if shouts_with_player.is_empty() {
         return Ok(
@@ -136,9 +121,33 @@ pub async fn fetch_shouts(
 }
 
 #[derive(Deserialize)]
+pub struct FetchShoutsRequest {
+    #[serde(default, deserialize_with = "take_first", rename = "songid")]
+    song_id: i32,
+}
+
+/// Sends track shape to the game as x-seperated string
+///
+/// # Errors
+///
+/// This fails if:
+/// - The response fails to serialize
+/// - Something goes wrong with the database
+#[instrument(skip_all)]
+pub async fn fetch_shouts(
+    State(state): State<AppState>,
+    ExtraForm(payload): ExtraForm<FetchShoutsRequest>,
+) -> Result<String, RouteError> {
+    let mut conn = state.db.get().await?;
+
+    Ok(shouts_to_string(&mut conn, payload.song_id).await?)
+}
+
+#[derive(Deserialize)]
 pub struct SendShoutRequest {
     ticket: String,
-    songid: i32,
+    #[serde(rename = "songid")]
+    song_id: i32,
     shout: String,
 }
 
@@ -154,8 +163,6 @@ pub async fn send_shout(
     State(state): State<AppState>,
     Form(payload): Form<SendShoutRequest>,
 ) -> Result<String, RouteError> {
-    use crate::schema::shouts::dsl::*;
-
     let steam_player = ticket_auth(&payload.ticket, &state.steam_api).await?;
 
     let mut conn = state.db.get().await?;
@@ -164,30 +171,8 @@ pub async fn send_shout(
         .first::<Player>(&mut conn)
         .await?;
 
-    let shout = NewShout::new(payload.songid, player.id, &payload.shout);
+    let shout = NewShout::new(payload.song_id, player.id, &payload.shout);
     shout.insert(&mut conn).await?;
 
-    // TODO: Maybe seperate this into a reusable function?
-    let shouts_with_player = Shout::find_by_song_id(payload.songid)
-        .order(posted_at.desc())
-        .inner_join(crate::schema::players::table)
-        .select((Shout::as_select(), Player::as_select()))
-        .load::<(Shout, Player)>(&mut conn)
-        .await?;
-    if shouts_with_player.is_empty() {
-        return Ok(
-            "This song has no shouts yet. Let's change that!\n'Cause we're gonna shout it loud!"
-                .to_owned(),
-        );
-    }
-
-    let mut shout_string = String::new();
-    for shout in shouts_with_player {
-        shout_string.push_str(&format!(
-            "{} (at {}): {}\n",
-            shout.1.username, shout.0.posted_at, shout.0.content
-        ));
-    }
-
-    Ok(shout_string)
+    Ok(shouts_to_string(&mut conn, payload.song_id).await?)
 }
