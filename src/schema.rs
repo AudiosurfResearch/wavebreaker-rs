@@ -60,6 +60,7 @@ diesel::table! {
         title -> Text,
         artist -> Text,
         created_at -> Timestamp,
+        modifiers -> Nullable<Array<Text>>,
     }
 }
 
@@ -68,4 +69,10 @@ diesel::joinable!(scores -> songs (song_id));
 diesel::joinable!(shouts -> players (author_id));
 diesel::joinable!(shouts -> songs (song_id));
 
-diesel::allow_tables_to_appear_in_same_query!(players, rivalries, scores, shouts, songs,);
+diesel::allow_tables_to_appear_in_same_query!(
+    players,
+    rivalries,
+    scores,
+    shouts,
+    songs,
+);

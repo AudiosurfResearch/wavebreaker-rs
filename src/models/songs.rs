@@ -11,6 +11,7 @@ pub struct Song {
     pub title: String,
     pub artist: String,
     pub created_at: time::PrimitiveDateTime,
+    pub modifiers: Option<Vec<String>>,
 }
 
 #[derive(Insertable)]
