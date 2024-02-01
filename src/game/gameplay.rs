@@ -48,10 +48,16 @@ pub async fn fetch_song_id(
     State(state): State<AppState>,
     Form(payload): Form<SongIdRequest>,
 ) -> Result<Xml<SongIdResponse>, RouteError> {
+    use crate::util::modifiers::{parse_from_title, remove_from_title};
+
     let mut conn = state.db.get().await?;
-    let song = NewSong::new(&payload.song, &payload.artist)
-        .find_or_create(&mut conn)
-        .await?;
+    let song = NewSong::new(
+        &remove_from_title(&payload.song),
+        &payload.artist,
+        parse_from_title(&payload.song),
+    )
+    .find_or_create(&mut conn)
+    .await?;
 
     info!(
         "Song {} - {} looked up by {}, league {:?}",

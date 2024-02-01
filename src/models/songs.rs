@@ -20,6 +20,7 @@ pub struct Song {
 pub struct NewSong<'a> {
     pub title: &'a str,
     pub artist: &'a str,
+    pub modifiers: Option<Vec<&'a str>>,
 }
 
 impl<'a> NewSong<'a> {
@@ -34,8 +35,8 @@ impl<'a> NewSong<'a> {
     ///
     /// A new `NewSong` instance.
     #[must_use]
-    pub const fn new(title: &'a str, artist: &'a str) -> Self {
-        Self { title, artist }
+    pub const fn new(title: &'a str, artist: &'a str, modifiers: Option<Vec<&'a str>>) -> Self {
+        Self { title, artist, modifiers }
     }
 
     /// Finds or creates a song in the database.
