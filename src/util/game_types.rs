@@ -72,6 +72,10 @@ pub fn split_x_separated<T>(s: &str) -> Result<Vec<T>, T::Err>
 where
     T: std::str::FromStr,
 {
+    if s.is_empty() {
+        return Ok(vec![]);
+    }
+
     //If string ends with 'x', remove it
     let s = s.strip_suffix('x').unwrap_or(s);
     s.split('x')
@@ -90,4 +94,40 @@ where
         .join("x");
     result.push('x');
     result
+}
+
+#[allow(clippy::unwrap_used)]
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_split_x_separated() {
+        // Test case 1: Valid input
+        let input1 = "1x2x3x4x";
+        let expected1 = vec![1, 2, 3, 4];
+        assert_eq!(split_x_separated::<i32>(input1).unwrap(), expected1);
+
+        // Test case 2: Empty input
+        let input2 = "";
+        let expected2: Vec<i32> = vec![];
+        assert_eq!(split_x_separated::<i32>(input2).unwrap(), expected2);
+
+        // Test case 3: Invalid input
+        let input3 = "1x2x3xAAAx";
+        assert!(split_x_separated::<i32>(input3).is_err());
+    }
+
+    #[test]
+    fn test_join_x_separated() {
+        // Test case 1: Valid input
+        let input1 = vec![1, 2, 3, 4];
+        let expected1 = "1x2x3x4x";
+        assert_eq!(join_x_separated(&input1), expected1);
+
+        // Test case 2: Empty input
+        let input2: Vec<i32> = vec![];
+        let expected2 = "x";
+        assert_eq!(join_x_separated(&input2), expected2);
+    }
 }
