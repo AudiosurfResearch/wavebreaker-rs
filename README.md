@@ -6,6 +6,7 @@ Config example (``Wavebreaker.toml``):
 [main]
 address = "localhost:1337"
 database = "postgres://user:owaranai_future_sound_o@localhost/wavebreaker"
+redis = "redis://localhost:6379"
 
 [radio]
 cgr_location = "./radio"
@@ -34,14 +35,14 @@ To connect, use the latest Wavebreaker client with ``forceInsecure`` set to ``tr
 - Creating and retrieving songs from the DB
 - Submitting scores
 - Shouts (Song comments)
-- **Audiosurf Radio!**
+- Player rankings (using Skill Points)
+- **Audiosurf Radio!** (using [Rainbow Dream](https://github.com/AudiosurfResearch/rainbowdream) to create the needed files)
 - **Proper dethrones and the Brutus achievement!** (not present in TypeScript version)
 - Miscellaneous stuff (e.g. custom news)
 
 ## What still needs to be done?
-- User rankings
-- MusicBrainz integration
-- Non-game API (for the frontend)
+- MusicBrainz integration for *fancy metadata!*
+- Non-game API (for the frontend and other clients that want to get data from Wavebreaker)
 
 ## Contributing
 

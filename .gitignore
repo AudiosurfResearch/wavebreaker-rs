@@ -6,6 +6,7 @@ Rocket.toml
 .env
 .cargo
 radio/*
+dump.rdb
 
 # VSC-specific
 .vscode
