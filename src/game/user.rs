@@ -61,6 +61,7 @@ pub async fn login_steam(
         .await?;
 
     let mut conn = state.db.get().await?;
+    let mut redis_conn = state.redis.get().await?;
 
     let player = NewPlayer::new(
         &summary[0].persona_name,
@@ -68,7 +69,7 @@ pub async fn login_steam(
         i32::try_from(steam_player.get_account_id())?,
         &summary[0].avatar_full,
     )
-    .create_or_update(&mut conn)
+    .create_or_update(&mut conn, &mut redis_conn)
     .await?;
 
     Ok(Xml(LoginSteamResponse {

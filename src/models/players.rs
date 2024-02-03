@@ -10,6 +10,7 @@ use diesel::{
     sql_types::Text,
 };
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
+use redis::AsyncCommands;
 use serde::Serialize;
 use steam_rs::steam_id::SteamId;
 
@@ -62,7 +63,10 @@ type BySteamId = diesel::dsl::Filter<All, WithSteamId>;
 
 impl Player {
     /// Returns the total skill points a player has earned with their scores.
-    pub async fn get_skill_points(&self, conn: &mut AsyncPgConnection) -> QueryResult<u32> {
+    /// 
+    /// # Errors
+    /// This fails if something goes wrong with the database.
+    pub async fn get_skill_points(&self, conn: &mut AsyncPgConnection) -> QueryResult<i32> {
         use crate::schema::scores::dsl::*;
 
         let player_scores = scores
@@ -72,7 +76,7 @@ impl Player {
 
         let skill_points_sum = player_scores
             .iter()
-            .map(|player_score| player_score.get_skill_points())
+            .map(Score::get_skill_points)
             .sum();
 
         Ok(skill_points_sum)
@@ -187,9 +191,11 @@ impl<'a> NewPlayer<'a> {
     pub async fn create_or_update(
         &self,
         conn: &mut AsyncPgConnection,
-        redis_conn: &mut redis::Connection,
-    ) -> QueryResult<Player> {
-        diesel::insert_into(players::table)
+        redis_conn: &mut deadpool_redis::Connection,
+    ) -> anyhow::Result<Player> {
+        // Register player
+        // Update info if already registered
+        let player_result = diesel::insert_into(players::table)
             .values(self)
             .on_conflict(players::steam_account_num)
             .do_update()
@@ -198,6 +204,16 @@ impl<'a> NewPlayer<'a> {
                 players::avatar_url.eq(&self.avatar_url),
             ))
             .get_result::<Player>(conn)
-            .await
+            .await?;
+
+        // If the player doesn't exist in the Redis sorted set, add them
+        let player_rank: Option<u32> = redis_conn.zscore("leaderboard", player_result.id).await?;
+        if player_rank.is_none() {
+            redis_conn
+                .zadd("leaderboard", player_result.id, 0)
+                .await?;
+        }
+
+        Ok(player_result)
     }
 }
