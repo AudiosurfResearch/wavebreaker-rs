@@ -13,7 +13,10 @@ use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde::Serialize;
 use steam_rs::steam_id::SteamId;
 
-use crate::{models::rivalries::Rivalry, schema::players};
+use crate::{
+    models::{rivalries::Rivalry, scores::Score},
+    schema::players,
+};
 
 #[derive(Serialize, AsExpression, FromSqlRow, Debug, PartialEq, Eq)]
 #[diesel(sql_type = diesel::sql_types::Text)]
@@ -58,6 +61,23 @@ type WithSteamId = diesel::dsl::Eq<players::steam_id, SteamIdWrapper>;
 type BySteamId = diesel::dsl::Filter<All, WithSteamId>;
 
 impl Player {
+    /// Returns the total skill points a player has earned with their scores.
+    pub async fn get_skill_points(&self, conn: &mut AsyncPgConnection) -> QueryResult<u32> {
+        use crate::schema::scores::dsl::*;
+
+        let player_scores = scores
+            .filter(player_id.eq(self.id))
+            .load::<Score>(conn)
+            .await?;
+
+        let skill_points_sum = player_scores
+            .iter()
+            .map(|player_score| player_score.get_skill_points())
+            .sum();
+
+        Ok(skill_points_sum)
+    }
+
     /// Finds a player by their Steam ID.
     ///
     /// # Arguments
@@ -164,7 +184,11 @@ impl<'a> NewPlayer<'a> {
     ///
     /// This fails if:
     /// - The player fails to be inserted/updated in the database
-    pub async fn create_or_update(&self, conn: &mut AsyncPgConnection) -> QueryResult<Player> {
+    pub async fn create_or_update(
+        &self,
+        conn: &mut AsyncPgConnection,
+        redis_conn: &mut redis::Connection,
+    ) -> QueryResult<Player> {
         diesel::insert_into(players::table)
             .values(self)
             .on_conflict(players::steam_account_num)

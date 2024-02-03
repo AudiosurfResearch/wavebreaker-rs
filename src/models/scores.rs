@@ -85,6 +85,12 @@ pub struct Score {
 }
 
 impl Score {
+    /// Calculates and returns the skill points the player earned for this score.
+    pub fn get_skill_points(&self) -> u32 {
+        let multiplier = (self.league as u32 + 1) * 100;
+        ((self.score as f64 / self.gold_threshold as f64) * multiplier as f64).round() as u32
+    }
+
     /// Retrieves the scores for a specific song and league, for display in-game.
     ///
     /// # Arguments
