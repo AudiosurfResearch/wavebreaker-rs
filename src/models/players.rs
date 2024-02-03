@@ -13,6 +13,7 @@ use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use redis::AsyncCommands;
 use serde::Serialize;
 use steam_rs::steam_id::SteamId;
+use tracing::info;
 
 use crate::{
     models::{rivalries::Rivalry, scores::Score},
@@ -63,7 +64,7 @@ type BySteamId = diesel::dsl::Filter<All, WithSteamId>;
 
 impl Player {
     /// Returns the total skill points a player has earned with their scores.
-    /// 
+    ///
     /// # Errors
     /// This fails if something goes wrong with the database.
     pub async fn get_skill_points(&self, conn: &mut AsyncPgConnection) -> QueryResult<i32> {
@@ -74,10 +75,7 @@ impl Player {
             .load::<Score>(conn)
             .await?;
 
-        let skill_points_sum = player_scores
-            .iter()
-            .map(Score::get_skill_points)
-            .sum();
+        let skill_points_sum = player_scores.iter().map(Score::get_skill_points).sum();
 
         Ok(skill_points_sum)
     }
@@ -209,9 +207,8 @@ impl<'a> NewPlayer<'a> {
         // If the player doesn't exist in the Redis sorted set, add them
         let player_rank: Option<u32> = redis_conn.zscore("leaderboard", player_result.id).await?;
         if player_rank.is_none() {
-            redis_conn
-                .zadd("leaderboard", player_result.id, 0)
-                .await?;
+            info!("Adding player {} to leaderboard", player_result.id);
+            redis_conn.zadd("leaderboard", player_result.id, 0).await?;
         }
 
         Ok(player_result)

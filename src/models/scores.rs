@@ -1,3 +1,4 @@
+use anyhow::Context;
 use diesel::{
     associations::HasTable,
     backend::Backend,
@@ -9,6 +10,7 @@ use diesel::{
     sql_types::SmallInt,
 };
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
+use redis::AsyncCommands;
 use serde::Serialize;
 use time::{OffsetDateTime, PrimitiveDateTime};
 
@@ -87,9 +89,11 @@ pub struct Score {
 impl Score {
     /// Calculates and returns the skill points the player earned for this score.
     #[must_use]
+    #[allow(clippy::cast_possible_truncation)]
     pub fn get_skill_points(&self) -> i32 {
         let multiplier = (self.league as u32 + 1) * 100;
-        ((f64::from(self.score) / f64::from(self.gold_threshold)) * f64::from(multiplier)).round() as i32
+        ((f64::from(self.score) / f64::from(self.gold_threshold)) * f64::from(multiplier)).round()
+            as i32
     }
 
     /// Retrieves the scores for a specific song and league, for display in-game.
@@ -309,7 +313,11 @@ impl<'a> NewScore<'a> {
     /// This fails if:
     /// - The database connection fails
     /// - The score fails to be created/retrieved
-    pub async fn create_or_update(&self, conn: &mut AsyncPgConnection) -> QueryResult<Score> {
+    pub async fn create_or_update(
+        &self,
+        conn: &mut AsyncPgConnection,
+        redis_conn: &mut deadpool_redis::Connection,
+    ) -> anyhow::Result<Score> {
         use crate::schema::scores::dsl::*;
 
         let existing_score = scores
@@ -319,44 +327,73 @@ impl<'a> NewScore<'a> {
             .first::<Score>(conn)
             .await;
 
-        match existing_score {
-            Ok(existing_score) => {
-                if existing_score.score < self.score {
-                    let offset_time = OffsetDateTime::now_utc();
+        if let Ok(existing_score) = existing_score {
+            if existing_score.score < self.score {
+                // Subtract the skill points of the old score from the Redis leaderboard
+                let sub_amount = 0 - existing_score.get_skill_points();
+                redis_conn
+                    .zincr::<&str, i32, i32, i32>(
+                        "leaderboard",
+                        existing_score.player_id,
+                        sub_amount,
+                    )
+                    .await?;
 
-                    diesel::update(scores)
-                        .filter(player_id.eq(self.player_id))
-                        .filter(song_id.eq(self.song_id))
-                        .filter(league.eq(self.league))
-                        .set((
-                            score.eq(self.score),
-                            track_shape.eq(self.track_shape),
-                            xstats.eq(self.xstats),
-                            density.eq(self.density),
-                            vehicle.eq(self.vehicle),
-                            feats.eq(self.feats),
-                            song_length.eq(self.song_length),
-                            gold_threshold.eq(self.gold_threshold),
-                            iss.eq(self.iss),
-                            isj.eq(self.isj),
-                            play_count.eq(play_count + 1),
-                            submitted_at.eq(PrimitiveDateTime::new(
-                                offset_time.date(),
-                                offset_time.time(),
-                            )),
-                        ))
-                        .get_result::<Score>(conn)
-                        .await
-                } else {
-                    Ok(existing_score)
-                }
-            }
-            Err(_) => {
-                diesel::insert_into(scores)
-                    .values(self)
+                let offset_time = OffsetDateTime::now_utc();
+
+                let updated_score = diesel::update(scores)
+                    .filter(player_id.eq(self.player_id))
+                    .filter(song_id.eq(self.song_id))
+                    .filter(league.eq(self.league))
+                    .set((
+                        score.eq(self.score),
+                        track_shape.eq(self.track_shape),
+                        xstats.eq(self.xstats),
+                        density.eq(self.density),
+                        vehicle.eq(self.vehicle),
+                        feats.eq(self.feats),
+                        song_length.eq(self.song_length),
+                        gold_threshold.eq(self.gold_threshold),
+                        iss.eq(self.iss),
+                        isj.eq(self.isj),
+                        play_count.eq(play_count + 1),
+                        submitted_at.eq(PrimitiveDateTime::new(
+                            offset_time.date(),
+                            offset_time.time(),
+                        )),
+                    ))
                     .get_result::<Score>(conn)
                     .await
+                    .context("Failed to update score")?;
+
+                // Add the skill points of the new score to the Redis leaderboard
+                let add_amount = updated_score.get_skill_points();
+                redis_conn
+                    .zincr::<&str, i32, i32, i32>(
+                        "leaderboard",
+                        updated_score.player_id,
+                        add_amount,
+                    )
+                    .await?;
+
+                Ok(updated_score)
+            } else {
+                Ok(existing_score)
             }
+        } else {
+            let new_score = diesel::insert_into(scores)
+                .values(self)
+                .get_result::<Score>(conn)
+                .await
+                .context("Failed to insert score")?;
+
+            // Add the skill points of the new score to the Redis leaderboard
+            let add_amount = new_score.get_skill_points();
+            redis_conn
+                .zincr::<&str, i32, i32, i32>("leaderboard", new_score.player_id, add_amount)
+                .await?;
+
+            Ok(new_score)
         }
     }
 }

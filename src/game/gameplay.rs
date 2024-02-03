@@ -144,6 +144,7 @@ pub async fn send_ride(
         &payload.song_id, &steam_player, &payload.score, &payload.vehicle
     );
 
+    let mut redis_conn = state.redis.get().await?;
     let mut conn = state.db.get().await?;
     let player: Player = Player::find_by_steam_id(steam_player)
         .first::<Player>(&mut conn)
@@ -221,7 +222,7 @@ pub async fn send_ride(
         payload.iss,
         payload.isj,
     )
-    .create_or_update(&mut conn)
+    .create_or_update(&mut conn, &mut redis_conn)
     .await?;
 
     // TODO: Properly implement dethroning
