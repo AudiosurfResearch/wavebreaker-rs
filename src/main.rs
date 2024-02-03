@@ -25,6 +25,7 @@ use axum::{
     extract::{MatchedPath, Request},
     Router,
 };
+use deadpool_redis::Runtime;
 use diesel_async::pooled_connection::deadpool::Pool;
 use diesel_async::pooled_connection::AsyncDieselConnectionManager;
 use figment::{
@@ -52,6 +53,7 @@ struct Config {
 struct Main {
     address: String,
     database: String,
+    redis: String,
 }
 
 #[derive(Deserialize, Clone)]
@@ -69,6 +71,7 @@ pub struct AppState {
     steam_api: Arc<Steam>,
     config: Arc<Config>,
     db: Pool<diesel_async::AsyncPgConnection>,
+    redis: deadpool_redis::Pool,
 }
 
 #[tokio::main]
@@ -104,10 +107,16 @@ async fn main() -> anyhow::Result<()> {
         .build()
         .context("Failed to build DB pool!")?;
 
+    let redis_cfg = deadpool_redis::Config::from_url(&wavebreaker_config.main.redis);
+    let redis_pool = redis_cfg
+        .create_pool(Some(Runtime::Tokio1))
+        .context("Failed to build Redis pool!")?;
+
     let state = AppState {
         steam_api: Arc::new(Steam::new(&wavebreaker_config.external.steam_key)),
         config: Arc::new(wavebreaker_config),
         db: pool,
+        redis: redis_pool,
     };
 
     let app = Router::new()

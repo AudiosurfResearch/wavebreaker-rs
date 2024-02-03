@@ -29,3 +29,5 @@ validator = { version = "0.16.1", features = ["derive"] }
 axum-valid = "0.14.0"
 axum-extra = { version = "0.9.2", features = ["form"] }
 regex = "1.10.3"
+redis = { version = "0.24.0", features = ["aio"] }
+deadpool-redis = "0.14.0"

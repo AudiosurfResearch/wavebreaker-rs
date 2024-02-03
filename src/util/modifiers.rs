@@ -43,28 +43,28 @@ mod tests {
 
     #[test]
     fn mods_from_title() {
-        let title = "My Title [as-tag1] [as-tag2] [as-steep]";
+        let title = "SUMMER [as-tag1] [as-tag2] [as-steep]";
         let expected_tags = Some(vec!["tag1", "tag2", "steep"]);
         assert_eq!(parse_from_title(title), expected_tags);
     }
 
     #[test]
     fn mods_from_title_empty() {
-        let title = "My Title";
+        let title = "On Down";
         assert_eq!(parse_from_title(title), None);
     }
 
     #[test]
     fn remove_mods_from_title() {
-        let title = "My Title [as-tag1] [as-tag2] [as-tag3]";
-        let expected_result = "My Title";
+        let title = "Future Rewind [as-tag1] [as-tag2] [as-tag3]";
+        let expected_result = "Future Rewind";
         assert_eq!(remove_from_title(title), expected_result);
     }
 
     #[test]
     fn remove_mods_from_title_empty() {
-        let title = "My Title";
-        let expected_result = "My Title";
+        let title = "マボロシ";
+        let expected_result = "マボロシ";
         assert_eq!(remove_from_title(title), expected_result);
     }
 }

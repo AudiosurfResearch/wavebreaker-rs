@@ -39,6 +39,7 @@ To connect, use the latest Wavebreaker client with ``forceInsecure`` set to ``tr
 - Miscellaneous stuff (e.g. custom news)
 
 ## What still needs to be done?
+- User rankings
 - MusicBrainz integration
 - Non-game API (for the frontend)
 
