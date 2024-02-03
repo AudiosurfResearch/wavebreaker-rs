@@ -1,17 +1,21 @@
-use super::helpers::ticket_auth;
-use crate::models::players::Player;
-use crate::models::shouts::{NewShout, Shout};
-use crate::util::game_types::join_x_separated;
-use crate::AppState;
-use crate::{models::scores::Score, util::errors::RouteError};
-use axum::extract::State;
-use axum::Form;
+use axum::{extract::State, Form};
 use axum_extra::extract::Form as ExtraForm;
 use axum_serde::Xml;
 use diesel::{ExpressionMethods, QueryDsl, SelectableHelper};
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
+
+use super::helpers::ticket_auth;
+use crate::{
+    models::{
+        players::Player,
+        scores::Score,
+        shouts::{NewShout, Shout},
+    },
+    util::{errors::RouteError, game_types::join_x_separated},
+    AppState,
+};
 
 #[derive(Deserialize)]
 pub struct CustomNewsRequest {

@@ -1,11 +1,9 @@
-use crate::schema::shouts;
 use diesel::prelude::*;
-use diesel_async::AsyncPgConnection;
-use diesel_async::RunQueryDsl;
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde::Serialize;
 
-use super::players::Player;
-use super::songs::Song;
+use super::{players::Player, songs::Song};
+use crate::schema::shouts;
 
 #[derive(Identifiable, Selectable, Queryable, Associations, Debug, Serialize)]
 #[diesel(belongs_to(Player, foreign_key = author_id))]

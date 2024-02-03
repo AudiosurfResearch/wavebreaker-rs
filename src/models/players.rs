@@ -1,19 +1,19 @@
-use crate::models::rivalries::Rivalry;
-use crate::schema::players;
-use diesel::backend::Backend;
-use diesel::deserialize::{self, FromSql, FromSqlRow};
-use diesel::expression::AsExpression;
-use diesel::pg::Pg;
-use diesel::sql_types::Text;
+use std::str::FromStr;
+
 use diesel::{
+    backend::Backend,
+    deserialize::{self, FromSql, FromSqlRow},
+    expression::AsExpression,
+    pg::Pg,
     prelude::*,
     serialize::{self, Output, ToSql},
+    sql_types::Text,
 };
-use diesel_async::AsyncPgConnection;
-use diesel_async::RunQueryDsl;
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde::Serialize;
-use std::str::FromStr;
 use steam_rs::steam_id::SteamId;
+
+use crate::{models::rivalries::Rivalry, schema::players};
 
 #[derive(Serialize, AsExpression, FromSqlRow, Debug, PartialEq, Eq)]
 #[diesel(sql_type = diesel::sql_types::Text)]
@@ -100,8 +100,7 @@ impl Player {
     ///
     /// This fails if the database connection fails
     pub async fn get_rivals(&self, conn: &mut AsyncPgConnection) -> QueryResult<Vec<Self>> {
-        use crate::schema::players::dsl::*;
-        use crate::schema::rivalries::dsl::*;
+        use crate::schema::{players::dsl::*, rivalries::dsl::*};
 
         let rival_ids = rivalries
             .filter(challenger_id.eq(self.id))

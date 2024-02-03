@@ -1,18 +1,22 @@
-use crate::game::helpers::ticket_auth;
-use crate::models::players::{NewPlayer, Player};
-#[allow(clippy::wildcard_imports)]
-use crate::schema::players::dsl::*;
-use crate::schema::players::steam_account_num;
-use crate::util::errors::{IntoRouteError, RouteError};
-use crate::util::game_types::split_x_separated;
-use crate::AppState;
 use axum::{extract::State, Form};
 use axum_serde::Xml;
-use diesel::ExpressionMethods;
-use diesel::QueryDsl;
+use diesel::{ExpressionMethods, QueryDsl};
 use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
 use tracing::{info, instrument};
+
+#[allow(clippy::wildcard_imports)]
+use crate::schema::players::dsl::*;
+use crate::{
+    game::helpers::ticket_auth,
+    models::players::{NewPlayer, Player},
+    schema::players::steam_account_num,
+    util::{
+        errors::{IntoRouteError, RouteError},
+        game_types::split_x_separated,
+    },
+    AppState,
+};
 
 #[derive(Deserialize)]
 pub struct LoginSteamRequest {

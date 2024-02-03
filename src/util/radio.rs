@@ -1,5 +1,6 @@
-use serde::Deserialize;
 use std::fs;
+
+use serde::Deserialize;
 
 #[derive(Deserialize, Clone)]
 struct RadioConfig {

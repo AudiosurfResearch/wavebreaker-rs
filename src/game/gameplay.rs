@@ -1,22 +1,26 @@
-use super::helpers::ticket_auth;
-use crate::models::players::Player;
-use crate::models::rivalries::Rivalry;
-use crate::models::scores::{NewScore, Score, ScoreWithPlayer};
-use crate::models::songs::NewSong;
-use crate::util::errors::RouteError;
-use crate::util::game_types::{split_x_separated, League};
-use crate::util::game_types::{Character, Leaderboard};
-use crate::AppState;
-use axum::extract::State;
-use axum::Form;
+use axum::{extract::State, Form};
 use axum_serde::Xml;
-use diesel::associations::HasTable;
-use diesel::prelude::*;
+use diesel::{associations::HasTable, prelude::*};
 use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 use tokio::try_join;
 use tracing::{info, instrument};
+
+use super::helpers::ticket_auth;
+use crate::{
+    models::{
+        players::Player,
+        rivalries::Rivalry,
+        scores::{NewScore, Score, ScoreWithPlayer},
+        songs::NewSong,
+    },
+    util::{
+        errors::RouteError,
+        game_types::{split_x_separated, Character, Leaderboard, League},
+    },
+    AppState,
+};
 
 #[derive(Deserialize)]
 pub struct SongIdRequest {
@@ -131,9 +135,7 @@ pub async fn send_ride(
     State(state): State<AppState>,
     Form(payload): Form<SendRideRequest>,
 ) -> Result<Xml<SendRideResponse>, RouteError> {
-    use crate::schema::players::dsl::*;
-    use crate::schema::rivalries::dsl::*;
-    use crate::schema::scores::dsl::*;
+    use crate::schema::{players::dsl::*, rivalries::dsl::*, scores::dsl::*};
 
     let steam_player = ticket_auth(&payload.ticket, &state.steam_api).await?;
 

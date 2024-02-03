@@ -1,7 +1,7 @@
-use crate::schema::songs;
 use diesel::prelude::*;
-use diesel_async::AsyncPgConnection;
-use diesel_async::RunQueryDsl;
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
+
+use crate::schema::songs;
 
 #[derive(Identifiable, Selectable, Queryable, Debug)]
 #[diesel(table_name = songs, check_for_backend(diesel::pg::Pg))]

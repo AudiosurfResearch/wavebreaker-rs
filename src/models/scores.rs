@@ -1,18 +1,22 @@
-use crate::models::players::Player;
-use crate::models::songs::Song;
-use crate::schema::scores;
-use crate::util::game_types::{Character, League};
-use diesel::associations::HasTable;
-use diesel::backend::Backend;
-use diesel::deserialize::{self, FromSql};
-use diesel::pg::Pg;
-use diesel::serialize::{Output, ToSql};
-use diesel::sql_types::SmallInt;
-use diesel::{prelude::*, serialize};
-use diesel_async::AsyncPgConnection;
-use diesel_async::RunQueryDsl;
+use diesel::{
+    associations::HasTable,
+    backend::Backend,
+    deserialize::{self, FromSql},
+    pg::Pg,
+    prelude::*,
+    serialize,
+    serialize::{Output, ToSql},
+    sql_types::SmallInt,
+};
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde::Serialize;
 use time::{OffsetDateTime, PrimitiveDateTime};
+
+use crate::{
+    models::{players::Player, songs::Song},
+    schema::scores,
+    util::game_types::{Character, League},
+};
 
 impl ToSql<SmallInt, Pg> for League
 where
@@ -101,8 +105,7 @@ impl Score {
         find_league: League,
         conn: &mut AsyncPgConnection,
     ) -> QueryResult<Vec<ScoreWithPlayer>> {
-        use crate::schema::players::dsl::*;
-        use crate::schema::scores::dsl::*;
+        use crate::schema::{players::dsl::*, scores::dsl::*};
 
         Ok(scores
             .inner_join(players::table())
@@ -142,8 +145,7 @@ impl Score {
         rival_ids: &Vec<i32>,
         conn: &mut AsyncPgConnection,
     ) -> QueryResult<Vec<ScoreWithPlayer>> {
-        use crate::schema::players::dsl::*;
-        use crate::schema::scores::dsl::*;
+        use crate::schema::{players::dsl::*, scores::dsl::*};
 
         Ok(scores
             .inner_join(players::table())
@@ -184,8 +186,7 @@ impl Score {
         find_location_id: i32,
         conn: &mut AsyncPgConnection,
     ) -> QueryResult<Vec<ScoreWithPlayer>> {
-        use crate::schema::players::dsl::*;
-        use crate::schema::scores::dsl::*;
+        use crate::schema::{players::dsl::*, scores::dsl::*};
 
         Ok(scores
             .inner_join(players::table())

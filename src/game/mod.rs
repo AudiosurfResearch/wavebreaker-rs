@@ -4,14 +4,16 @@ mod misc;
 mod radio;
 mod user;
 
-use self::gameplay::{fetch_song_id, get_rides, send_ride};
-use self::misc::{fetch_shouts, fetch_track_shape, get_custom_news, send_shout};
-use self::radio::get_radio_list;
-use self::user::{login_steam, steam_sync};
-use crate::AppState;
-use axum::routing::post;
-use axum::Router;
+use axum::{routing::post, Router};
 use tower_http::services::ServeDir;
+
+use self::{
+    gameplay::{fetch_song_id, get_rides, send_ride},
+    misc::{fetch_shouts, fetch_track_shape, get_custom_news, send_shout},
+    radio::get_radio_list,
+    user::{login_steam, steam_sync},
+};
+use crate::AppState;
 
 /// Returns all routes used for everything under ``/as_steamlogin``
 pub fn routes_steam() -> Router<AppState> {

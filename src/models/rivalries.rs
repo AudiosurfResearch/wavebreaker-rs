@@ -1,8 +1,7 @@
-use crate::models::players::Player;
-use crate::schema::rivalries;
 use diesel::prelude::*;
-use diesel_async::AsyncPgConnection;
-use diesel_async::RunQueryDsl;
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
+
+use crate::{models::players::Player, schema::rivalries};
 
 #[derive(Identifiable, Selectable, Queryable, Associations, Debug)]
 #[diesel(belongs_to(Player, foreign_key = challenger_id))]

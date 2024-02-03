@@ -6,17 +6,15 @@
 */
 
 #![allow(dead_code)]
+use std::fmt::{Debug, Display, Formatter, Result as FmtResult};
+
 use anyhow::Error as AnyhowError;
-use axum::http::StatusCode;
-use axum::response::IntoResponse;
-use axum::response::Response;
-use axum::Json;
-use serde::Deserialize;
-use serde::Serialize;
-use std::fmt::Debug;
-use std::fmt::Display;
-use std::fmt::Formatter;
-use std::fmt::Result as FmtResult;
+use axum::{
+    http::StatusCode,
+    response::{IntoResponse, Response},
+    Json,
+};
+use serde::{Deserialize, Serialize};
 
 /// This is for **exposing internal errors publically.**
 /// It is desirable for internal services, where you do want to expose
