@@ -31,11 +31,11 @@ diesel::table! {
         submitted_at -> Timestamp,
         play_count -> Int4,
         score -> Int4,
-        track_shape -> Array<Int4>,
-        xstats -> Array<Int4>,
+        track_shape -> Array<Nullable<Int4>>,
+        xstats -> Array<Nullable<Int4>>,
         density -> Int4,
         vehicle -> Int2,
-        feats -> Array<Text>,
+        feats -> Array<Nullable<Text>>,
         song_length -> Int4,
         gold_threshold -> Int4,
         iss -> Int4,
@@ -60,7 +60,16 @@ diesel::table! {
         title -> Text,
         artist -> Text,
         created_at -> Timestamp,
-        modifiers -> Nullable<Array<Text>>,
+        modifiers -> Nullable<Array<Nullable<Text>>>,
+        cover_url -> Nullable<Text>,
+        small_cover_url -> Nullable<Text>,
+        mbid -> Nullable<Text>,
+        musicbrainz_title -> Nullable<Text>,
+        musicbrainz_artist -> Nullable<Text>,
+        musicbrainz_length -> Nullable<Int4>,
+        mistag_lock -> Bool,
+        aliases_artist -> Array<Nullable<Text>>,
+        aliases_title -> Array<Nullable<Text>>,
     }
 }
 
@@ -69,4 +78,10 @@ diesel::joinable!(scores -> songs (song_id));
 diesel::joinable!(shouts -> players (author_id));
 diesel::joinable!(shouts -> songs (song_id));
 
-diesel::allow_tables_to_appear_in_same_query!(players, rivalries, scores, shouts, songs,);
+diesel::allow_tables_to_appear_in_same_query!(
+    players,
+    rivalries,
+    scores,
+    shouts,
+    songs,
+);
