@@ -96,6 +96,29 @@ impl Score {
             as i32
     }
 
+    /// Deletes the score from the database.
+    ///
+    /// # Errors
+    /// This fails if the database query fails or something goes wrong with Redis.
+    pub async fn delete(
+        &self,
+        conn: &mut AsyncPgConnection,
+        redis_conn: &mut deadpool_redis::Connection,
+    ) -> anyhow::Result<()> {
+        use crate::schema::scores::dsl::*;
+
+        // Subtract the skill points from the player on Redis
+        let sub_amount = 0 - self.get_skill_points();
+        redis_conn
+            .zincr::<&str, i32, i32, i32>("leaderboard", self.player_id, sub_amount)
+            .await?;
+
+        diesel::delete(scores.filter(id.eq(self.id)))
+            .execute(conn)
+            .await?;
+        Ok(())
+    }
+
     /// Retrieves the scores for a specific song and league, for display in-game.
     ///
     /// # Arguments
