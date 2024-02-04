@@ -32,11 +32,11 @@ impl Song {
         // Manually delete all scores associated with this song using Score::delete().
         // This normally wouldn't be necessary, but we have to subtract the skill points from Redis
         // and Diesel doesn't let me hook into the delete operation.
-        let associated_scores = scores
+        let ass_scores = scores
             .filter(song_id.eq(self.id))
             .load::<Score>(conn)
             .await?;
-        for score in associated_scores {
+        for score in ass_scores {
             score.delete(conn, redis_conn).await?;
         }
 
