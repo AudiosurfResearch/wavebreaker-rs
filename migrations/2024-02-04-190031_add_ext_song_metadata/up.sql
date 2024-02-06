@@ -1,7 +1,7 @@
 -- Your SQL goes here
 ALTER TABLE songs
 ADD COLUMN cover_url TEXT,
-ADD COLUMN small_cover_url TEXT,
+ADD COLUMN cover_url_small TEXT,
 ADD COLUMN mbid TEXT,
 ADD COLUMN musicbrainz_title TEXT,
 ADD COLUMN musicbrainz_artist TEXT,

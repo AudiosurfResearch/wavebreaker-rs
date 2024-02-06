@@ -62,7 +62,7 @@ diesel::table! {
         created_at -> Timestamp,
         modifiers -> Nullable<Array<Nullable<Text>>>,
         cover_url -> Nullable<Text>,
-        small_cover_url -> Nullable<Text>,
+        cover_url_small -> Nullable<Text>,
         mbid -> Nullable<Text>,
         musicbrainz_title -> Nullable<Text>,
         musicbrainz_artist -> Nullable<Text>,
