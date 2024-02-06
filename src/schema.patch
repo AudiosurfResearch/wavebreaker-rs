@@ -1,0 +1,51 @@
+diff --git a/src/schema.rs b/src/schema.rs
+index 3156e16..e16eac3 100644
+--- a/src/schema.rs
++++ b/src/schema.rs
+@@ -28,17 +28,17 @@ diesel::table! {
+         song_id -> Int4,
+         player_id -> Int4,
+         league -> Int2,
+         submitted_at -> Timestamp,
+         play_count -> Int4,
+         score -> Int4,
+-        track_shape -> Array<Nullable<Int4>>,
+-        xstats -> Array<Nullable<Int4>>,
++        track_shape -> Array<Int4>,
++        xstats -> Array<Int4>,
+         density -> Int4,
+         vehicle -> Int2,
+-        feats -> Array<Nullable<Text>>,
++        feats -> Array<Text>,
+         song_length -> Int4,
+         gold_threshold -> Int4,
+         iss -> Int4,
+         isj -> Int4,
+     }
+ }
+@@ -57,22 +57,22 @@ diesel::table! {
+ diesel::table! {
+     songs (id) {
+         id -> Int4,
+         title -> Text,
+         artist -> Text,
+         created_at -> Timestamp,
+-        modifiers -> Nullable<Array<Nullable<Text>>>,
++        modifiers -> Nullable<Array<Text>>,
+         cover_url -> Nullable<Text>,
+         cover_url_small -> Nullable<Text>,
+         mbid -> Nullable<Text>,
+         musicbrainz_title -> Nullable<Text>,
+         musicbrainz_artist -> Nullable<Text>,
+         musicbrainz_length -> Nullable<Int4>,
+         mistag_lock -> Bool,
+-        aliases_artist -> Array<Nullable<Text>>,
+-        aliases_title -> Array<Nullable<Text>>,
++        aliases_artist -> Nullable<Array<Text>>,
++        aliases_title -> Nullable<Array<Text>>,
+     }
+ }
+ 
+ diesel::joinable!(scores -> players (player_id));
+ diesel::joinable!(scores -> songs (song_id));
+ diesel::joinable!(shouts -> players (author_id));
