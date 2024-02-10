@@ -17,7 +17,7 @@ pub struct Song {
 
 impl Song {
     /// Deletes the song from the database.
-    /// 
+    ///
     /// # Errors
     /// Fails if something is wrong with the DB or with Redis.
     pub async fn delete(
@@ -27,7 +27,7 @@ impl Song {
     ) -> anyhow::Result<()> {
         use crate::schema::{
             scores::dsl::{scores, song_id},
-            songs::dsl::{songs, id},
+            songs::dsl::{id, songs},
         };
 
         // Manually delete all scores associated with this song using Score::delete().
