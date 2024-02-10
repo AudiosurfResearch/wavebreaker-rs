@@ -7,20 +7,12 @@ use crate::{models::scores::Score, schema::songs};
 #[diesel(table_name = songs, check_for_backend(diesel::pg::Pg))]
 #[diesel(primary_key(id))]
 pub struct Song {
+    // Main info
     pub id: i32,
     pub title: String,
     pub artist: String,
     pub created_at: time::PrimitiveDateTime,
     pub modifiers: Option<Vec<String>>,
-    pub cover_url: Option<String>,
-    pub cover_url_small: Option<String>,
-    pub mbid: Option<String>,
-    pub musicbrainz_title: Option<String>,
-    pub musicbrainz_artist: Option<String>,
-    pub musicbrainz_length: Option<i32>,
-    pub mistag_lock: bool,
-    pub aliases_artist: Option<Vec<String>>,
-    pub aliases_title: Option<Vec<String>>,
 }
 
 impl Song {
