@@ -119,6 +119,11 @@ async fn main() -> anyhow::Result<()> {
         redis: redis_pool,
     };
 
+    // Set global user agent so MusicBrainz can contact us if we're messing up
+    musicbrainz_rs::config::set_user_agent(
+        "wavebreaker-rs/0.1.0 (https://github.com/AudiosurfResearch/wavebreaker-rs)",
+    );
+
     let app = Router::new()
         .nest("/as_steamlogin", routes_steam())
         .nest("//as_steamlogin", routes_steam_doubleslash()) // for that one edge case

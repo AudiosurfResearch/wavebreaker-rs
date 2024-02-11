@@ -13,6 +13,4 @@ CREATE TABLE
         aliases_title TEXT[]
     );
 
-CREATE UNIQUE INDEX ext_info_mbid ON extra_song_info (mbid);
-
 CREATE UNIQUE INDEX ext_info_song ON extra_song_info (song_id);

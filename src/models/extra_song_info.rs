@@ -65,7 +65,7 @@ impl NewExtraSongInfo {
     ///
     /// # Errors
     /// Fails if something is wrong with the database.
-    pub async fn create(&self, connection: &mut AsyncPgConnection) -> QueryResult<ExtraSongInfo> {
+    pub async fn insert(&self, connection: &mut AsyncPgConnection) -> QueryResult<ExtraSongInfo> {
         diesel::insert_into(extra_song_info::table)
             .values(self)
             .get_result(connection)

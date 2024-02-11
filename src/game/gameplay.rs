@@ -5,19 +5,21 @@ use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
 use tokio::try_join;
-use tracing::{info, instrument};
+use tracing::{error, info, instrument};
 
 use super::helpers::ticket_auth;
 use crate::{
     models::{
+        extra_song_info::ExtraSongInfo,
         players::Player,
         rivalries::Rivalry,
         scores::{NewScore, Score, ScoreWithPlayer},
-        songs::NewSong,
+        songs::{NewSong, Song},
     },
     util::{
         errors::RouteError,
         game_types::{split_x_separated, Character, Leaderboard, League},
+        musicbrainz::lookup_metadata,
     },
     AppState,
 };
@@ -135,7 +137,9 @@ pub async fn send_ride(
     State(state): State<AppState>,
     Form(payload): Form<SendRideRequest>,
 ) -> Result<Xml<SendRideResponse>, RouteError> {
-    use crate::schema::{players::dsl::*, rivalries::dsl::*, scores::dsl::*};
+    use crate::schema::{
+        extra_song_info, players::dsl::*, rivalries::dsl::*, scores::dsl::*, songs::dsl::songs,
+    };
 
     let steam_player = ticket_auth(&payload.ticket, &state.steam_api).await?;
 
@@ -225,7 +229,30 @@ pub async fn send_ride(
     .create_or_update(&mut conn, &mut redis_conn)
     .await?;
 
-    // TODO: Properly implement dethroning
+    // try to find existing metadata
+    let ext_metadata = extra_song_info::table
+        .filter(extra_song_info::song_id.eq(payload.song_id))
+        .first::<ExtraSongInfo>(&mut conn)
+        .await
+        .optional()?;
+    if ext_metadata.is_some() {
+        info!("Metadata already exists for song {}", payload.song_id);
+    } else {
+        // Get song, try to find metadata and add it to the DB
+        let song = songs.find(payload.song_id).first::<Song>(&mut conn).await?;
+        let ext_metadata = lookup_metadata(&song, payload.song_length * 10).await;
+        match ext_metadata {
+            Ok(ext_metadata) => {
+                info!("Got metadata: {:?}", ext_metadata);
+                ext_metadata.insert(&mut conn).await?;
+            }
+            Err(e) => {
+                error!("Failed to get metadata: {:?}", e);
+            }
+        }
+    }
+
+    // TODO: Implement dethrone notifications
     Ok(Xml(SendRideResponse {
         status: "allgood".to_owned(),
         song_id: new_score.song_id,
