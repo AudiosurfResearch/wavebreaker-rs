@@ -1,12 +1,14 @@
 use diesel::prelude::*;
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde::Serialize;
 
 use crate::schema::extra_song_info;
 
+/// Used for storing additional metadata from [MusicBrainz](https://musicbrainz.org).
+/// This lets us display fancy stuff™ on the song page.
 #[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Serialize)]
 #[diesel(table_name = extra_song_info, check_for_backend(diesel::pg::Pg))]
 pub struct ExtraSongInfo {
-    // Extended data
     pub id: i32,
     pub song_id: i32,
     pub cover_url: Option<String>,
@@ -18,4 +20,55 @@ pub struct ExtraSongInfo {
     pub mistag_lock: bool,
     pub aliases_artist: Option<Vec<String>>,
     pub aliases_title: Option<Vec<String>>,
+}
+
+/// Used for inserting additional metadata from [MusicBrainz](https://musicbrainz.org).
+#[derive(Insertable, PartialEq, Eq, Debug)]
+#[diesel(table_name = extra_song_info)]
+#[allow(clippy::module_name_repetitions)]
+pub struct NewExtraSongInfo {
+    pub song_id: i32,
+    pub cover_url: Option<String>,
+    pub cover_url_small: Option<String>,
+    pub mbid: Option<String>,
+    pub musicbrainz_title: Option<String>,
+    pub musicbrainz_artist: Option<String>,
+    pub musicbrainz_length: Option<i32>,
+}
+
+impl NewExtraSongInfo {
+    #[must_use]
+    pub const fn new(
+        song_id: i32,
+        cover_url: Option<String>,
+        cover_url_small: Option<String>,
+        mbid: Option<String>,
+        musicbrainz_title: Option<String>,
+        musicbrainz_artist: Option<String>,
+        musicbrainz_length: Option<i32>,
+    ) -> Self {
+        Self {
+            song_id,
+            cover_url,
+            cover_url_small,
+            mbid,
+            musicbrainz_title,
+            musicbrainz_artist,
+            musicbrainz_length,
+        }
+    }
+
+    /// Creates a new `ExtraSongInfo` record in the database.
+    ///
+    /// # Arguments
+    /// * `connection` - The database connection.
+    ///
+    /// # Errors
+    /// Fails if something is wrong with the database.
+    pub async fn create(&self, connection: &mut AsyncPgConnection) -> QueryResult<ExtraSongInfo> {
+        diesel::insert_into(extra_song_info::table)
+            .values(self)
+            .get_result(connection)
+            .await
+    }
 }
