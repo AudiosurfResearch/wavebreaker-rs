@@ -37,11 +37,12 @@ To connect, use the latest Wavebreaker client with ``forceInsecure`` set to ``tr
 - Shouts (Song comments)
 - Player rankings (using Skill Points)
 - **Audiosurf Radio!** (using [Rainbow Dream](https://github.com/AudiosurfResearch/rainbowdream) to create the needed files)
-- **Proper dethrones and the Brutus achievement!** (not present in TypeScript version)
+- **MusicBrainz integration!** (fetches cover art and title)
+- **Proper dethrones and the Brutus achievement!** *(not present in TypeScript version)*
+- **Custom aliases for songs' title/artist names** *(not present in TypeScript version)*
 - Miscellaneous stuff (e.g. custom news)
 
 ## What still needs to be done?
-- MusicBrainz integration for *fancy metadata!*
 - Non-game API (for the frontend and other clients that want to get data from Wavebreaker)
 
 ## Contributing
