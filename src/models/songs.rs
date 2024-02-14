@@ -1,7 +1,13 @@
 use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 
-use crate::{models::scores::Score, schema::songs};
+use crate::{
+    models::{extra_song_info::ExtraSongInfo, scores::Score},
+    schema::{
+        extra_song_info::{self},
+        songs,
+    },
+};
 
 #[derive(Identifiable, Selectable, Queryable, Debug)]
 #[diesel(table_name = songs, check_for_backend(diesel::pg::Pg))]
@@ -91,17 +97,39 @@ impl<'a> NewSong<'a> {
     ///
     /// This fails if the query or DB connection fail.
     pub async fn find_or_create(&self, conn: &mut AsyncPgConnection) -> QueryResult<Song> {
-        use crate::schema::songs::dsl::{artist, songs, title};
+        use diesel::sql_types::{Nullable, Text};
 
-        match songs
-            .filter(title.eq(self.title))
-            .filter(artist.eq(self.artist))
-            .first(conn)
+        use crate::schema::{
+            extra_song_info::dsl::{
+                aliases_artist, aliases_title, musicbrainz_artist, musicbrainz_title,
+            },
+            songs::dsl::{artist, title},
+        };
+
+        sql_function!(fn lower(x: Nullable<Text> ) -> Nullable<Text>);
+
+        let regular_data_predicate = title.eq(self.title).and(artist.eq(self.artist));
+        let musicbrainz_data_predicate = lower(musicbrainz_title)
+            .eq(self.title)
+            .and(lower(musicbrainz_artist).eq(self.artist));
+        let aliases_predicate = aliases_title
+            .contains(vec![self.title])
+            .and(aliases_artist.contains(vec![self.artist]));
+
+        match songs::table
+            .inner_join(extra_song_info::table)
+            .filter(
+                regular_data_predicate
+                    .or(musicbrainz_data_predicate)
+                    .or(aliases_predicate),
+            )
+            .select((Song::as_select(), ExtraSongInfo::as_select()))
+            .first::<(Song, ExtraSongInfo)>(conn)
             .await
         {
-            Ok(song) => Ok(song),
+            Ok(song_extended) => Ok(song_extended.0),
             Err(_) => {
-                diesel::insert_into(songs)
+                diesel::insert_into(songs::table)
                     .values(self)
                     .get_result(conn)
                     .await
