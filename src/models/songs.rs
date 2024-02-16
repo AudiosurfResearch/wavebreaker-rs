@@ -109,8 +109,9 @@ impl<'a> NewSong<'a> {
         // diesel doesn't have support for the lower function out of the box
         sql_function!(fn lower(x: Nullable<Text> ) -> Nullable<Text>);
 
-        // the alias arrays and the musicbrainz data have to play by the game's rules
-        // that means: lowercase, "&" replaced with "and", potentially other changes by the client too!
+        // the alias arrays and the musicbrainz data have to play by the game's rules else
+        // for arrays: lowercase (the lower function wont work on arrays)
+        // for all of them: "&" replaced with "and", potentially other changes by the client too!
         // can we fix this in the hook? what do we do?!
         let title_predicate = title.eq(self.title).or(lower(musicbrainz_title)
             .eq(self.title)
