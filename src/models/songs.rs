@@ -106,23 +106,22 @@ impl<'a> NewSong<'a> {
             songs::dsl::{artist, title},
         };
 
+        // diesel doesn't have support for the lower function out of the box
         sql_function!(fn lower(x: Nullable<Text> ) -> Nullable<Text>);
 
-        let regular_data_predicate = title.eq(self.title).and(artist.eq(self.artist));
-        let musicbrainz_data_predicate = lower(musicbrainz_title)
+        // the alias arrays and the musicbrainz data have to play by the game's rules
+        // that means: lowercase, "&" replaced with "and", potentially other changes by the client too!
+        // can we fix this in the hook? what do we do?!
+        let title_predicate = title.eq(self.title).or(lower(musicbrainz_title)
             .eq(self.title)
-            .and(lower(musicbrainz_artist).eq(self.artist));
-        let aliases_predicate = aliases_title
-            .contains(vec![self.title])
-            .and(aliases_artist.contains(vec![self.artist]));
+            .or(aliases_title.contains(vec![self.title])));
+        let artist_predicate = artist.eq(self.artist).or(lower(musicbrainz_artist)
+            .eq(self.artist)
+            .or(aliases_artist.contains(vec![self.artist])));
 
         match songs::table
             .inner_join(extra_song_info::table)
-            .filter(
-                regular_data_predicate
-                    .or(musicbrainz_data_predicate)
-                    .or(aliases_predicate),
-            )
+            .filter(title_predicate.and(artist_predicate))
             .select((Song::as_select(), ExtraSongInfo::as_select()))
             .first::<(Song, ExtraSongInfo)>(conn)
             .await
