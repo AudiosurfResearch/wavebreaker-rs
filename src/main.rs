@@ -88,24 +88,11 @@ async fn main() -> anyhow::Result<()> {
         .with(tracing_subscriber::fmt::layer())
         .init();
 
-    let args = manager::Args::parse();
-
-    if args.command.is_some() {
-        return manager::parse_command(&args.command.unwrap());
-    }
-
-    info!("Wavebreaker starting...");
-
     let wavebreaker_config: Config = Figment::new()
         .merge(Toml::file("Wavebreaker.toml"))
         .merge(Env::prefixed("WAVEBREAKER_"))
         .extract()
         .context("Config should be valid!")?;
-
-    let listener = tokio::net::TcpListener::bind(&wavebreaker_config.main.address)
-        .await
-        .context("Listener should always be able to listen!")?;
-    info!("Listening on {}", wavebreaker_config.main.address);
 
     let diesel_manager = AsyncDieselConnectionManager::<diesel_async::AsyncPgConnection>::new(
         &wavebreaker_config.main.database,
@@ -125,6 +112,19 @@ async fn main() -> anyhow::Result<()> {
         db: pool,
         redis: redis_pool,
     };
+
+    let args = manager::Args::parse();
+
+    if args.command.is_some() {
+        return manager::parse_command(&args.command.unwrap(), state).await;
+    }
+
+    info!("Wavebreaker starting...");
+
+    let listener = tokio::net::TcpListener::bind(&state.config.main.address)
+        .await
+        .context("Listener should always be able to listen!")?;
+    info!("Listening on {}", &state.config.main.address);
 
     // Set global user agent so MusicBrainz can contact us if we're messing up
     musicbrainz_rs::config::set_user_agent(

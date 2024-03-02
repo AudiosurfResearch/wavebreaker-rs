@@ -52,6 +52,15 @@ impl Song {
             .await?;
         Ok(())
     }
+
+    /// Merges this song into another one. This song will be deleted when it's done.
+    pub async fn merge(&self, target: i32, conn: &mut AsyncPgConnection) -> anyhow::Result<()> {
+        use crate::schema::songs::dsl::*;
+
+        let target = songs.find(target).first::<Self>(conn).await?;
+
+        Ok(())
+    }
 }
 
 #[derive(Insertable)]

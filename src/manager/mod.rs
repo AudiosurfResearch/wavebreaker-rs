@@ -1,5 +1,10 @@
+use anyhow::anyhow;
 use clap::{Parser, Subcommand};
+use diesel::prelude::*;
+use diesel_async::RunQueryDsl;
 use tracing::debug;
+
+use crate::AppState;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -11,28 +16,17 @@ pub struct Args {
 
 #[derive(Debug, Subcommand)]
 pub enum Command {
-    #[clap(subcommand)]
-    Read(Entity),
-    #[clap(subcommand)]
-    Delete(Entity),
+    MergeSongs {
+        id_to_merge: i32,
+        target: i32,
+    },
 }
 
-#[derive(Debug, Clone, Subcommand)]
-pub enum Entity {
-    User { id: i32 },
-    Song { id: i32 },
-    Score { id: i32 },
-}
-
-pub fn parse_command(command: &Command) -> anyhow::Result<()> {
+pub async fn parse_command(command: &Command, state: AppState) -> anyhow::Result<()> {
     match command {
-        Command::Read(entity) => {
-            debug!("Read command input: {:?}", entity);
-            Err(anyhow::anyhow!("placeholder"))
-        }
-        Command::Delete(entity) => {
-            debug!("Delete command input: {:?}", entity);
-            Ok(())
+        Command::MergeSongs { id_to_merge, target } => {
+            let conn = state.db.get().await?;
+            Err(anyhow!("Not implemented"))
         }
     }
 }
