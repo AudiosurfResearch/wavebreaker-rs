@@ -1,7 +1,6 @@
 #![warn(
     clippy::pedantic,
     clippy::nursery,
-    clippy::unwrap_used,
     clippy::correctness,
     clippy::style,
     clippy::perf,
@@ -16,6 +15,7 @@
 #![allow(clippy::wildcard_imports)]
 
 mod game;
+mod manager;
 pub mod models;
 pub mod schema;
 mod util;
@@ -27,6 +27,7 @@ use axum::{
     extract::{MatchedPath, Request},
     Router,
 };
+use clap::Parser;
 use deadpool_redis::Runtime;
 use diesel_async::pooled_connection::{deadpool::Pool, AsyncDieselConnectionManager};
 use figment::{
@@ -86,6 +87,12 @@ async fn main() -> anyhow::Result<()> {
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
+
+    let args = manager::Args::parse();
+
+    if args.command.is_some() {
+        return manager::parse_command(&args.command.unwrap());
+    }
 
     info!("Wavebreaker starting...");
 
