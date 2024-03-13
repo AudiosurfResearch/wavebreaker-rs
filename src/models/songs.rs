@@ -1,10 +1,11 @@
 use diesel::prelude::*;
-use diesel_async::{AsyncPgConnection, RunQueryDsl};
+use diesel_async::{AsyncPgConnection, RunQueryDsl, SaveChangesDsl};
+use tracing::debug;
 
 use crate::{
-    models::{extra_song_info::ExtraSongInfo, scores::Score},
+    models::{extra_song_info::{ExtraSongInfo, NewExtraSongInfo}, scores::Score},
     schema::{
-        extra_song_info::{self},
+        extra_song_info,
         songs,
     },
 };
@@ -54,10 +55,96 @@ impl Song {
     }
 
     /// Merges this song into another one. This song will be deleted when it's done.
-    pub async fn merge(&self, target: i32, conn: &mut AsyncPgConnection) -> anyhow::Result<()> {
-        use crate::schema::songs::dsl::*;
+    ///
+    /// # Errors
+    /// If it can't be merged or if something is wrong with the database, this fails.
+    pub async fn merge_into(
+        &self,
+        target: i32,
+        should_alias: bool,
+        conn: &mut AsyncPgConnection,
+        redis_conn: &mut deadpool_redis::Connection,
+    ) -> anyhow::Result<()> {
+        use crate::schema::{scores::dsl::*, songs::dsl::*};
 
         let target = songs.find(target).first::<Self>(conn).await?;
+        let mut target_scores: Vec<Score> = Score::belonging_to(&target)
+            .select(Score::as_select())
+            .load::<Score>(conn)
+            .await?;
+        let own_scores: Vec<Score> = Score::belonging_to(&self)
+            .select(Score::as_select())
+            .load::<Score>(conn)
+            .await?;
+
+        debug!("Merging song {} into {}", self.id, target.id);
+
+        for mut own_score in own_scores {
+            // Find score with same player and league in the target song
+            match target_scores.iter_mut().find(|found_score| {
+                found_score.player_id == own_score.player_id
+                    && found_score.league == own_score.league
+            }) {
+                Some(target_score) => {
+                    // If the score on the song we want to merge into is lower, we delete that score
+                    // then, we add our song's score to the merge target song
+                    if target_score.score < own_score.score {
+                        target_score.delete(conn, redis_conn).await?;
+                        own_score.song_id = target.id;
+                        own_score.play_count += target_score.play_count;
+                        own_score.save_changes::<Score>(conn).await?;
+                    } else {
+                        target_score.play_count += own_score.play_count;
+                        target_score.save_changes::<Score>(conn).await?;
+                        own_score.delete(conn, redis_conn).await?;
+                    }
+                }
+                None => {
+                    diesel::update(&own_score)
+                        .set(song_id.eq(target.id))
+                        .execute(conn)
+                        .await?;
+                }
+            }
+        }
+
+        if should_alias {
+            let target_extra_info: Option<ExtraSongInfo> = ExtraSongInfo::belonging_to(&target)
+                .select(ExtraSongInfo::as_select())
+                .first::<ExtraSongInfo>(conn)
+                .await
+                .optional()?;
+
+            if let Some(target_extra_info) = target_extra_info {
+                //Note that this doesn't merge our own alias list into the target's!
+                //Instead, we add *only our artist and title fields* to the target's aliases.
+                target_extra_info
+                    .aliases_artist
+                    .clone()
+                    .unwrap_or_default()
+                    .push(self.artist.clone());
+                target_extra_info
+                    .aliases_title
+                    .clone()
+                    .unwrap_or_default()
+                    .push(self.title.clone());
+
+                target_extra_info
+                    .save_changes::<ExtraSongInfo>(conn)
+                    .await?;
+            } else {
+                let new_extra_info = NewExtraSongInfo {
+                    song_id: target.id,
+                    aliases_artist: Some(vec![self.artist.clone()]),
+                    aliases_title: Some(vec![self.title.clone()]),
+                    ..Default::default()
+                };
+                new_extra_info.insert(conn).await?;
+            }
+        }
+
+        //Delete this song!
+        self.delete(conn, redis_conn).await?;
 
         Ok(())
     }

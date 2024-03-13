@@ -6,7 +6,19 @@ use crate::schema::extra_song_info;
 
 /// Used for storing additional metadata from [MusicBrainz](https://musicbrainz.org).
 /// This lets us display fancy stuff™ on the song page.
-#[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Serialize)]
+#[derive(
+    Queryable,
+    Selectable,
+    Identifiable,
+    Associations,
+    PartialEq,
+    Eq,
+    Debug,
+    Serialize,
+    Default,
+    AsChangeset,
+)]
+#[diesel(belongs_to(super::songs::Song))]
 #[diesel(table_name = extra_song_info, check_for_backend(diesel::pg::Pg))]
 pub struct ExtraSongInfo {
     pub id: i32,
@@ -23,7 +35,7 @@ pub struct ExtraSongInfo {
 }
 
 /// Used for inserting additional metadata from [MusicBrainz](https://musicbrainz.org).
-#[derive(Insertable, PartialEq, Eq, Debug)]
+#[derive(Insertable, PartialEq, Eq, Debug, Default)]
 #[diesel(table_name = extra_song_info)]
 #[allow(clippy::module_name_repetitions)]
 pub struct NewExtraSongInfo {
@@ -34,10 +46,13 @@ pub struct NewExtraSongInfo {
     pub musicbrainz_title: Option<String>,
     pub musicbrainz_artist: Option<String>,
     pub musicbrainz_length: Option<i32>,
+    pub aliases_title: Option<Vec<String>>,
+    pub aliases_artist: Option<Vec<String>>,
 }
 
 impl NewExtraSongInfo {
     #[must_use]
+    #[allow(clippy::too_many_arguments)] // Too bad, I don't care!
     pub const fn new(
         song_id: i32,
         cover_url: Option<String>,
@@ -46,6 +61,8 @@ impl NewExtraSongInfo {
         musicbrainz_title: Option<String>,
         musicbrainz_artist: Option<String>,
         musicbrainz_length: Option<i32>,
+        aliases_title: Option<Vec<String>>,
+        aliases_artist: Option<Vec<String>>,
     ) -> Self {
         Self {
             song_id,
@@ -55,6 +72,8 @@ impl NewExtraSongInfo {
             musicbrainz_title,
             musicbrainz_artist,
             musicbrainz_length,
+            aliases_title,
+            aliases_artist,
         }
     }
 

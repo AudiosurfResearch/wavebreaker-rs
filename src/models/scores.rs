@@ -62,7 +62,7 @@ where
     }
 }
 
-#[derive(Identifiable, Selectable, Queryable, Associations, Debug, Serialize)]
+#[derive(AsChangeset, Identifiable, Selectable, Queryable, Associations, Debug, Serialize)]
 #[diesel(belongs_to(Player))]
 #[diesel(belongs_to(Song))]
 #[diesel(table_name = scores, check_for_backend(diesel::pg::Pg))]

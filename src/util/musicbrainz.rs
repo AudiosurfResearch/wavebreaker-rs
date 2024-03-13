@@ -66,6 +66,8 @@ pub async fn lookup_metadata(song: &Song, duration: i32) -> anyhow::Result<NewEx
     #[allow(clippy::cast_possible_wrap)]
     let musicbrainz_length = recording.length.map(|length| length as i32);
 
+    //TODO: What if the song already has extra info? What if we just want to update it?
+    //We can't just insert a new record in that case...
     Ok(NewExtraSongInfo::new(
         song.id,
         Some(cover_url),
@@ -74,5 +76,7 @@ pub async fn lookup_metadata(song: &Song, duration: i32) -> anyhow::Result<NewEx
         Some(musicbrainz_title),
         Some(musicbrainz_artist),
         musicbrainz_length,
+        None,
+        None,
     ))
 }

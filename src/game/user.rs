@@ -10,7 +10,6 @@ use crate::schema::players::dsl::*;
 use crate::{
     game::helpers::ticket_auth,
     models::players::{NewPlayer, Player},
-    schema::players::steam_account_num,
     util::{
         errors::{IntoRouteError, RouteError},
         game_types::split_x_separated,
