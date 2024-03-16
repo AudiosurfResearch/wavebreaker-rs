@@ -10,7 +10,7 @@ use tracing::{error, info, instrument};
 use super::helpers::ticket_auth;
 use crate::{
     models::{
-        extra_song_info::ExtraSongInfo,
+        extra_song_info::{ExtraSongInfo, NewExtraSongInfo},
         players::Player,
         rivalries::Rivalry,
         scores::{NewScore, Score, ScoreWithPlayer},
@@ -235,21 +235,41 @@ pub async fn send_ride(
         .first::<ExtraSongInfo>(&mut conn)
         .await
         .optional()?;
-    if ext_metadata.is_some() {
+
+    // We get the song and try to find any existing metadata
+    //
+    // If metadata exists, check if it has an MBID. If it does, no need to do another MusicBrainz lookup!
+    // If it doesn't, do a MusicBrainz lookup and update the metadata
+    //
+    // If metadata doesn't exist, do a MusicBrainz lookup and create the metadata
+    let song = songs.find(payload.song_id).first::<Song>(&mut conn).await?;
+
+    if let Some(ext_metadata) = ext_metadata {
         info!("Metadata already exists for song {}", payload.song_id);
-    } else {
-        // Get song, try to find metadata and add it to the DB
-        let song = songs.find(payload.song_id).first::<Song>(&mut conn).await?;
-        let ext_metadata = lookup_metadata(&song, payload.song_length * 10).await;
-        match ext_metadata {
-            Ok(ext_metadata) => {
-                info!("Got metadata: {:?}", ext_metadata);
-                ext_metadata.insert(&mut conn).await?;
-            }
-            Err(e) => {
-                error!("Failed to get metadata: {:?}", e);
-            }
+
+        if ext_metadata.mbid.is_none() {
+            info!("Existing metadata does not have an MBID, performing MusicBrainz lookup");
+            let musicbrainz_data = lookup_metadata(&song, payload.song_length * 10).await?;
+            diesel::update(&ext_metadata)
+                .set(&musicbrainz_data)
+                .execute(&mut conn)
+                .await?;
         }
+    } else {
+        info!("Song has no extra metadata yet, performing MusicBrainz lookup");
+        let musicbrainz_data = lookup_metadata(&song, payload.song_length * 10).await?;
+        let new_ext_metadata = NewExtraSongInfo {
+            song_id: payload.song_id,
+            cover_url: Some(musicbrainz_data.cover_url),
+            cover_url_small: Some(musicbrainz_data.cover_url_small),
+            mbid: Some(musicbrainz_data.mbid),
+            musicbrainz_title: Some(musicbrainz_data.musicbrainz_title),
+            musicbrainz_artist: Some(musicbrainz_data.musicbrainz_artist),
+            musicbrainz_length: Some(musicbrainz_data.musicbrainz_length),
+            aliases_title: None,
+            aliases_artist: None,
+        };
+        new_ext_metadata.insert(&mut conn).await?;
     }
 
     // TODO: Implement dethrone notifications

@@ -1,13 +1,25 @@
+use diesel::query_builder::AsChangeset;
 use musicbrainz_rs::{
     entity::{recording::Recording, CoverartResponse},
     FetchCoverart, Search,
 };
 use tracing::info;
 
-use crate::models::{extra_song_info::NewExtraSongInfo, songs::Song};
+use crate::models::songs::Song;
+
+#[derive(Debug, AsChangeset)]
+#[diesel(table_name = crate::schema::extra_song_info)]
+pub struct MusicBrainzInfo {
+    pub cover_url: String,
+    pub cover_url_small: String,
+    pub mbid: String,
+    pub musicbrainz_title: String,
+    pub musicbrainz_artist: String,
+    pub musicbrainz_length: i32,
+}
 
 // TODO: Make this code less bad
-pub async fn lookup_metadata(song: &Song, duration: i32) -> anyhow::Result<NewExtraSongInfo> {
+pub async fn lookup_metadata(song: &Song, duration: i32) -> anyhow::Result<MusicBrainzInfo> {
     let query = format!(
         "query=(recording:\"{}\" OR alias:\"{0}\") AND artist:\"{}\" AND dur:\"[{} TO {}]\"",
         song.title,
@@ -68,15 +80,12 @@ pub async fn lookup_metadata(song: &Song, duration: i32) -> anyhow::Result<NewEx
 
     //TODO: What if the song already has extra info? What if we just want to update it?
     //We can't just insert a new record in that case...
-    Ok(NewExtraSongInfo::new(
-        song.id,
-        Some(cover_url),
-        Some(cover_url_small),
-        Some(mbid),
-        Some(musicbrainz_title),
-        Some(musicbrainz_artist),
-        musicbrainz_length,
-        None,
-        None,
-    ))
+    Ok(MusicBrainzInfo {
+        cover_url,
+        cover_url_small,
+        mbid,
+        musicbrainz_title,
+        musicbrainz_artist,
+        musicbrainz_length: musicbrainz_length.unwrap_or_default(),
+    })
 }
