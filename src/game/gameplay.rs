@@ -249,27 +249,41 @@ pub async fn send_ride(
 
         if ext_metadata.mbid.is_none() {
             info!("Existing metadata does not have an MBID, performing MusicBrainz lookup");
-            let musicbrainz_data = lookup_metadata(&song, payload.song_length * 10).await?;
-            diesel::update(&ext_metadata)
-                .set(&musicbrainz_data)
-                .execute(&mut conn)
-                .await?;
+            let musicbrainz_data = lookup_metadata(&song, payload.song_length * 10).await;
+            match musicbrainz_data {
+                Ok(musicbrainz_data) => {
+                    diesel::update(&ext_metadata)
+                        .set(&musicbrainz_data)
+                        .execute(&mut conn)
+                        .await?;
+                }
+                Err(e) => {
+                    error!("MusicBrainz lookup failed: {}", e);
+                }
+            }
         }
     } else {
         info!("Song has no extra metadata yet, performing MusicBrainz lookup");
-        let musicbrainz_data = lookup_metadata(&song, payload.song_length * 10).await?;
-        let new_ext_metadata = NewExtraSongInfo {
-            song_id: payload.song_id,
-            cover_url: Some(musicbrainz_data.cover_url),
-            cover_url_small: Some(musicbrainz_data.cover_url_small),
-            mbid: Some(musicbrainz_data.mbid),
-            musicbrainz_title: Some(musicbrainz_data.musicbrainz_title),
-            musicbrainz_artist: Some(musicbrainz_data.musicbrainz_artist),
-            musicbrainz_length: Some(musicbrainz_data.musicbrainz_length),
-            aliases_title: None,
-            aliases_artist: None,
-        };
-        new_ext_metadata.insert(&mut conn).await?;
+        let musicbrainz_data = lookup_metadata(&song, payload.song_length * 10).await;
+        match musicbrainz_data {
+            Ok(musicbrainz_data) => {
+                let new_ext_metadata = NewExtraSongInfo {
+                    song_id: payload.song_id,
+                    cover_url: Some(musicbrainz_data.cover_url),
+                    cover_url_small: Some(musicbrainz_data.cover_url_small),
+                    mbid: Some(musicbrainz_data.mbid),
+                    musicbrainz_title: Some(musicbrainz_data.musicbrainz_title),
+                    musicbrainz_artist: Some(musicbrainz_data.musicbrainz_artist),
+                    musicbrainz_length: Some(musicbrainz_data.musicbrainz_length),
+                    aliases_title: None,
+                    aliases_artist: None,
+                };
+                new_ext_metadata.insert(&mut conn).await?;
+            }
+            Err(e) => {
+                error!("MusicBrainz lookup failed: {}", e);
+            }
+        }
     }
 
     // TODO: Implement dethrone notifications
