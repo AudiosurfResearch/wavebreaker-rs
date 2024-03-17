@@ -26,9 +26,9 @@ use crate::{
 
 #[derive(Deserialize)]
 pub struct SongIdRequest {
+    ticket: String,
     artist: String,
     song: String,
-    uid: u64,
     league: League,
 }
 
@@ -56,6 +56,8 @@ pub async fn fetch_song_id(
 ) -> Result<Xml<SongIdResponse>, RouteError> {
     use crate::util::modifiers::{parse_from_title, remove_from_title};
 
+    let steam_player = ticket_auth(&payload.ticket, &state.steam_api).await?;
+
     let mut conn = state.db.get().await?;
     let song = NewSong::new(
         &remove_from_title(&payload.song),
@@ -66,8 +68,8 @@ pub async fn fetch_song_id(
     .await?;
 
     info!(
-        "Song {} - {} looked up by {}, league {:?}",
-        song.artist, song.title, payload.uid, payload.league
+        "Song {} - {} looked up by {} (Steam), league {:?}",
+        song.artist, song.title, steam_player, payload.league
     );
 
     Ok(Xml(SongIdResponse {
