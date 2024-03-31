@@ -26,10 +26,14 @@ use crate::{
 
 #[derive(Deserialize)]
 pub struct SongIdRequest {
-    ticket: String,
     artist: String,
     song: String,
     league: League,
+    //Wavebreaker-specific
+    ticket: String,
+    mbid: Option<String>,
+    #[serde(rename = "releasembid")]
+    release_mbid: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -97,6 +101,10 @@ pub struct SendRideRequest {
     gold_threshold: i32,
     iss: i32,
     isj: i32,
+    //Wavebreaker-specific
+    mbid: Option<String>,
+    #[serde(rename = "releasembid")]
+    release_mbid: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -146,8 +154,8 @@ pub async fn send_ride(
     let steam_player = ticket_auth(&payload.ticket, &state.steam_api).await?;
 
     info!(
-        "Score received on {} from {} (Steam) with score {}, using {:?}",
-        &payload.song_id, &steam_player, &payload.score, &payload.vehicle
+        "Score received on {} from {} (Steam) with score {}, using {:?}. MBID {:?}, release MBID {:?}",
+        &payload.song_id, &steam_player, &payload.score, &payload.vehicle, &payload.mbid, &payload.release_mbid
     );
 
     let mut redis_conn = state.redis.get().await?;
@@ -156,16 +164,20 @@ pub async fn send_ride(
         .first::<Player>(&mut conn)
         .await?;
 
-    let current_top: QueryResult<(Score, Player)> = scores
+    // Check the song for a top score by another player
+    let current_top: Option<(Score, Player)> = scores
         .inner_join(players::table())
         .filter(song_id.eq(payload.song_id))
         .filter(league.eq(payload.league))
         .filter(player_id.ne(player.id))
         .order(score.desc())
         .first::<(Score, Player)>(&mut conn)
-        .await;
+        .await
+        .optional()?;
 
-    let beat_score = if let Ok(current_top) = current_top {
+    // construct part of the response that's for dethroning
+    let beat_score = if let Some(current_top) = current_top {
+        // Check if the player dethroned the current top score
         if current_top.0.score < payload.score {
             info!(
                 "Player {} (Steam) dethroned {} on {} with score {}",
@@ -173,13 +185,15 @@ pub async fn send_ride(
             );
         }
 
+        // Calculate how long the current top score has been at the top before being mercilessly dethroned (part of the Brutus achievement condition!)
         let reign_duration = OffsetDateTime::now_utc() - current_top.0.submitted_at.assume_utc();
 
+        // Check if the player has a rivalry with the top score holder (part of the Brutus achievement condition!)
         let rivalry = rivalries
-            .find((player.id, player.id))
+            .find((player.id, current_top.1.id))
             .first::<Rivalry>(&mut conn)
             .await;
-        //If rivalry exists, check if rivalry is mutual
+        //If rivalry exists, check if rivalry is mutual (we consider mutual rivalries to be friends)
         let mutual = if let Ok(rivalry) = rivalry {
             rivalry.is_mutual(&mut conn).await
         } else {
