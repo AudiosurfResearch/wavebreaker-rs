@@ -1,4 +1,4 @@
-use axum::{extract::State, Form};
+use axum::{extract::State, http::StatusCode, Form};
 use axum_serde::Xml;
 use diesel::{associations::HasTable, prelude::*};
 use diesel_async::RunQueryDsl;
@@ -17,7 +17,7 @@ use crate::{
         songs::{NewSong, Song},
     },
     util::{
-        errors::RouteError,
+        errors::{IntoRouteError, RouteError},
         game_types::{split_x_separated, Character, Leaderboard, League},
         musicbrainz::lookup_metadata,
     },
@@ -148,11 +148,11 @@ pub async fn send_ride(
     Form(payload): Form<SendRideRequest>,
 ) -> Result<Xml<SendRideResponse>, RouteError> {
     use crate::schema::{
-        extra_song_info, players::dsl::*, rivalries::dsl::*, scores::dsl::*, songs::dsl::songs,
+        players::dsl::*, rivalries::dsl::*, scores::dsl::*, songs::dsl::songs,
     };
 
     let steam_player = ticket_auth(&payload.ticket, &state.steam_api).await?;
-
+    
     info!(
         "Score received on {} from {} (Steam) with score {}, using {:?}. MBID {:?}, release MBID {:?}",
         &payload.song_id, &steam_player, &payload.score, &payload.vehicle, &payload.mbid, &payload.release_mbid
@@ -163,6 +163,8 @@ pub async fn send_ride(
     let player: Player = Player::find_by_steam_id(steam_player)
         .first::<Player>(&mut conn)
         .await?;
+
+    let song = songs.find(payload.song_id).first::<Song>(&mut conn).await.http_error("Song not found", StatusCode::NOT_FOUND)?;
 
     // Check the song for a top score by another player
     let current_top: Option<(Score, Player)> = scores
@@ -193,7 +195,7 @@ pub async fn send_ride(
             .find((player.id, current_top.1.id))
             .first::<Rivalry>(&mut conn)
             .await;
-        //If rivalry exists, check if rivalry is mutual (we consider mutual rivalries to be friends)
+        // If rivalry exists, check if rivalry is mutual (we consider mutual rivalries to be friends)
         let mutual = if let Ok(rivalry) = rivalry {
             rivalry.is_mutual(&mut conn).await
         } else {
@@ -225,7 +227,7 @@ pub async fn send_ride(
 
     let new_score = NewScore::new(
         player.id,
-        payload.song_id,
+        song.id,
         payload.league,
         payload.score,
         &split_x_separated::<i32>(&payload.track_shape)?,
@@ -245,21 +247,17 @@ pub async fn send_ride(
     .create_or_update(&mut conn, &mut redis_conn)
     .await?;
 
-    // try to find existing metadata
-    let ext_metadata = extra_song_info::table
-        .filter(extra_song_info::song_id.eq(payload.song_id))
-        .first::<ExtraSongInfo>(&mut conn)
-        .await
-        .optional()?;
-
-    // We get the song and try to find any existing metadata
+    // We try to find any existing metadata
     //
     // If metadata exists, check if it has an MBID. If it does, no need to do another MusicBrainz lookup!
     // If it doesn't, do a MusicBrainz lookup and update the metadata
     //
     // If metadata doesn't exist, do a MusicBrainz lookup and create the metadata
-    let song = songs.find(payload.song_id).first::<Song>(&mut conn).await?;
-
+    let ext_metadata: Option<ExtraSongInfo> = ExtraSongInfo::belonging_to(&song)
+        .first::<ExtraSongInfo>(&mut conn)
+        .await
+        .optional()?;
+    
     if let Some(ext_metadata) = ext_metadata {
         info!("Metadata already exists for song {}", payload.song_id);
 
