@@ -3,11 +3,11 @@ use diesel_async::{AsyncPgConnection, RunQueryDsl, SaveChangesDsl};
 use tracing::debug;
 
 use crate::{
-    models::{extra_song_info::{ExtraSongInfo, NewExtraSongInfo}, scores::Score},
-    schema::{
-        extra_song_info,
-        songs,
+    models::{
+        extra_song_info::{ExtraSongInfo, NewExtraSongInfo},
+        scores::Score,
     },
+    schema::{extra_song_info, songs},
 };
 
 #[derive(Identifiable, Selectable, Queryable, Debug)]
@@ -145,6 +145,40 @@ impl Song {
 
         //Delete this song!
         self.delete(conn, redis_conn).await?;
+
+        Ok(())
+    }
+
+    #[allow(clippy::doc_markdown)]
+    /// Automatically adds extra metadata from [MusicBrainz](https://musicbrainz.org) to the song if it doesn't have any.
+    ///
+    /// This function does not check if an existing `ExtraSongInfo` struct lacks MusicBrainz info.
+    /// It just bails if it finds an existing struct *at all.*
+    ///
+    /// # Errors
+    /// If anything goes wrong with the database (when looking up if the song already has extra metadata or inserting the new data), this fails.
+    /// This also fails if the MusicBrainz lookup fails.
+    pub async fn auto_add_metadata(
+        &self,
+        duration: i32,
+        conn: &mut AsyncPgConnection,
+    ) -> anyhow::Result<()> {
+        use crate::util::musicbrainz::lookup_metadata;
+
+        let extra_info = ExtraSongInfo::belonging_to(self)
+            .select(ExtraSongInfo::as_select())
+            .first::<ExtraSongInfo>(conn)
+            .await
+            .optional()?;
+
+        if extra_info.is_none() {
+            let metadata = lookup_metadata(self, duration).await?;
+
+            diesel::insert_into(extra_song_info::table)
+                .values((metadata, extra_song_info::song_id.eq(self.id)))
+                .execute(conn)
+                .await?;
+        }
 
         Ok(())
     }

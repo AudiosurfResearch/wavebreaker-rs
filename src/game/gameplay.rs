@@ -10,7 +10,6 @@ use tracing::{error, info, instrument};
 use super::helpers::ticket_auth;
 use crate::{
     models::{
-        extra_song_info::{ExtraSongInfo, NewExtraSongInfo},
         players::Player,
         rivalries::Rivalry,
         scores::{NewScore, Score, ScoreWithPlayer},
@@ -19,7 +18,6 @@ use crate::{
     util::{
         errors::{IntoRouteError, RouteError},
         game_types::{split_x_separated, Character, Leaderboard, League},
-        musicbrainz::lookup_metadata,
     },
     AppState,
 };
@@ -247,57 +245,10 @@ pub async fn send_ride(
     .create_or_update(&mut conn, &mut redis_conn)
     .await?;
 
-    // We try to find any existing metadata
-    //
-    // If metadata exists, check if it has an MBID. If it does, no need to do another MusicBrainz lookup!
-    // If it doesn't, do a MusicBrainz lookup and update the metadata
-    //
-    // If metadata doesn't exist, do a MusicBrainz lookup and create the metadata
-    let ext_metadata: Option<ExtraSongInfo> = ExtraSongInfo::belonging_to(&song)
-        .first::<ExtraSongInfo>(&mut conn)
-        .await
-        .optional()?;
-    
-    if let Some(ext_metadata) = ext_metadata {
-        info!("Metadata already exists for song {}", payload.song_id);
-
-        if ext_metadata.mbid.is_none() {
-            info!("Existing metadata does not have an MBID, performing MusicBrainz lookup");
-            let musicbrainz_data = lookup_metadata(&song, payload.song_length * 10).await;
-            match musicbrainz_data {
-                Ok(musicbrainz_data) => {
-                    diesel::update(&ext_metadata)
-                        .set(&musicbrainz_data)
-                        .execute(&mut conn)
-                        .await?;
-                }
-                Err(e) => {
-                    error!("MusicBrainz lookup failed: {}", e);
-                }
-            }
-        }
-    } else {
-        info!("Song has no extra metadata yet, performing MusicBrainz lookup");
-        let musicbrainz_data = lookup_metadata(&song, payload.song_length * 10).await;
-        match musicbrainz_data {
-            Ok(musicbrainz_data) => {
-                let new_ext_metadata = NewExtraSongInfo {
-                    song_id: payload.song_id,
-                    cover_url: Some(musicbrainz_data.cover_url),
-                    cover_url_small: Some(musicbrainz_data.cover_url_small),
-                    mbid: Some(musicbrainz_data.mbid),
-                    musicbrainz_title: Some(musicbrainz_data.musicbrainz_title),
-                    musicbrainz_artist: Some(musicbrainz_data.musicbrainz_artist),
-                    musicbrainz_length: Some(musicbrainz_data.musicbrainz_length),
-                    aliases_title: None,
-                    aliases_artist: None,
-                };
-                new_ext_metadata.insert(&mut conn).await?;
-            }
-            Err(e) => {
-                error!("MusicBrainz lookup failed: {}", e);
-            }
-        }
+    // Add MusicBrainz metadata, if no extra metadata exists already
+    // we're doing this here because we need the song length to search for the recording
+    if let Err(e) = song.auto_add_metadata(payload.song_length * 10, &mut conn,).await {
+        error!("Failed to add metadata for song {}: {}", song.id, e);
     }
 
     // TODO: Implement dethrone notifications

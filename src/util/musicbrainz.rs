@@ -1,4 +1,4 @@
-use diesel::query_builder::AsChangeset;
+use diesel::{prelude::Insertable, query_builder::AsChangeset};
 use musicbrainz_rs::{
     entity::{recording::Recording, CoverartResponse},
     FetchCoverart, Search,
@@ -7,7 +7,7 @@ use tracing::info;
 
 use crate::models::songs::Song;
 
-#[derive(Debug, AsChangeset)]
+#[derive(Debug, AsChangeset, Insertable)]
 #[diesel(table_name = crate::schema::extra_song_info)]
 pub struct MusicBrainzInfo {
     pub cover_url: String,
@@ -78,8 +78,6 @@ pub async fn lookup_metadata(song: &Song, duration: i32) -> anyhow::Result<Music
     #[allow(clippy::cast_possible_wrap)]
     let musicbrainz_length = recording.length.map(|length| length as i32);
 
-    //TODO: What if the song already has extra info? What if we just want to update it?
-    //We can't just insert a new record in that case...
     Ok(MusicBrainzInfo {
         cover_url,
         cover_url_small,
