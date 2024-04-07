@@ -1,6 +1,6 @@
 use diesel::{prelude::Insertable, query_builder::AsChangeset};
 use musicbrainz_rs::{
-    entity::{recording::Recording, CoverartResponse},
+    entity::{recording::Recording, release::Release, CoverartResponse},
     Fetch, FetchCoverart, Search,
 };
 use tracing::info;
@@ -88,7 +88,10 @@ pub async fn lookup_metadata(song: &Song, duration: i32) -> anyhow::Result<Music
     })
 }
 
-pub async fn lookup_mbid(mbid: &str) -> anyhow::Result<MusicBrainzInfo> {
+pub async fn lookup_mbid(
+    mbid: &str,
+    release_mbid: Option<&str>,
+) -> anyhow::Result<MusicBrainzInfo> {
     let recording = Recording::fetch()
         .id(mbid)
         .with_releases()
@@ -96,12 +99,24 @@ pub async fn lookup_mbid(mbid: &str) -> anyhow::Result<MusicBrainzInfo> {
         .execute()
         .await?;
 
-    let release = recording.releases.clone();
-    let release = if let Some(releases) = release {
-        releases[0].clone()
+    // get cover from user-supplied release, if present
+    let release: Release;
+    if let Some(release_mbid) = release_mbid {
+        match Release::fetch().id(release_mbid).execute().await {
+            Ok(release_result) => {
+                release = release_result;
+            }
+            Err(_) => {
+                return Err(anyhow::anyhow!("Failed to fetch release from MBID"));
+            }
+        };
     } else {
-        return Err(anyhow::anyhow!("No release found for recording"));
-    };
+        release = if let Some(releases) = recording.releases.clone() {
+            releases[0].clone()
+        } else {
+            return Err(anyhow::anyhow!("No release found for recording"));
+        };
+    }
 
     let cover_url = release.get_coverart().front().res_500().execute().await?;
     let cover_url = match cover_url {

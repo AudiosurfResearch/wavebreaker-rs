@@ -67,10 +67,13 @@ pub async fn fetch_song_id(
     let mut conn = state.db.get().await?;
     let parsed_modifiers = parse_from_title(&payload.song);
 
-    if let Some(user_mbid) = &payload.mbid {
+    if let Some(recording_mbid) = &payload.mbid {
         let song = songs
             .inner_join(extra_song_info)
-            .filter(mbid.eq(user_mbid).and(modifiers.is_not_distinct_from(&parsed_modifiers)))
+            .filter(
+                mbid.eq(recording_mbid)
+                    .and(modifiers.is_not_distinct_from(&parsed_modifiers)),
+            )
             .first::<(Song, ExtraSongInfo)>(&mut conn)
             .await
             .optional()?;
@@ -99,7 +102,8 @@ pub async fn fetch_song_id(
             .find_or_create(&mut conn)
             .await?;
 
-            song.add_metadata_mbid(user_mbid, &mut conn).await?;
+            song.add_metadata_mbid(recording_mbid, payload.release_mbid.as_deref(), &mut conn)
+                .await?;
 
             Ok(Xml(SongIdResponse {
                 status: "allgood".to_owned(),

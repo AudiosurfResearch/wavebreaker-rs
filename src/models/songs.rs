@@ -192,6 +192,7 @@ impl Song {
     pub async fn add_metadata_mbid(
         &self,
         mbid: &str,
+        release_mbid: Option<&str>,
         conn: &mut AsyncPgConnection,
     ) -> anyhow::Result<()> {
         use crate::util::musicbrainz::lookup_mbid;
@@ -202,7 +203,7 @@ impl Song {
             .await
             .optional()?;
 
-        let mb_info = lookup_mbid(mbid).await?;
+        let mb_info = lookup_mbid(mbid, release_mbid).await?;
 
         if let Some(existing_info) = existing_info {
             diesel::update(&existing_info)
