@@ -54,7 +54,10 @@ pub async fn login_steam(
         .await
         .http_internal_error("Failed to authenticate with Steam")?;
 
-    info!("Login request from {} (Steam), client is {}", steam_player, &payload.client_version);
+    info!(
+        "Login request from {} (Steam), client is {}",
+        steam_player, &payload.client_version
+    );
 
     let summary = &state
         .steam_api

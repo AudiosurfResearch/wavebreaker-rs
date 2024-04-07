@@ -156,8 +156,7 @@ impl Song {
     /// It just bails if it finds an existing struct *at all.*
     ///
     /// # Errors
-    /// If anything goes wrong with the database (when looking up if the song already has extra metadata or inserting the new data), this fails.
-    /// This also fails if the MusicBrainz lookup fails.
+    /// Fails on database error or if the MusicBrainz lookup fails.
     pub async fn auto_add_metadata(
         &self,
         duration: i32,
@@ -176,6 +175,43 @@ impl Song {
 
             diesel::insert_into(extra_song_info::table)
                 .values((metadata, extra_song_info::song_id.eq(self.id)))
+                .execute(conn)
+                .await?;
+        }
+
+        Ok(())
+    }
+
+    #[allow(clippy::doc_markdown)]
+    /// Gets and adds metadata to a song from a [MusicBrainz ID](https://musicbrainz.org/doc/MusicBrainz_Identifier).
+    /// It updates all relevant fields on the `ExtraSongInfo` struct, if there is one already.
+    /// If there isn't, it creates a new one.
+    ///
+    /// # Errors
+    /// Fails on database error or if the MusicBrainz lookup fails.
+    pub async fn add_metadata_mbid(
+        &self,
+        mbid: &str,
+        conn: &mut AsyncPgConnection,
+    ) -> anyhow::Result<()> {
+        use crate::util::musicbrainz::lookup_mbid;
+
+        let existing_info = ExtraSongInfo::belonging_to(self)
+            .select(ExtraSongInfo::as_select())
+            .first::<ExtraSongInfo>(conn)
+            .await
+            .optional()?;
+
+        let mb_info = lookup_mbid(mbid).await?;
+
+        if let Some(existing_info) = existing_info {
+            diesel::update(&existing_info)
+                .set(mb_info)
+                .execute(conn)
+                .await?;
+        } else {
+            diesel::insert_into(extra_song_info::table)
+                .values((mb_info, extra_song_info::song_id.eq(self.id)))
                 .execute(conn)
                 .await?;
         }

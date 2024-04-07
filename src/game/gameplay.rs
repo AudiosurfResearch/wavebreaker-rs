@@ -10,6 +10,7 @@ use tracing::{error, info, instrument};
 use super::helpers::ticket_auth;
 use crate::{
     models::{
+        extra_song_info::ExtraSongInfo,
         players::Player,
         rivalries::Rivalry,
         scores::{NewScore, Score, ScoreWithPlayer},
@@ -56,28 +57,79 @@ pub async fn fetch_song_id(
     State(state): State<AppState>,
     Form(payload): Form<SongIdRequest>,
 ) -> Result<Xml<SongIdResponse>, RouteError> {
-    use crate::util::modifiers::{parse_from_title, remove_from_title};
+    use crate::{
+        schema::{extra_song_info::dsl::*, songs::dsl::*},
+        util::modifiers::{parse_from_title, remove_from_title},
+    };
 
     let steam_player = ticket_auth(&payload.ticket, &state.steam_api).await?;
 
     let mut conn = state.db.get().await?;
-    let song = NewSong::new(
-        &remove_from_title(&payload.song),
-        &payload.artist,
-        parse_from_title(&payload.song),
-    )
-    .find_or_create(&mut conn)
-    .await?;
+    let parsed_modifiers = parse_from_title(&payload.song);
 
-    info!(
-        "Song {} - {} looked up by {} (Steam), league {:?}",
-        song.artist, song.title, steam_player, payload.league
-    );
+    if let Some(user_mbid) = &payload.mbid {
+        let song = songs
+            .inner_join(extra_song_info)
+            .filter(mbid.eq(user_mbid).and(modifiers.is_not_distinct_from(&parsed_modifiers)))
+            .first::<(Song, ExtraSongInfo)>(&mut conn)
+            .await
+            .optional()?;
 
-    Ok(Xml(SongIdResponse {
-        status: "allgood".to_owned(),
-        song_id: song.id,
-    }))
+        if let Some((song, _)) = song {
+            info!(
+                "Song {} - {} looked up by {} (Steam), league {:?}, MBID {:?}, release MBID {:?} (successful existing MBID lookup)",
+                song.artist, song.title, steam_player, payload.league, payload.mbid, payload.release_mbid
+            );
+
+            Ok(Xml(SongIdResponse {
+                status: "allgood".to_owned(),
+                song_id: song.id,
+            }))
+        } else {
+            info!(
+                "Song {} - {} looked up by {} (Steam), league {:?}, MBID {:?}, release MBID {:?} (new MBID lookup)",
+                payload.artist, payload.song, steam_player, payload.league, payload.mbid, payload.release_mbid
+            );
+
+            let song = NewSong::new(
+                &remove_from_title(&payload.song),
+                &payload.artist,
+                parsed_modifiers,
+            )
+            .find_or_create(&mut conn)
+            .await?;
+
+            song.add_metadata_mbid(user_mbid, &mut conn).await?;
+
+            Ok(Xml(SongIdResponse {
+                status: "allgood".to_owned(),
+                song_id: song.id,
+            }))
+        }
+    } else {
+        let song = NewSong::new(
+            &remove_from_title(&payload.song),
+            &payload.artist,
+            parsed_modifiers,
+        )
+        .find_or_create(&mut conn)
+        .await?;
+
+        info!(
+            "Song {} - {} looked up by {} (Steam), league {:?}, MBID {:?}, release MBID {:?}",
+            song.artist,
+            song.title,
+            steam_player,
+            payload.league,
+            payload.mbid,
+            payload.release_mbid
+        );
+
+        Ok(Xml(SongIdResponse {
+            status: "allgood".to_owned(),
+            song_id: song.id,
+        }))
+    }
 }
 
 #[derive(Deserialize)]
@@ -145,12 +197,10 @@ pub async fn send_ride(
     State(state): State<AppState>,
     Form(payload): Form<SendRideRequest>,
 ) -> Result<Xml<SendRideResponse>, RouteError> {
-    use crate::schema::{
-        players::dsl::*, rivalries::dsl::*, scores::dsl::*, songs::dsl::songs,
-    };
+    use crate::schema::{players::dsl::*, rivalries::dsl::*, scores::dsl::*, songs::dsl::songs};
 
     let steam_player = ticket_auth(&payload.ticket, &state.steam_api).await?;
-    
+
     info!(
         "Score received on {} from {} (Steam) with score {}, using {:?}. MBID {:?}, release MBID {:?}",
         &payload.song_id, &steam_player, &payload.score, &payload.vehicle, &payload.mbid, &payload.release_mbid
@@ -162,7 +212,11 @@ pub async fn send_ride(
         .first::<Player>(&mut conn)
         .await?;
 
-    let song = songs.find(payload.song_id).first::<Song>(&mut conn).await.http_error("Song not found", StatusCode::NOT_FOUND)?;
+    let song = songs
+        .find(payload.song_id)
+        .first::<Song>(&mut conn)
+        .await
+        .http_error("Song not found", StatusCode::NOT_FOUND)?;
 
     // Check the song for a top score by another player
     let current_top: Option<(Score, Player)> = scores
@@ -247,7 +301,10 @@ pub async fn send_ride(
 
     // Add MusicBrainz metadata, if no extra metadata exists already
     // we're doing this here because we need the song length to search for the recording
-    if let Err(e) = song.auto_add_metadata(payload.song_length * 10, &mut conn,).await {
+    if let Err(e) = song
+        .auto_add_metadata(payload.song_length * 10, &mut conn)
+        .await
+    {
         error!("Failed to add metadata for song {}: {}", song.id, e);
     }
 

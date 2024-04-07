@@ -1,6 +1,7 @@
 use diesel::{prelude::Insertable, query_builder::AsChangeset};
 use musicbrainz_rs::{
-    entity::{recording::Recording, CoverartResponse}, Fetch, FetchCoverart, Search
+    entity::{recording::Recording, CoverartResponse},
+    Fetch, FetchCoverart, Search,
 };
 use tracing::info;
 
@@ -88,7 +89,12 @@ pub async fn lookup_metadata(song: &Song, duration: i32) -> anyhow::Result<Music
 }
 
 pub async fn lookup_mbid(mbid: &str) -> anyhow::Result<MusicBrainzInfo> {
-    let recording = Recording::fetch().id(mbid).execute().await?;
+    let recording = Recording::fetch()
+        .id(mbid)
+        .with_releases()
+        .with_artists()
+        .execute()
+        .await?;
 
     let release = recording.releases.clone();
     let release = if let Some(releases) = release {
