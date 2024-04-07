@@ -3,15 +3,15 @@ use musicbrainz_rs::{
     entity::{recording::Recording, release::Release, CoverartResponse},
     Fetch, FetchCoverart, Search,
 };
-use tracing::info;
+use tracing::{error, info};
 
 use crate::models::songs::Song;
 
 #[derive(Debug, AsChangeset, Insertable)]
 #[diesel(table_name = crate::schema::extra_song_info)]
 pub struct MusicBrainzInfo {
-    pub cover_url: String,
-    pub cover_url_small: String,
+    pub cover_url: Option<String>,
+    pub cover_url_small: Option<String>,
     pub mbid: String,
     pub musicbrainz_title: String,
     pub musicbrainz_artist: String,
@@ -45,16 +45,32 @@ pub async fn lookup_metadata(song: &Song, duration: i32) -> anyhow::Result<Music
         return Err(anyhow::anyhow!("No release found for recording"));
     };
 
-    let cover_url = release.get_coverart().front().res_500().execute().await?;
-    let cover_url = match cover_url {
-        CoverartResponse::Json(cover) => cover.images[0].image.clone(),
-        CoverartResponse::Url(url) => url,
+    let cover_url: Option<String>;
+    match release.get_coverart().front().res_500().execute().await {
+        Ok(cover_resp) => {
+            cover_url = match cover_resp {
+                CoverartResponse::Json(cover) => Some(cover.images[0].image.clone()),
+                CoverartResponse::Url(url) => Some(url),
+            };
+        }
+        Err(e) => {
+            cover_url = None;
+            info!("Failed to fetch cover of {}: {:?}", release.id, e);
+        }
     };
 
-    let cover_url_small = release.get_coverart().front().res_250().execute().await?;
-    let cover_url_small = match cover_url_small {
-        CoverartResponse::Json(cover) => cover.images[0].image.clone(),
-        CoverartResponse::Url(url) => url,
+    let cover_url_small: Option<String>;
+    match release.get_coverart().front().res_250().execute().await {
+        Ok(cover_resp) => {
+            cover_url_small = match cover_resp {
+                CoverartResponse::Json(cover) => Some(cover.images[0].image.clone()),
+                CoverartResponse::Url(url) => Some(url),
+            };
+        }
+        Err(e) => {
+            cover_url_small = None;
+            info!("Failed to fetch small cover of {}: {:?}", release.id, e);
+        }
     };
 
     let mbid = recording.id;
@@ -102,6 +118,7 @@ pub async fn lookup_mbid(
     // get cover from user-supplied release, if present
     let release: Release;
     if let Some(release_mbid) = release_mbid {
+        info!("Fetching release from MBID: {:?}", release_mbid);
         match Release::fetch().id(release_mbid).execute().await {
             Ok(release_result) => {
                 release = release_result;
@@ -118,16 +135,32 @@ pub async fn lookup_mbid(
         };
     }
 
-    let cover_url = release.get_coverart().front().res_500().execute().await?;
-    let cover_url = match cover_url {
-        CoverartResponse::Json(cover) => cover.images[0].image.clone(),
-        CoverartResponse::Url(url) => url,
+    let cover_url: Option<String>;
+    match release.get_coverart().front().res_500().execute().await {
+        Ok(cover_resp) => {
+            cover_url = match cover_resp {
+                CoverartResponse::Json(cover) => Some(cover.images[0].image.clone()),
+                CoverartResponse::Url(url) => Some(url),
+            };
+        }
+        Err(e) => {
+            cover_url = None;
+            error!("Failed to fetch cover of {}: {:?}", release.id, e);
+        }
     };
 
-    let cover_url_small = release.get_coverart().front().res_250().execute().await?;
-    let cover_url_small = match cover_url_small {
-        CoverartResponse::Json(cover) => cover.images[0].image.clone(),
-        CoverartResponse::Url(url) => url,
+    let cover_url_small: Option<String>;
+    match release.get_coverart().front().res_250().execute().await {
+        Ok(cover_resp) => {
+            cover_url_small = match cover_resp {
+                CoverartResponse::Json(cover) => Some(cover.images[0].image.clone()),
+                CoverartResponse::Url(url) => Some(url),
+            };
+        }
+        Err(e) => {
+            cover_url_small = None;
+            error!("Failed to fetch small cover of {}: {:?}", release.id, e);
+        }
     };
 
     let mbid = recording.id;
