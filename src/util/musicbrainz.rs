@@ -30,64 +30,55 @@ pub async fn lookup_metadata(song: &Song, duration: i32) -> anyhow::Result<Music
 
     info!("Searching for recording with query: {:?}", query);
 
-    let query_result = Recording::search(query).execute().await?;
-    let query_result = query_result.entities;
+    let query_result = Recording::search(query).execute().await?.entities;
 
     if query_result.is_empty() {
         return Err(anyhow::anyhow!("No recording found"));
     }
 
     let recording = query_result[0].clone();
-    let release = recording.releases.clone();
-    let release = if let Some(releases) = release {
-        releases[0].clone()
-    } else {
-        return Err(anyhow::anyhow!("No release found for recording"));
+    let release = match recording.releases.clone() {
+        Some(releases) => releases[0].clone(),
+        None => return Err(anyhow::anyhow!("No release found for recording")),
     };
 
-    let cover_url: Option<String>;
-    match release.get_coverart().front().res_500().execute().await {
-        Ok(cover_resp) => {
-            cover_url = match cover_resp {
-                CoverartResponse::Json(cover) => Some(cover.images[0].image.clone()),
-                CoverartResponse::Url(url) => Some(url),
-            };
-        }
+    let cover_url = match release.get_coverart().front().res_500().execute().await {
+        Ok(cover_resp) => match cover_resp {
+            CoverartResponse::Json(cover) => Some(cover.images[0].image.clone()),
+            CoverartResponse::Url(url) => Some(url),
+        },
         Err(e) => {
-            cover_url = None;
-            info!("Failed to fetch cover of {}: {:?}", release.id, e);
+            error!("Failed to fetch cover of {}: {:?}", release.id, e);
+            None
         }
     };
 
-    let cover_url_small: Option<String>;
-    match release.get_coverart().front().res_250().execute().await {
-        Ok(cover_resp) => {
-            cover_url_small = match cover_resp {
-                CoverartResponse::Json(cover) => Some(cover.images[0].image.clone()),
-                CoverartResponse::Url(url) => Some(url),
-            };
-        }
+    let cover_url_small = match release.get_coverart().front().res_250().execute().await {
+        Ok(cover_resp) => match cover_resp {
+            CoverartResponse::Json(cover) => Some(cover.images[0].image.clone()),
+            CoverartResponse::Url(url) => Some(url),
+        },
         Err(e) => {
-            cover_url_small = None;
-            info!("Failed to fetch small cover of {}: {:?}", release.id, e);
+            error!("Failed to fetch small cover of {}: {:?}", release.id, e);
+            None
         }
     };
 
     let mbid = recording.id;
     let musicbrainz_title = recording.title;
-    let musicbrainz_artist = recording.artist_credit;
-    let musicbrainz_artist = if let Some(artist_credit) = musicbrainz_artist {
-        // Join all artists by their join phrase
-        let mut artist_string = String::new();
-        for artist in artist_credit {
-            artist_string.push_str(&artist.name);
-            if let Some(join_phrase) = artist.joinphrase {
-                artist_string.push_str(&join_phrase);
+    let musicbrainz_artist = match recording.artist_credit {
+        Some(artist_credit) => {
+            // Join all artists by their join phrase
+            let mut artist_string = String::new();
+            for artist in artist_credit {
+                artist_string.push_str(&artist.name);
+                if let Some(join_phrase) = artist.joinphrase {
+                    artist_string.push_str(&join_phrase);
+                }
             }
+            artist_string
         }
-        artist_string
-    } else {
-        return Err(anyhow::anyhow!("No artist found for recording"));
+        None => return Err(anyhow::anyhow!("No artist found for recording")),
     };
 
     //let's be real, we're not gonna see a song be so long it eclipses i32::MAX
@@ -116,68 +107,61 @@ pub async fn lookup_mbid(
         .await?;
 
     // get cover from user-supplied release, if present
-    let release: Release;
-    if let Some(release_mbid) = release_mbid {
-        info!("Fetching release from MBID: {:?}", release_mbid);
-        match Release::fetch().id(release_mbid).execute().await {
-            Ok(release_result) => {
-                release = release_result;
+    let release = match release_mbid {
+        Some(release_mbid) => {
+            info!("Fetching release from MBID: {:?}", release_mbid);
+            match Release::fetch().id(release_mbid).execute().await {
+                Ok(release_result) => release_result,
+                Err(_) => {
+                    return Err(anyhow::anyhow!("Failed to fetch release from MBID"));
+                }
             }
-            Err(_) => {
-                return Err(anyhow::anyhow!("Failed to fetch release from MBID"));
-            }
-        };
-    } else {
-        release = if let Some(releases) = recording.releases.clone() {
-            releases[0].clone()
-        } else {
-            return Err(anyhow::anyhow!("No release found for recording"));
-        };
-    }
-
-    let cover_url: Option<String>;
-    match release.get_coverart().front().res_500().execute().await {
-        Ok(cover_resp) => {
-            cover_url = match cover_resp {
-                CoverartResponse::Json(cover) => Some(cover.images[0].image.clone()),
-                CoverartResponse::Url(url) => Some(url),
-            };
         }
-        Err(e) => {
-            cover_url = None;
-            error!("Failed to fetch cover of {}: {:?}", release.id, e);
+        None => {
+            match recording.releases.clone() {
+                Some(releases) => releases[0].clone(),
+                None => return Err(anyhow::anyhow!("No release found for recording")),
+            }
         }
     };
 
-    let cover_url_small: Option<String>;
-    match release.get_coverart().front().res_250().execute().await {
-        Ok(cover_resp) => {
-            cover_url_small = match cover_resp {
-                CoverartResponse::Json(cover) => Some(cover.images[0].image.clone()),
-                CoverartResponse::Url(url) => Some(url),
-            };
-        }
+    let cover_url = match release.get_coverart().front().res_500().execute().await {
+        Ok(cover_resp) => match cover_resp {
+            CoverartResponse::Json(cover) => Some(cover.images[0].image.clone()),
+            CoverartResponse::Url(url) => Some(url),
+        },
         Err(e) => {
-            cover_url_small = None;
+            error!("Failed to fetch cover of {}: {:?}", release.id, e);
+            None
+        }
+    };
+
+    let cover_url_small = match release.get_coverart().front().res_250().execute().await {
+        Ok(cover_resp) => match cover_resp {
+            CoverartResponse::Json(cover) => Some(cover.images[0].image.clone()),
+            CoverartResponse::Url(url) => Some(url),
+        },
+        Err(e) => {
             error!("Failed to fetch small cover of {}: {:?}", release.id, e);
+            None
         }
     };
 
     let mbid = recording.id;
     let musicbrainz_title = recording.title;
-    let musicbrainz_artist = recording.artist_credit;
-    let musicbrainz_artist = if let Some(artist_credit) = musicbrainz_artist {
-        // Join all artists by their join phrase
-        let mut artist_string = String::new();
-        for artist in artist_credit {
-            artist_string.push_str(&artist.name);
-            if let Some(join_phrase) = artist.joinphrase {
-                artist_string.push_str(&join_phrase);
+    let musicbrainz_artist = match recording.artist_credit {
+        Some(artist_credit) => {
+            // Join all artists by their join phrase
+            let mut artist_string = String::new();
+            for artist in artist_credit {
+                artist_string.push_str(&artist.name);
+                if let Some(join_phrase) = artist.joinphrase {
+                    artist_string.push_str(&join_phrase);
+                }
             }
+            artist_string
         }
-        artist_string
-    } else {
-        return Err(anyhow::anyhow!("No artist found for recording"));
+        None => return Err(anyhow::anyhow!("No artist found for recording")),
     };
 
     //let's be real, we're not gonna see a song be so long it eclipses i32::MAX
