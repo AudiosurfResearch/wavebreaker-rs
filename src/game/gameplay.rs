@@ -379,7 +379,13 @@ fn create_league_rides(league: League, scores: Vec<ScoreWithPlayer>) -> LeagueRi
             score: with_player.score.score,
             vehicle_id: with_player.score.vehicle,
             time: with_player.score.submitted_at.assume_utc().unix_timestamp(),
-            feats: with_player.score.feats.join(", "),
+            feats: with_player
+                .score
+                .feats
+                .into_iter()
+                .flatten()
+                .collect::<Vec<String>>()
+                .join(", "),
             song_length: with_player.score.song_length,
             traffic_count: with_player.score.id,
         });

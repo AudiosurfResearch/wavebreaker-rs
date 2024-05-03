@@ -78,7 +78,8 @@ pub async fn fetch_track_shape(
     let mut conn = state.db.get().await?;
 
     let ride = scores.find(payload.ridd).first::<Score>(&mut conn).await?;
-    let track_shape_string = join_x_separated(&ride.track_shape);
+    let track_shape_string =
+        join_x_separated(&ride.track_shape.into_iter().flatten().collect::<Vec<i32>>());
 
     Ok(track_shape_string)
 }

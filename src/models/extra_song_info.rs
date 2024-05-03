@@ -30,8 +30,8 @@ pub struct ExtraSongInfo {
     pub musicbrainz_artist: Option<String>,
     pub musicbrainz_length: Option<i32>,
     pub mistag_lock: bool,
-    pub aliases_artist: Option<Vec<String>>,
-    pub aliases_title: Option<Vec<String>>,
+    pub aliases_artist: Option<Vec<Option<String>>>,
+    pub aliases_title: Option<Vec<Option<String>>>,
 }
 
 /// Used for inserting additional metadata from [MusicBrainz](https://musicbrainz.org).

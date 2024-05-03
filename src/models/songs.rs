@@ -19,7 +19,7 @@ pub struct Song {
     pub title: String,
     pub artist: String,
     pub created_at: time::PrimitiveDateTime,
-    pub modifiers: Option<Vec<String>>,
+    pub modifiers: Option<Vec<Option<String>>>,
 }
 
 impl Song {
@@ -122,12 +122,12 @@ impl Song {
                     .aliases_artist
                     .clone()
                     .unwrap_or_default()
-                    .push(self.artist.clone());
+                    .push(Some(self.artist.clone()));
                 target_extra_info
                     .aliases_title
                     .clone()
                     .unwrap_or_default()
-                    .push(self.title.clone());
+                    .push(Some(self.title.clone()));
 
                 target_extra_info
                     .save_changes::<ExtraSongInfo>(conn)

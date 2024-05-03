@@ -117,12 +117,10 @@ pub async fn lookup_mbid(
                 }
             }
         }
-        None => {
-            match recording.releases.clone() {
-                Some(releases) => releases[0].clone(),
-                None => return Err(anyhow::anyhow!("No release found for recording")),
-            }
-        }
+        None => match recording.releases.clone() {
+            Some(releases) => releases[0].clone(),
+            None => return Err(anyhow::anyhow!("No release found for recording")),
+        },
     };
 
     let cover_url = match release.get_coverart().front().res_500().execute().await {

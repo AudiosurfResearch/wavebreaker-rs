@@ -11,8 +11,8 @@ diesel::table! {
         musicbrainz_artist -> Nullable<Text>,
         musicbrainz_length -> Nullable<Int4>,
         mistag_lock -> Bool,
-        aliases_artist -> Nullable<Array<Text>>,
-        aliases_title -> Nullable<Array<Text>>,
+        aliases_artist -> Nullable<Array<Nullable<Text>>>,
+        aliases_title -> Nullable<Array<Nullable<Text>>>,
     }
 }
 
@@ -47,11 +47,11 @@ diesel::table! {
         submitted_at -> Timestamp,
         play_count -> Int4,
         score -> Int4,
-        track_shape -> Array<Int4>,
-        xstats -> Array<Int4>,
+        track_shape -> Array<Nullable<Int4>>,
+        xstats -> Array<Nullable<Int4>>,
         density -> Int4,
         vehicle -> Int2,
-        feats -> Array<Text>,
+        feats -> Array<Nullable<Text>>,
         song_length -> Int4,
         gold_threshold -> Int4,
         iss -> Int4,
@@ -76,7 +76,7 @@ diesel::table! {
         title -> Text,
         artist -> Text,
         created_at -> Timestamp,
-        modifiers -> Nullable<Array<Text>>,
+        modifiers -> Nullable<Array<Nullable<Text>>>,
     }
 }
 

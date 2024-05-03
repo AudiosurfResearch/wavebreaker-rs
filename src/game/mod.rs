@@ -28,7 +28,8 @@ pub fn routes_steam() -> Router<AppState> {
 }
 
 /// Returns all routes used for everything under ``//as_steamlogin``
-/// beware the double slash
+///
+/// **beware the double slash**
 pub fn routes_steam_doubleslash() -> Router<AppState> {
     Router::new().route("/game_CustomNews.php", post(get_custom_news))
 }
