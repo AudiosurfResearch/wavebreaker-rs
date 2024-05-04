@@ -330,7 +330,7 @@ impl<T: std::fmt::Debug, E: Into<AnyhowError> + std::fmt::Debug> IntoRouteError<
 const fn status_code_to_public_message(status_code: StatusCode) -> &'static str {
     match status_code {
         StatusCode::CONFLICT => "The request is not allowed",
-        StatusCode::UNAUTHORIZED => "You are not authorised to access this endpoint",
+        StatusCode::UNAUTHORIZED => "You are not authorized to access this endpoint",
         StatusCode::NOT_FOUND => "The resource was not found",
         StatusCode::BAD_REQUEST => "Bad request made",
         StatusCode::FORBIDDEN => "Request is forbidden",

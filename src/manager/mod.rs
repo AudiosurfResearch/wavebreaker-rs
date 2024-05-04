@@ -7,7 +7,6 @@ use crate::AppState;
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 pub struct Args {
-    /// Name of the person to greet
     #[clap(subcommand)]
     pub command: Option<Command>,
 }

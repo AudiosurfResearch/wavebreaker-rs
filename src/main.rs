@@ -38,7 +38,7 @@ use game::routes_steam;
 use serde::Deserialize;
 use steam_rs::Steam;
 use tower_http::trace::TraceLayer;
-use tracing::info;
+use tracing::{debug, info};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 use crate::game::{routes_as, routes_steam_doubleslash};
@@ -75,8 +75,7 @@ pub struct AppState {
     redis: deadpool_redis::Pool,
 }
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+fn init_state() -> anyhow::Result<AppState> {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
@@ -87,6 +86,8 @@ async fn main() -> anyhow::Result<()> {
         )
         .with(tracing_subscriber::fmt::layer())
         .init();
+
+    debug!("Start init");
 
     let wavebreaker_config: Config = Figment::new()
         .merge(Toml::file("Wavebreaker.toml"))
@@ -106,32 +107,21 @@ async fn main() -> anyhow::Result<()> {
         .create_pool(Some(Runtime::Tokio1))
         .context("Failed to build Redis pool!")?;
 
-    let state = AppState {
-        steam_api: Arc::new(Steam::new(&wavebreaker_config.external.steam_key)),
-        config: Arc::new(wavebreaker_config),
-        db: pool,
-        redis: redis_pool,
-    };
-
-    let args = manager::Args::parse();
-
-    if args.command.is_some() {
-        return manager::parse_command(&args.command.unwrap(), state).await;
-    }
-
-    info!("Wavebreaker starting...");
-
-    let listener = tokio::net::TcpListener::bind(&state.config.main.address)
-        .await
-        .context("Listener should always be able to listen!")?;
-    info!("Listening on {}", &state.config.main.address);
-
     // Set global user agent so MusicBrainz can contact us if we're messing up
     musicbrainz_rs::config::set_user_agent(
         "wavebreaker-rs/0.1.0 (https://github.com/AudiosurfResearch/wavebreaker-rs)",
     );
 
-    let app = Router::new()
+    Ok(AppState {
+        steam_api: Arc::new(Steam::new(&wavebreaker_config.external.steam_key)),
+        config: Arc::new(wavebreaker_config),
+        db: pool,
+        redis: redis_pool,
+    })
+}
+
+fn make_router(state: AppState) -> Router {
+    Router::new()
         .nest("/as_steamlogin", routes_steam())
         .nest("//as_steamlogin", routes_steam_doubleslash()) // for that one edge case
         .nest("/as", routes_as(&state.config.radio.cgr_location))
@@ -155,7 +145,28 @@ async fn main() -> anyhow::Result<()> {
                 // logging of errors so disable that
                 .on_failure(()),
         )
-        .with_state(state);
+        .with_state(state)
+}
+
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
+    let state = init_state()?;
+
+    // Parse CLI arguments
+    // and if we have a management command, don't spin up a server
+    let args = manager::Args::parse();
+    if args.command.is_some() {
+        return manager::parse_command(&args.command.unwrap(), state).await;
+    }
+
+    info!("Wavebreaker starting...");
+
+    let listener = tokio::net::TcpListener::bind(&state.config.main.address)
+        .await
+        .context("Listener should always be able to listen!")?;
+    info!("Listening on {}", &state.config.main.address);
+
+    let app = make_router(state);
 
     axum::serve(listener, app)
         .await
