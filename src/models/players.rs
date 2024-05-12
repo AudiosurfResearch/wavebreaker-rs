@@ -7,11 +7,13 @@ use diesel::{
     pg::Pg,
     prelude::*,
     serialize::{self, Output, ToSql},
-    sql_types::Text,
+    sql_types::{SmallInt, Text},
 };
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 use redis::AsyncCommands;
 use serde::Serialize;
+use serde_repr::{Deserialize_repr, Serialize_repr};
 use steam_rs::steam_id::SteamId;
 use tracing::info;
 
@@ -45,6 +47,48 @@ where
     }
 }
 
+#[derive(
+    AsExpression,
+    FromSqlRow,
+    Serialize_repr,
+    Deserialize_repr,
+    Debug,
+    Eq,
+    PartialEq,
+    Clone,
+    Copy,
+    TryFromPrimitive,
+    IntoPrimitive,
+)]
+#[diesel(sql_type = diesel::sql_types::SmallInt)]
+#[repr(i16)]
+pub enum AccountType {
+    User,
+    Moderator,
+    Team,
+}
+
+impl ToSql<SmallInt, Pg> for AccountType
+where
+    i16: ToSql<SmallInt, Pg>,
+{
+    fn to_sql<'b>(&'b self, out: &mut Output<'b, '_, Pg>) -> serialize::Result {
+        let v = *self as i16;
+        <i16 as ToSql<SmallInt, Pg>>::to_sql(&v, &mut out.reborrow())
+    }
+}
+
+impl<DB> FromSql<SmallInt, DB> for AccountType
+where
+    DB: Backend,
+    i16: FromSql<SmallInt, DB>,
+{
+    fn from_sql(bytes: DB::RawValue<'_>) -> deserialize::Result<Self> {
+        let account_type = i16::from_sql(bytes)?;
+        Ok(Self::try_from(account_type)?)
+    }
+}
+
 #[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Serialize)]
 #[diesel(table_name = players, check_for_backend(diesel::pg::Pg))]
 pub struct Player {
@@ -53,7 +97,7 @@ pub struct Player {
     pub steam_id: SteamIdWrapper,
     pub steam_account_num: i32,
     pub location_id: i32,
-    pub account_type: i16,
+    pub account_type: AccountType,
     pub joined_at: time::PrimitiveDateTime,
     pub avatar_url: String,
 }

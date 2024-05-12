@@ -5,6 +5,7 @@ use tracing::debug;
 use crate::{
     models::{
         extra_song_info::{ExtraSongInfo, NewExtraSongInfo},
+        players::{AccountType, Player},
         scores::Score,
     },
     schema::{extra_song_info, songs},
@@ -218,6 +219,47 @@ impl Song {
         }
 
         Ok(())
+    }
+
+    /// Checks if a user is allowed to edit a song's metadata.
+    /// This is allowed if the user is a moderator/Wavebreaker team member, or if they set the first score on the song.
+    ///
+    /// # Arguments
+    /// * `player_id` - The ID of the player.
+    /// * `conn` - The mutable reference to the database connection.
+    ///
+    /// # Errors
+    /// If something is wrong with the database or a player with the given ID doesn't exist, this fails.
+    pub async fn user_can_edit(
+        &self,
+        player_id: i32,
+        conn: &mut AsyncPgConnection,
+    ) -> anyhow::Result<bool> {
+        use crate::schema::{
+            players::dsl::players,
+            scores::dsl::{scores, song_id, submitted_at},
+        };
+
+        let player = players.find(player_id).first::<Player>(conn).await?;
+
+        if player.account_type == AccountType::Moderator || player.account_type == AccountType::Team
+        {
+            return Ok(true);
+        }
+
+        //Get first score of song
+        let first_score = scores
+            .filter(song_id.eq(self.id))
+            .order(submitted_at.asc())
+            .first::<Score>(conn)
+            .await
+            .optional()?;
+
+        // If the first score was set by the player, they can edit the song
+        match first_score {
+            Some(score) => Ok(score.player_id == player.id),
+            None => Ok(false),
+        }
     }
 }
 

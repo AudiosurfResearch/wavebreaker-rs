@@ -75,6 +75,13 @@ pub struct AppState {
     redis: deadpool_redis::Pool,
 }
 
+/// Reads the config, initializes database connections and the Steam API client
+///
+/// # Returns
+/// An `AppState` struct with all the necessary members
+///
+/// # Errors
+/// This function can fail if the config file is missing or invalid, the connection to Postgres or Redis fails, or the Steam API key is invalid
 fn init_state() -> anyhow::Result<AppState> {
     tracing_subscriber::registry()
         .with(
