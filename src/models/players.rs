@@ -248,12 +248,14 @@ impl<'a> NewPlayer<'a> {
             .get_result::<Player>(conn)
             .await?;
 
-        // If the player doesn't exist in the Redis sorted set, add them
-        let player_rank: Option<u32> = redis_conn.zscore("leaderboard", player_result.id).await?;
-        if player_rank.is_none() {
-            info!("Adding player {} to leaderboard", player_result.id);
-            redis_conn.zadd("leaderboard", player_result.id, 0).await?;
-        }
+        // If the player doesn't exist in the Redis sorted set, add them with a score of 0
+        redis::cmd("ZADD")
+            .arg("leaderboard")
+            .arg("NX")
+            .arg(0i32)
+            .arg(player_result.id)
+            .query_async(redis_conn)
+            .await?;
 
         Ok(player_result)
     }

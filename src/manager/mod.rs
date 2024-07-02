@@ -1,6 +1,7 @@
 use clap::{ArgAction, Parser, Subcommand};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
+use redis::AsyncCommands;
 use tracing::instrument;
 
 use crate::AppState;
@@ -25,6 +26,9 @@ pub enum Command {
     },
     DeleteScore {
         id_to_delete: i32,
+    },
+    RefreshSkillPoints {
+        player_to_refresh: i32,
     },
 }
 
@@ -70,6 +74,25 @@ pub async fn parse_command(command: &Command, state: AppState) -> anyhow::Result
                 .first::<crate::models::scores::Score>(&mut conn)
                 .await?;
             score_to_delete.delete(&mut conn, &mut redis_conn).await
+        }
+        Command::RefreshSkillPoints { player_to_refresh } => {
+            use crate::{models::scores::Score, schema::scores::dsl::*};
+
+            let mut conn = state.db.get().await?;
+            let mut redis_conn = state.redis.get().await?;
+
+            let all_player_scores: Vec<Score> = scores
+                .filter(player_id.eq(player_to_refresh))
+                .load::<Score>(&mut conn)
+                .await?;
+
+            //Add skill points of all scores
+            let skill_points: i32 = all_player_scores.iter().map(Score::get_skill_points).sum();
+            redis_conn
+                .zadd("leaderboard", player_to_refresh, skill_points)
+                .await?;
+
+            Ok(())
         }
     }
 }
