@@ -1,18 +1,22 @@
 # shoutout to Luca Palmieri
 # https://www.lpalmieri.com/posts/2020-11-01-zero-to-production-5-how-to-deploy-a-rust-application
 
-FROM rust:latest AS builder
-
-# Let's switch our working directory to `app` (equivalent to `cd app`)
-# The `app` folder will be created for us by Docker in case it does not 
-# exist already.
-WORKDIR /app
-# Install the required system dependencies for our linking configuration
+FROM lukemathwalker/cargo-chef:latest AS chef
+RUN rustup toolchain install nightly
 RUN apt update && apt install lld clang -y
-# Copy all files from our working environment to our Docker image 
+WORKDIR /app
+
+FROM chef AS planner
 COPY . .
-# Build in release mode
-RUN cargo build --release
+RUN cargo +nightly chef prepare --recipe-path recipe.json
+
+FROM chef AS builder 
+COPY --from=planner /app/recipe.json recipe.json
+# Build dependencies - this is the caching Docker layer!
+RUN cargo +nightly chef cook --release --recipe-path recipe.json
+# Build application
+COPY . .
+RUN cargo +nightly build --release --bin wavebreaker
 
 # Runtime stage
 FROM debian:bookworm-slim AS runtime
