@@ -11,11 +11,9 @@ use diesel::{
 };
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-use redis::AsyncCommands;
 use serde::Serialize;
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use steam_rs::steam_id::SteamId;
-use tracing::info;
 
 use crate::{
     models::{rivalries::Rivalry, scores::Score},

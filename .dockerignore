@@ -1,0 +1,12 @@
+.env
+.cargo/
+.github/
+.vscode/
+radio/
+target/
+tests/
+Dockerfile
+scripts/
+Wavebreaker.toml
+WavebreakerRadio.toml
+dump.rdb

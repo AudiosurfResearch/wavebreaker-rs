@@ -29,7 +29,12 @@ use axum::{
 };
 use clap::Parser;
 use deadpool_redis::Runtime;
-use diesel_async::pooled_connection::{deadpool::Pool, AsyncDieselConnectionManager};
+use diesel::pg::Pg;
+use diesel_async::{
+    async_connection_wrapper::AsyncConnectionWrapper,
+    pooled_connection::{deadpool::Pool, AsyncDieselConnectionManager},
+};
+use diesel_migrations::{embed_migrations, EmbeddedMigrations, MigrationHarness};
 use figment::{
     providers::{Env, Format, Toml},
     Figment,
@@ -40,6 +45,7 @@ use steam_rs::Steam;
 use tower_http::trace::TraceLayer;
 use tracing::{debug, info};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
 
 use crate::game::{routes_as, routes_steam_doubleslash};
 
@@ -75,6 +81,18 @@ pub struct AppState {
     redis: deadpool_redis::Pool,
 }
 
+fn run_migrations(
+    connection: &mut impl MigrationHarness<Pg>,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync + 'static>> {
+    // This will run the necessary migrations.
+    //
+    // See the documentation for `MigrationHarness` for
+    // all available methods.
+    connection.run_pending_migrations(MIGRATIONS)?;
+
+    Ok(())
+}
+
 /// Reads the config, initializes database connections and the Steam API client
 ///
 /// # Returns
@@ -82,7 +100,7 @@ pub struct AppState {
 ///
 /// # Errors
 /// This function can fail if the config file is missing or invalid, the connection to Postgres or Redis fails, or the Steam API key is invalid
-fn init_state() -> anyhow::Result<AppState> {
+async fn init_state() -> anyhow::Result<AppState> {
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
@@ -108,6 +126,18 @@ fn init_state() -> anyhow::Result<AppState> {
     let pool = Pool::builder(diesel_manager)
         .build()
         .context("Failed to build DB pool!")?;
+
+    // clone the url because moving the value will screw things up
+    let pg_url = wavebreaker_config.main.database.clone();
+    tokio::task::spawn_blocking(move || {
+        use diesel::prelude::Connection;
+        use diesel_async::pg::AsyncPgConnection;
+        let mut conn = AsyncConnectionWrapper::<AsyncPgConnection>::establish(&pg_url)
+            .expect("Failed to establish DB connection for migrations!");
+
+        run_migrations(&mut conn).expect("Failed to run migrations!");
+    })
+    .await?;
 
     let redis_cfg = deadpool_redis::Config::from_url(&wavebreaker_config.main.redis);
     let redis_pool = redis_cfg
@@ -157,7 +187,7 @@ fn make_router(state: AppState) -> Router {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
-    let state = init_state()?;
+    let state = init_state().await?;
 
     // Parse CLI arguments
     // and if we have a management command, don't spin up a server
