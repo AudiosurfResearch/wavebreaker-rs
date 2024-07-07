@@ -1,6 +1,10 @@
 # wavebreaker-rs
 **EXTREMELY WIP!!!** (Yes, so much so that it's worth three exclamation marks!!!)
 
+This is a custom server for Dylan Fitterer's game [Audiosurf](https://store.steampowered.com/app/12900/AudioSurf/).
+
+*The goal of this endeavour is to have at least feature parity with the [TypeScript version](https://github.com/AudiosurfResearch/Wavebreaker), which is currently running in production at https://wavebreaker.arcadian.garden. Once this goal is reached and everything is working after a public test, the TypeScript version will be replaced with this.*
+
 Config example (``Wavebreaker.toml``):
 ```toml
 [main]
@@ -26,7 +30,6 @@ cgr_url = "http://localhost/as/asradio/WVBR_A4_DearMusic.cgr" # URL for the .cgr
 ```
 
 To connect, use the latest Wavebreaker client with ``forceInsecure`` set to ``true`` in its config. This is only intended for local testing.
-*The end goal of this endeavour is to have feature parity with the [TypeScript version!](https://github.com/AudiosurfResearch/Wavebreaker)*
 
 ## What works currently?
 - Logging in/registering via Steam
