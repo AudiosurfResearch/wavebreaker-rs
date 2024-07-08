@@ -12,6 +12,7 @@ env:
 jobs:
   build-and-push-image:
     runs-on: ubuntu-latest
+    environment: Container deploy
     permissions:
         contents: read
         packages: write
@@ -48,3 +49,10 @@ jobs:
             labels: ${{ steps.meta.outputs.labels }}
             cache-from: type=gha
             cache-to: type=gha,mode=max
+
+        - shell: bash
+          env:
+            WATCHTOWER_URL: ${{ secrets.WATCHTOWER_URL }}
+            WATCHTOWER_KEY: ${{ secrets.WATCHTOWER_KEY }}
+          run: |
+            curl -H "Authorization: Bearer $WATCHTOWER_KEY" $WATCHTOWER_URL
