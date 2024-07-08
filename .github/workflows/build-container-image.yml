@@ -15,7 +15,6 @@ jobs:
     permissions:
         contents: read
         packages: write
-        attestations: write
         id-token: write
 
     steps:
@@ -43,6 +42,7 @@ jobs:
           uses: docker/build-push-action@v6
           with:
             context: .
+            provenance: false
             push: true
             tags: ${{ steps.meta.outputs.tags }}
             labels: ${{ steps.meta.outputs.labels }}
