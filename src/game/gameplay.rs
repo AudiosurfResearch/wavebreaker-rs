@@ -67,6 +67,8 @@ pub async fn fetch_song_id(
     let mut conn = state.db.get().await?;
     let parsed_modifiers = parse_from_title(&payload.song);
 
+    // if recording MBID is provided, look it up using that + modifiers from the title
+    // else, look up the song by title and artist
     if let Some(recording_mbid) = &payload.mbid {
         let song = songs
             .inner_join(extra_song_info)
@@ -78,6 +80,8 @@ pub async fn fetch_song_id(
             .await
             .optional()?;
 
+        // if song with MBID and modifiers exists, return its ID
+        // else create a new song, attach the MBID to it and get metadata from MusicBrainz
         if let Some((song, _)) = song {
             info!(
                 "Song {} - {} looked up by {} (Steam), league {:?}, MBID {:?}, release MBID {:?} (successful existing MBID lookup)",

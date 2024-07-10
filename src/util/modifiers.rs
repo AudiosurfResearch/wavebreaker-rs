@@ -1,10 +1,8 @@
 use regex::Regex;
 
-/// For song titles with modifiers, this function returns a vector of the modifiers.
+/// For song titles with modifiers, this function returns a vector of the modifiers, or `None` if no modifiers are found.
 ///
 /// **Example:** "death comes from above \[as-steep]" -> \["steep"]
-///
-/// Returns ``None`` if no modifiers are found.
 pub fn parse_from_title(title: &str) -> Option<Vec<&str>> {
     let full_tag_string_regex =
         Regex::new(r"(?:\[as-[a-zA-Z0-9]+\]\s*)+$").expect("Regex should always be valid!");

@@ -32,9 +32,7 @@ pub struct CustomNewsResponse {
 /// Sends text to the game, shown before playing a song
 ///
 /// # Errors
-///
-/// This fails if:
-/// - The response fails to serialize
+/// This fails if the response fails to serialize
 #[instrument(skip_all)]
 pub async fn get_custom_news(
     State(state): State<AppState>,
@@ -134,10 +132,7 @@ pub struct FetchShoutsRequest {
 /// Sends track shape to the game as x-seperated string
 ///
 /// # Errors
-///
-/// This fails if:
-/// - The response fails to serialize
-/// - Something goes wrong with the database
+/// This fails if the response can't serialize or something is wrong with the database
 #[instrument(skip_all)]
 pub async fn fetch_shouts(
     State(state): State<AppState>,
@@ -161,8 +156,7 @@ pub struct SendShoutRequest {
 /// # Errors
 /// This fails if:
 /// - The response fails to serialize
-/// - Something goes wrong with the database
-/// - The shout didn't validate
+/// - Something is wrong with the database
 #[instrument(skip_all)]
 pub async fn send_shout(
     State(state): State<AppState>,

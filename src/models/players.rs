@@ -22,6 +22,9 @@ use crate::{
 
 #[derive(Serialize, AsExpression, FromSqlRow, Debug, PartialEq, Eq)]
 #[diesel(sql_type = diesel::sql_types::Text)]
+/// Wrapper around `SteamId` so we can use it in Diesel queries.
+/// Postgres doesn't natively have an uint type, so we have to store it as a string
+/// and convert it back to a `SteamId` when we get it from the DB.
 pub struct SteamIdWrapper(pub SteamId);
 
 impl ToSql<Text, Pg> for SteamIdWrapper
@@ -100,6 +103,7 @@ pub struct Player {
     pub avatar_url: String,
 }
 
+// Types for use with functions that return reusable query fragments
 type All = diesel::dsl::Select<players::table, diesel::dsl::AsSelect<Player, diesel::pg::Pg>>;
 type WithSteamId = diesel::dsl::Eq<players::steam_id, SteamIdWrapper>;
 type BySteamId = diesel::dsl::Filter<All, WithSteamId>;
@@ -125,12 +129,10 @@ impl Player {
     /// Finds a player by their Steam ID.
     ///
     /// # Arguments
-    ///
     /// * `id_to_find` - The Steam ID of the player to find.
     /// * `conn` - A mutable reference to an `AsyncPgConnection`.
     ///
     /// # Returns
-    ///
     /// Returns a query fragment
     ///
     /// # Errors
@@ -153,15 +155,12 @@ impl Player {
     /// Retrieves the rivals of a player.
     ///
     /// # Arguments
-    ///
     /// * `conn` - A mutable reference to an `AsyncPgConnection`.
     ///
     /// # Returns
-    ///
     /// Returns a `QueryResult` containing a vector of players.
     ///
     /// # Errors
-    ///
     /// This fails if the database connection fails
     pub async fn get_rivals(&self, conn: &mut AsyncPgConnection) -> QueryResult<Vec<Self>> {
         use crate::schema::{players::dsl::*, rivalries::dsl::*};
@@ -198,14 +197,12 @@ impl<'a> NewPlayer<'a> {
     /// Creates a new player with the specified parameters.
     ///
     /// # Arguments
-    ///
     /// * `username` - The username of the player.
     /// * `steam_id` - The `SteamId` of the player.
     /// * `steam_account_num` - The Steam account number of the player.
     /// * `avatar_url` - The avatar URL of the player.
     ///
     /// # Returns
-    ///
     /// A new `NewPlayer` instance.
     #[must_use]
     pub const fn new(
@@ -225,7 +222,6 @@ impl<'a> NewPlayer<'a> {
     /// Creates or updates the player in the database.
     ///
     /// # Errors
-    ///
     /// This fails if:
     /// - The player fails to be inserted/updated in the database
     pub async fn create_or_update(

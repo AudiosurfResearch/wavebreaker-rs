@@ -111,6 +111,8 @@ pub async fn steam_sync(
     Form(payload): Form<SteamSyncRequest>,
 ) -> Result<Xml<SteamSyncResponse>, RouteError> {
     //Split the string of steam account numbers into a vector
+    //Validating before the steam auth request, because if this is invalid anyway then we don't care about the request
+    //This way we have one less Steam API request on the daily limit
     let friend_nums: Vec<i32> =
         split_x_separated(&payload.snums).http_status_error(axum::http::StatusCode::BAD_REQUEST)?;
 

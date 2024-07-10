@@ -4,7 +4,6 @@ use steam_rs::{steam_id::SteamId, Steam};
 /// Validates Steam game auth tickets. Returns a `SteamId` struct representing for user who the ticket belongs to.
 ///
 /// # Errors
-///
 /// This function will return an error if it fails to authenticate with Steam.
 pub async fn ticket_auth(ticket: &str, steam: &Steam) -> Result<SteamId, Error> {
     // for testing purposes, return the ID of m1nt_
