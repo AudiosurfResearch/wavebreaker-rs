@@ -14,6 +14,7 @@
 )]
 #![allow(clippy::wildcard_imports)]
 
+mod api;
 mod game;
 mod manager;
 pub mod models;
@@ -39,15 +40,17 @@ use figment::{
     providers::{Env, Format, Toml},
     Figment,
 };
-use game::routes_steam;
 use serde::Deserialize;
 use steam_rs::Steam;
 use tower_http::trace::TraceLayer;
 use tracing::{debug, info};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
-pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
 
-use crate::game::{routes_as, routes_steam_doubleslash};
+use crate::{
+    api::routes,
+    game::{routes_as, routes_steam, routes_steam_doubleslash},
+};
+pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
 
 #[derive(Deserialize, Clone)]
 struct Config {
@@ -162,6 +165,7 @@ fn make_router(state: AppState) -> Router {
         .nest("/as_steamlogin", routes_steam())
         .nest("//as_steamlogin", routes_steam_doubleslash()) // for that one edge case
         .nest("/as", routes_as(&state.config.radio.cgr_location))
+        .nest("/api", routes())
         .layer(
             // TAKEN FROM: https://github.com/tokio-rs/axum/blob/d1fb14ead1063efe31ae3202e947ffd569875c0b/examples/error-handling/src/main.rs#L60-L77
             TraceLayer::new_for_http() // Create our own span for the request and include the matched path. The matched
