@@ -8,7 +8,6 @@ struct RadioConfig {
 }
 
 #[derive(Deserialize, Clone)]
-// RadioSong is a better name than Song because that already exists!
 #[allow(clippy::module_name_repetitions)]
 pub struct RadioSong {
     pub id: u32,

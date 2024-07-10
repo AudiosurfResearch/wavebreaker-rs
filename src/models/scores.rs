@@ -76,9 +76,11 @@ pub struct Score {
     pub play_count: i32,
     pub score: i32,
     pub track_shape: Vec<Option<i32>>,
+    /// Extra data about the play with meaning depending on the character used, sent by the game as a string of x-seperated numbers
     pub xstats: Vec<Option<i32>>,
     pub density: i32,
     pub vehicle: Character,
+    /// Bonuses like Clean Finish, Seeing Red, etc.
     pub feats: Vec<Option<String>>,
     pub song_length: i32,
     pub gold_threshold: i32,
@@ -119,20 +121,20 @@ impl Score {
         Ok(())
     }
 
+    //ALL OF THE game_get_* FUNCTIONS ARE ONLY FOR IN-GAME LEADERBOARDS
+    //therefore the score count is limited to 11
+
     /// Retrieves the scores for a specific song and league, for display in-game.
     ///
     /// # Arguments
-    ///
     /// * `find_song_id` - The ID of the song to find scores for.
     /// * `find_league` - The league to filter scores by.
     /// * `conn` - The database connection.
     ///
     /// # Returns
-    ///
     /// A vector of `ScoreWithPlayer` structs.
     ///
     /// # Errors
-    ///
     /// This fails if the database query fails.
     pub async fn game_get_global(
         find_song_id: i32,
@@ -157,21 +159,18 @@ impl Score {
             .collect::<Vec<ScoreWithPlayer>>())
     }
 
-    /// Retrieves all rivals' scores for a specific song and league, for display in-game.
+    /// Gets all rivals' scores for a specific song and league, for display in-game.
     ///
     /// # Arguments
-    ///
     /// * `find_song_id` - The ID of the song to find scores for.
     /// * `find_league` - The league to filter scores by.
     /// *  `rival_ids` - The IDs of the rivals to filter scores by.
     /// * `conn` - The database connection.
     ///
     /// # Returns
-    ///
     /// A vector of `ScoreWithPlayer` structs.
     ///
     /// # Errors
-    ///
     /// This fails if the database query fails.
     pub async fn game_get_rivals(
         find_song_id: i32,
@@ -202,17 +201,14 @@ impl Score {
     /// for a specific song and league, for display in-game.
     ///
     /// # Arguments
-    ///
     /// * `find_song_id` - The ID of the song to find scores for.
     /// * `find_league` - The league to filter scores by.
     /// * `conn` - The database connection.
     ///
     /// # Returns
-    ///
     /// A vector of `ScoreWithPlayer` structs.
     ///
     /// # Errors
-    ///
     /// This fails if the database query fails.
     pub async fn game_get_nearby(
         find_song_id: i32,
@@ -269,7 +265,6 @@ impl<'a> NewScore<'a> {
     /// Creates a new `NewScore` instance.
     ///
     /// # Arguments
-    ///
     /// * `player_id` - The ID of the player.
     /// * `song_id` - The ID of the song.
     /// * `league` - The league (Casual, Pro, Elite) the score was set in.
@@ -283,10 +278,6 @@ impl<'a> NewScore<'a> {
     /// * `gold_threshold` - The score required for the gold meda.
     /// * `iss` - Purpose unknown.
     /// * `isj_value` - Purpose unknown.
-    ///
-    /// # Returns
-    ///
-    /// A new instance of `NewScore`.
     #[allow(clippy::too_many_arguments)]
     #[must_use]
     pub const fn new(
@@ -324,15 +315,12 @@ impl<'a> NewScore<'a> {
     /// Creates or updates a score entry in the database.
     ///
     /// # Arguments
-    ///
     /// * `conn` - The database connection.
     ///
     /// # Returns
-    ///
     /// The created or updated score entry.
     ///
     /// # Errors
-    ///
     /// This fails if:
     /// - The database connection fails
     /// - The score fails to be created/retrieved
@@ -348,9 +336,10 @@ impl<'a> NewScore<'a> {
             .filter(song_id.eq(self.song_id))
             .filter(league.eq(self.league))
             .first::<Score>(conn)
-            .await;
+            .await
+            .optional()?;
 
-        if let Ok(existing_score) = existing_score {
+        if let Some(existing_score) = existing_score {
             if existing_score.score < self.score {
                 // Subtract the skill points of the old score from the Redis leaderboard
                 let sub_amount = 0 - existing_score.get_skill_points();

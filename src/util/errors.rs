@@ -16,7 +16,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 
-/// This is for **exposing internal errors publically.**
+/// This is for **exposing internal errors publicly.**
 /// It is desirable for internal services, where you do want to expose
 /// what has gone wrong as a part of the return.
 pub type RouteInternalError<S = ()> = RouteError<S, true>;

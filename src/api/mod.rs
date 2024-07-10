@@ -23,7 +23,7 @@ async fn health_check() -> Result<Json<HealthCheck>, RouteError> {
         |radio_songs| {
             radio_songs.map_or_else(
                 || "no songs".to_owned(),
-                |songs| format!("{} songs", songs.len()),
+                |songs| format!("{} song(s)", songs.len()),
             )
         },
     );

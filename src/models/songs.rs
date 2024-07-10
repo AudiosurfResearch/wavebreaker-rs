@@ -38,10 +38,10 @@ impl Song {
             songs::dsl::{id, songs},
         };
 
-        // Manually delete all scores associated with this song using Score::delete().
-        // This normally wouldn't be necessary, but we have to subtract the skill points from Redis
-        // and Diesel doesn't let me hook into the delete operation.
-        let ass_scores = scores
+        // Manually delete all of the song's scores with our own Score::delete().
+        // Necessary because we have to subtract the skill points from Redis
+        // Diesel doesn't provide hooks to do it automatically
+        let ass_scores: Vec<Score> = scores
             .filter(song_id.eq(self.id))
             .load::<Score>(conn)
             .await?;
@@ -55,10 +55,10 @@ impl Song {
         Ok(())
     }
 
-    /// Merges this song into another one. This song will be deleted when it's done.
+    /// Merges this song into another one. `self` will be deleted when it's done.
     ///
     /// # Errors
-    /// If it can't be merged or if something is wrong with the database, this fails.
+    /// When the merge fails or something is wrong with the database, this fails.
     pub async fn merge_into(
         &self,
         target: i32,
@@ -117,8 +117,8 @@ impl Song {
                 .optional()?;
 
             if let Some(target_extra_info) = target_extra_info {
-                //Note that this doesn't merge our own alias list into the target's!
-                //Instead, we add *only our artist and title fields* to the target's aliases.
+                //This doesn't merge our own alias list into the target's!
+                //*Only our artist and title fields* are added to the target's aliases.
                 target_extra_info
                     .aliases_artist
                     .clone()
@@ -153,8 +153,8 @@ impl Song {
     #[allow(clippy::doc_markdown)]
     /// Automatically adds extra metadata from [MusicBrainz](https://musicbrainz.org) to the song if it doesn't have any.
     ///
-    /// This function does not check if an existing `ExtraSongInfo` struct lacks MusicBrainz info.
-    /// It just bails if it finds an existing struct *at all.*
+    /// This function doesn't check if an existing `ExtraSongInfo` struct lacks info.
+    /// It bails if it finds an existing struct *at all.*
     ///
     /// # Errors
     /// Fails on database error or if the MusicBrainz lookup fails.

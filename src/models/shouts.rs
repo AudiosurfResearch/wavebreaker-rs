@@ -47,8 +47,7 @@ impl<'a> NewShout<'a> {
     /// Inserts the shout into the database
     ///
     /// # Errors
-    /// This fails if:
-    /// - Something goes wrong with the database
+    /// Fails if something goes wrong with the database
     pub async fn insert(&self, conn: &mut AsyncPgConnection) -> QueryResult<()> {
         use crate::schema::shouts::dsl::*;
         diesel::insert_into(shouts)

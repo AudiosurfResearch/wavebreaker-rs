@@ -29,8 +29,12 @@ pub struct ExtraSongInfo {
     pub musicbrainz_title: Option<String>,
     pub musicbrainz_artist: Option<String>,
     pub musicbrainz_length: Option<i32>,
+    /// For songs that have been mistagged by the automatic lookup
+    /// A value of `true`, prevents any new metadata lookups by title
     pub mistag_lock: bool,
+    /// Alternative artist tags that can be matched to this song
     pub aliases_artist: Option<Vec<Option<String>>>,
+    /// Alternative title tags that can be matched to this song
     pub aliases_title: Option<Vec<Option<String>>>,
 }
 

@@ -19,6 +19,10 @@ pub struct MusicBrainzInfo {
 }
 
 // TODO: Make this code less bad
+/// Tries automatically finding song on MB with title, artist and duration
+///
+/// # Errors
+/// Fails if no song is found or lookup errors
 pub async fn lookup_metadata(song: &Song, duration: i32) -> anyhow::Result<MusicBrainzInfo> {
     let query = format!(
         "query=(recording:\"{}\" OR alias:\"{0}\") AND artist:\"{}\" AND dur:\"[{} TO {}]\"",
@@ -95,6 +99,10 @@ pub async fn lookup_metadata(song: &Song, duration: i32) -> anyhow::Result<Music
     })
 }
 
+/// Fetches song metadata using recording and release MBIDs
+///
+/// # Errors
+/// Fails if no song is found or lookup fails
 pub async fn lookup_mbid(
     mbid: &str,
     release_mbid: Option<&str>,
