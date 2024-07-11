@@ -6,11 +6,6 @@ use steam_rs::{steam_id::SteamId, Steam};
 /// # Errors
 /// This function will return an error if it fails to authenticate with Steam.
 pub async fn ticket_auth(ticket: &str, steam: &Steam) -> Result<SteamId, Error> {
-    // for testing purposes, return the ID of m1nt_
-    if cfg!(test) {
-        return Ok(SteamId::from(76_561_198_307_851_839));
-    }
-
     let steam_result = steam
         .authenticate_user_ticket(12900, ticket)
         .await

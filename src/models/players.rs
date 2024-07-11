@@ -44,7 +44,7 @@ where
 {
     fn from_sql(bytes: DB::RawValue<'_>) -> deserialize::Result<Self> {
         let steam_id_string = String::from_sql(bytes)?;
-        Ok(Self(SteamId::from_str(&steam_id_string)?))
+        Ok(Self(SteamId::from(steam_id_string)))
     }
 }
 

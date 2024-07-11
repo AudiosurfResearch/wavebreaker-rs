@@ -229,7 +229,7 @@ impl Song {
     /// * `conn` - The mutable reference to the database connection.
     ///
     /// # Errors
-    /// If something is wrong with the database or a player with the given ID doesn't exist, this fails.
+    /// If something is wrong with the database or a player with the ID doesn't exist, this fails.
     pub async fn user_can_edit(
         &self,
         player_id: i32,

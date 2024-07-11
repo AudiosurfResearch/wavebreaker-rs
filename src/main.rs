@@ -21,7 +21,7 @@ pub mod models;
 pub mod schema;
 mod util;
 
-use std::sync::Arc;
+use std::{io::stdout, sync::Arc};
 
 use anyhow::Context;
 use axum::{
@@ -44,7 +44,10 @@ use serde::Deserialize;
 use steam_rs::Steam;
 use tower_http::trace::TraceLayer;
 use tracing::{debug, info};
-use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
+use tracing_appender::rolling::{RollingFileAppender, Rotation};
+use tracing_subscriber::{
+    fmt::writer::MakeWriterExt, layer::SubscriberExt, util::SubscriberInitExt,
+};
 
 use crate::{
     api::routes,
@@ -104,19 +107,6 @@ fn run_migrations(
 /// # Errors
 /// This function can fail if the config file is missing or invalid, the connection to Postgres or Redis fails, or the Steam API key is invalid
 async fn init_state() -> anyhow::Result<AppState> {
-    tracing_subscriber::registry()
-        .with(
-            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-                // axum logs rejections from built-in extractors with the `axum::rejection`
-                // target, at `TRACE` level. `axum::rejection=trace` enables showing those events
-                "wavebreaker=info,tower_http=error,axum::rejection=trace".into()
-            }),
-        )
-        .with(tracing_subscriber::fmt::layer())
-        .init();
-
-    debug!("Start init");
-
     let wavebreaker_config: Config = Figment::new()
         .merge(Toml::file("Wavebreaker.toml"))
         .merge(Env::prefixed("WAVEBREAKER_"))
@@ -191,6 +181,26 @@ fn make_router(state: AppState) -> Router {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    let file_appender = RollingFileAppender::builder()
+        .filename_suffix("wavebreaker.log")
+        .rotation(Rotation::DAILY)
+        .build("./logs")
+        .expect("Initializing logging failed");
+    let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
+
+    tracing_subscriber::registry()
+        .with(
+            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+                // axum logs rejections from built-in extractors with the `axum::rejection`
+                // target, at `TRACE` level. `axum::rejection=trace` enables showing those events
+                "wavebreaker=info,tower_http=error,axum::rejection=trace".into()
+            }),
+        )
+        .with(tracing_subscriber::fmt::layer().with_writer(stdout.and(non_blocking)))
+        .init();
+
+    debug!("Start init");
+
     let state = init_state().await?;
 
     // Parse CLI arguments
