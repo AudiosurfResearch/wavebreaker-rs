@@ -276,12 +276,10 @@ impl<'a> NewSong<'a> {
     /// Creates a new `NewSong` instance with the given title and artist.
     ///
     /// # Arguments
-    ///
     /// * `title` - The title of the song.
     /// * `artist` - The artist of the song.
     ///
     /// # Returns
-    ///
     /// A new `NewSong` instance.
     #[must_use]
     pub const fn new(title: &'a str, artist: &'a str, modifiers: Option<Vec<&'a str>>) -> Self {
@@ -295,15 +293,12 @@ impl<'a> NewSong<'a> {
     /// Finds or creates a song in the database.
     ///
     /// # Arguments
-    ///
     /// * `conn` - The mutable reference to the database connection.
     ///
     /// # Returns
-    ///
     /// A `QueryResult` containing the found or created song.
     ///
     /// # Errors
-    ///
     /// This fails if the query or DB connection fail.
     pub async fn find_or_create(&self, conn: &mut AsyncPgConnection) -> QueryResult<Song> {
         use diesel::sql_types::{Nullable, Text};
@@ -331,14 +326,15 @@ impl<'a> NewSong<'a> {
             .or(aliases_artist.contains(vec![self.artist])));
 
         match songs::table
-            .inner_join(extra_song_info::table)
+            .left_join(extra_song_info::table)
+            .select((Song::as_select(), Option::<ExtraSongInfo>::as_select()))
             .filter(title_predicate.and(artist_predicate))
-            .select((Song::as_select(), ExtraSongInfo::as_select()))
-            .first::<(Song, ExtraSongInfo)>(conn)
+            .first::<(Song, Option<ExtraSongInfo>)>(conn)
             .await
+            .optional()?
         {
-            Ok(song_extended) => Ok(song_extended.0),
-            Err(_) => {
+            Some(song_extended) => Ok(song_extended.0),
+            None => {
                 diesel::insert_into(songs::table)
                     .values(self)
                     .get_result(conn)

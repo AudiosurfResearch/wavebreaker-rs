@@ -1,5 +1,3 @@
-use std::str::FromStr;
-
 use diesel::{
     backend::Backend,
     deserialize::{self, FromSql, FromSqlRow},
