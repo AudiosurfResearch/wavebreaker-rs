@@ -311,7 +311,7 @@ impl<'a> NewSong<'a> {
         };
 
         // diesel doesn't have support for the lower function out of the box
-        sql_function!(fn lower(x: Nullable<Text> ) -> Nullable<Text>);
+        define_sql_function!(fn lower(x: Nullable<Text> ) -> Nullable<Text>);
 
         // the alias arrays and the musicbrainz data have to play by the game's rules
         // or else we can never match them with what the game sends!

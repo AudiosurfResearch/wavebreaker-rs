@@ -89,7 +89,7 @@ pub async fn parse_command(command: &Command, state: AppState) -> anyhow::Result
             //Add skill points of all scores
             let skill_points: i32 = all_player_scores.iter().map(Score::get_skill_points).sum();
             redis_conn
-                .zadd("leaderboard", player_to_refresh, skill_points)
+                .zadd::<_, _, _, ()>("leaderboard", player_to_refresh, skill_points)
                 .await?;
 
             Ok(())

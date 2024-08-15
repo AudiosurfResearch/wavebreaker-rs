@@ -246,7 +246,7 @@ impl<'a> NewPlayer<'a> {
             .arg("NX")
             .arg(0i32)
             .arg(player_result.id)
-            .query_async(redis_conn)
+            .query_async::<()>(redis_conn)
             .await?;
 
         Ok(player_result)
