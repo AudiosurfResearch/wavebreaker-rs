@@ -119,8 +119,11 @@ pub async fn steam_sync(
     let steam_player = ticket_auth(&payload.ticket, &state.steam_api)
         .await
         .http_internal_error("Failed to authenticate with Steam")?;
-
     let mut conn = state.db.get().await?;
+
+    let player: Player = Player::find_by_steam_id(steam_player)
+        .first::<Player>(&mut conn)
+        .await?;
 
     //Get all friends
     let friends = players
@@ -133,8 +136,8 @@ pub async fn steam_sync(
         diesel::insert_into(crate::schema::rivalries::table)
             .values((
                 crate::schema::rivalries::challenger_id
-                    .eq(i32::try_from(steam_player.get_account_id())?),
-                crate::schema::rivalries::rival_id.eq(friend.steam_account_num),
+                    .eq(player.id),
+                crate::schema::rivalries::rival_id.eq(friend.id),
             ))
             .on_conflict_do_nothing()
             .execute(&mut conn)
