@@ -21,6 +21,7 @@ use crate::schema::extra_song_info;
 #[diesel(belongs_to(super::songs::Song))]
 #[diesel(table_name = extra_song_info, check_for_backend(diesel::pg::Pg))]
 #[diesel(primary_key(id))]
+#[serde(rename_all = "camelCase")]
 pub struct ExtraSongInfo {
     pub id: i32,
     pub song_id: i32,
