@@ -21,6 +21,7 @@ pub struct Song {
     pub id: i32,
     pub title: String,
     pub artist: String,
+    #[serde(serialize_with = "time::serde::iso8601::serialize")]
     pub created_at: time::OffsetDateTime,
     pub modifiers: Option<Vec<Option<String>>>,
 }
