@@ -97,7 +97,7 @@ pub struct Player {
     pub steam_account_num: i32,
     pub location_id: i32,
     pub account_type: AccountType,
-    pub joined_at: time::PrimitiveDateTime,
+    pub joined_at: time::OffsetDateTime,
     pub avatar_url: String,
 }
 

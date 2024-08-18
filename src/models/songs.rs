@@ -1,5 +1,6 @@
 use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl, SaveChangesDsl};
+use serde::Serialize;
 use tracing::debug;
 
 use crate::{
@@ -11,15 +12,16 @@ use crate::{
     schema::{extra_song_info, songs},
 };
 
-#[derive(Identifiable, Selectable, Queryable, Debug)]
+#[derive(Identifiable, Selectable, Queryable, Debug, Serialize)]
 #[diesel(table_name = songs, check_for_backend(diesel::pg::Pg))]
 #[diesel(primary_key(id))]
+#[serde(rename_all = "camelCase")]
 pub struct Song {
     // Main info
     pub id: i32,
     pub title: String,
     pub artist: String,
-    pub created_at: time::PrimitiveDateTime,
+    pub created_at: time::OffsetDateTime,
     pub modifiers: Option<Vec<Option<String>>>,
 }
 

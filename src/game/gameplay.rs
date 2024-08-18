@@ -248,7 +248,7 @@ pub async fn send_ride(
         }
 
         // Calculate how long the current top score has been at the top before being mercilessly dethroned (part of the Brutus achievement condition!)
-        let reign_duration = OffsetDateTime::now_utc() - current_top.0.submitted_at.assume_utc();
+        let reign_duration = OffsetDateTime::now_utc() - current_top.0.submitted_at;
 
         // Check if the player has a rivalry with the top score holder (part of the Brutus achievement condition!)
         let rivalry = rivalries
@@ -382,7 +382,7 @@ fn create_league_rides(league: League, scores: Vec<ScoreWithPlayer>) -> LeagueRi
             username: with_player.player.username,
             score: with_player.score.score,
             vehicle_id: with_player.score.vehicle,
-            time: with_player.score.submitted_at.assume_utc().unix_timestamp(),
+            time: with_player.score.submitted_at.unix_timestamp(),
             feats: with_player
                 .score
                 .feats

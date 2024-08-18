@@ -13,7 +13,7 @@ use crate::{models::players::Player, schema::rivalries};
 pub struct Rivalry {
     pub challenger_id: i32,
     pub rival_id: i32,
-    pub established_at: time::PrimitiveDateTime,
+    pub established_at: time::OffsetDateTime,
 }
 
 impl Rivalry {

@@ -25,7 +25,7 @@ diesel::table! {
         steam_account_num -> Int4,
         location_id -> Int4,
         account_type -> Int2,
-        joined_at -> Timestamp,
+        joined_at -> Timestamptz,
         avatar_url -> Text,
     }
 }
@@ -34,7 +34,7 @@ diesel::table! {
     rivalries (challenger_id, rival_id) {
         challenger_id -> Int4,
         rival_id -> Int4,
-        established_at -> Timestamp,
+        established_at -> Timestamptz,
     }
 }
 
@@ -44,7 +44,7 @@ diesel::table! {
         song_id -> Int4,
         player_id -> Int4,
         league -> Int2,
-        submitted_at -> Timestamp,
+        submitted_at -> Timestamptz,
         play_count -> Int4,
         score -> Int4,
         track_shape -> Array<Nullable<Int4>>,
@@ -64,7 +64,7 @@ diesel::table! {
         id -> Int4,
         author_id -> Int4,
         song_id -> Int4,
-        posted_at -> Timestamp,
+        posted_at -> Timestamptz,
         #[max_length = 240]
         content -> Varchar,
     }
@@ -75,7 +75,7 @@ diesel::table! {
         id -> Int4,
         title -> Text,
         artist -> Text,
-        created_at -> Timestamp,
+        created_at -> Timestamptz,
         modifiers -> Nullable<Array<Nullable<Text>>>,
     }
 }

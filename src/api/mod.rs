@@ -1,13 +1,18 @@
 use axum::{routing::get, Json, Router};
 use serde::Serialize;
+use songs::song_routes;
 
 use crate::{
     util::{errors::RouteError, radio::get_radio_songs},
     AppState,
 };
 
+pub mod songs;
+
 pub fn routes() -> Router<AppState> {
-    Router::new().route("/healthCheck", get(health_check))
+    Router::new()
+        .route("/healthCheck", get(health_check))
+        .nest("/songs", song_routes())
 }
 
 #[derive(Serialize)]

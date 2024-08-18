@@ -135,8 +135,7 @@ pub async fn steam_sync(
     for friend in &friends {
         diesel::insert_into(crate::schema::rivalries::table)
             .values((
-                crate::schema::rivalries::challenger_id
-                    .eq(player.id),
+                crate::schema::rivalries::challenger_id.eq(player.id),
                 crate::schema::rivalries::rival_id.eq(friend.id),
             ))
             .on_conflict_do_nothing()

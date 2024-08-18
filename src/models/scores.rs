@@ -12,7 +12,7 @@ use diesel::{
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use redis::AsyncCommands;
 use serde::Serialize;
-use time::{OffsetDateTime, PrimitiveDateTime};
+use time::OffsetDateTime;
 
 use crate::{
     models::{players::Player, songs::Song},
@@ -72,7 +72,7 @@ pub struct Score {
     pub song_id: i32,
     pub player_id: i32,
     pub league: League,
-    pub submitted_at: time::PrimitiveDateTime,
+    pub submitted_at: time::OffsetDateTime,
     pub play_count: i32,
     pub score: i32,
     pub track_shape: Vec<Option<i32>>,
@@ -351,8 +351,6 @@ impl<'a> NewScore<'a> {
                     )
                     .await?;
 
-                let offset_time = OffsetDateTime::now_utc();
-
                 let updated_score = diesel::update(scores)
                     .filter(player_id.eq(self.player_id))
                     .filter(song_id.eq(self.song_id))
@@ -369,10 +367,7 @@ impl<'a> NewScore<'a> {
                         iss.eq(self.iss),
                         isj.eq(self.isj),
                         play_count.eq(play_count + 1),
-                        submitted_at.eq(PrimitiveDateTime::new(
-                            offset_time.date(),
-                            offset_time.time(),
-                        )),
+                        submitted_at.eq(OffsetDateTime::now_utc()),
                     ))
                     .get_result::<Score>(conn)
                     .await

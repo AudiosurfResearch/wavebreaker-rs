@@ -14,7 +14,7 @@ pub struct Shout {
     pub id: i32,
     pub song_id: i32,
     pub author_id: i32,
-    pub posted_at: time::PrimitiveDateTime,
+    pub posted_at: time::OffsetDateTime,
     pub content: String,
 }
 

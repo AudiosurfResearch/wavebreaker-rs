@@ -22,7 +22,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 diesel = { version = "2.2", features = ["time"] }
 diesel-async = { version = "0.5", features = ["postgres", "deadpool", "async-connection-wrapper"] }
 steam-rs = "0.4"
-time = { version = "0.3", features = ["serde"] }
+time = { version = "0.3", features = ["formatting", "serde"] }
 tower-http = { version = "0.5", features = ["fs", "trace"] }
 toml = "0.8"
 validator = { version = "0.18", features = ["derive"] }
