@@ -77,6 +77,8 @@ struct Radio {
 #[derive(Deserialize, Clone)]
 struct External {
     steam_key: String,
+    steam_realm: String,
+    steam_return_path: String,
 }
 
 #[derive(Clone)]
