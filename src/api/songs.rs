@@ -7,9 +7,13 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
 
-use crate::{models::{extra_song_info::ExtraSongInfo, songs::Song}, util::errors::RouteError, AppState};
+use crate::{
+    models::{extra_song_info::ExtraSongInfo, songs::Song},
+    util::errors::RouteError,
+    AppState,
+};
 
-pub fn song_routes() -> Router<AppState> {
+pub fn routes() -> Router<AppState> {
     Router::new().route("/:id", get(get_song))
 }
 
@@ -19,20 +23,20 @@ struct SongResponse {
     #[serde(flatten)]
     song: Song,
     #[serde(skip_serializing_if = "Option::is_none")]
-    extra_info: Option<ExtraSongInfo>
+    extra_info: Option<ExtraSongInfo>,
 }
 
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct GetSongParams {
     #[serde(default)] // default to false
-    with_extra_info: bool
+    with_extra_info: bool,
 }
 
 async fn get_song(
     State(state): State<AppState>,
     Path(id): Path<i32>,
-    query: Query<GetSongParams>
+    query: Query<GetSongParams>,
 ) -> Result<Json<SongResponse>, RouteError> {
     use crate::schema::songs;
 
@@ -40,9 +44,15 @@ async fn get_song(
 
     let song: Song = songs::table.find(id).first(&mut conn).await?;
     if query.with_extra_info {
-        let extra_info: Option<ExtraSongInfo> = ExtraSongInfo::belonging_to(&song).first(&mut conn).await.optional()?;
+        let extra_info: Option<ExtraSongInfo> = ExtraSongInfo::belonging_to(&song)
+            .first(&mut conn)
+            .await
+            .optional()?;
         return Ok(Json(SongResponse { song, extra_info }));
     }
 
-    Ok(Json(SongResponse { song, extra_info: None }))
+    Ok(Json(SongResponse {
+        song,
+        extra_info: None,
+    }))
 }

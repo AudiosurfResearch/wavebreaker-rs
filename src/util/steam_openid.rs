@@ -28,7 +28,10 @@ pub fn get_redirect_url(realm: &str, path: &str) -> std::result::Result<String, 
     Ok(redirect_url.to_string())
 }
 
-pub async fn verify_return(return_to: &str, form: &mut VerifyForm) -> std::result::Result<u64, VerifyError> {
+pub async fn verify_return(
+    return_to: &str,
+    form: &mut VerifyForm,
+) -> std::result::Result<u64, VerifyError> {
     lazy_static! {
         static ref STEAMID_REGEX: Regex =
             Regex::new("^https://steamcommunity.com/openid/id/([0-9]{17})$").unwrap();

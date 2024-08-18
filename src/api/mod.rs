@@ -13,9 +13,9 @@ mod songs;
 pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/healthCheck", get(health_check))
-        .nest("/songs", songs::song_routes())
-        .nest("/players", players::player_routes())
-        .nest("/auth", auth::auth_routes())
+        .nest("/songs", songs::routes())
+        .nest("/players", players::routes())
+        .nest("/auth", auth::routes())
 }
 
 #[derive(Serialize)]

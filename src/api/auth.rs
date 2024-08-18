@@ -14,7 +14,7 @@ use crate::{
     AppState,
 };
 
-pub fn auth_routes() -> Router<AppState> {
+pub fn routes() -> Router<AppState> {
     Router::new()
         .route("/return", get(auth_return))
         .route("/login", get(auth_login))
@@ -32,9 +32,9 @@ async fn auth_return(
     Query(mut query): Query<VerifyForm>,
 ) -> Result<Json<()>, RouteError> {
     let steamid64 = verify_return(
-        &Url::parse(&state.config.external.steam_realm)?
+        Url::parse(&state.config.external.steam_realm)?
             .join(&state.config.external.steam_return_path)?
-            .to_string(),
+            .as_ref(),
         &mut query,
     )
     .await?;

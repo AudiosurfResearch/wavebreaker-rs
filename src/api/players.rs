@@ -9,7 +9,7 @@ use serde::Serialize;
 
 use crate::{models::players::Player, util::errors::RouteError, AppState};
 
-pub fn player_routes() -> Router<AppState> {
+pub fn routes() -> Router<AppState> {
     Router::new().route("/:id", get(get_player))
 }
 
