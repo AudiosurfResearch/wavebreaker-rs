@@ -90,6 +90,7 @@ where
 
 #[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Serialize)]
 #[diesel(table_name = players, check_for_backend(diesel::pg::Pg))]
+#[serde(rename_all = "camelCase")]
 pub struct Player {
     pub id: i32,
     pub username: String,
@@ -97,6 +98,7 @@ pub struct Player {
     pub steam_account_num: i32,
     pub location_id: i32,
     pub account_type: AccountType,
+    #[serde(serialize_with = "time::serde::iso8601::serialize")]
     pub joined_at: time::OffsetDateTime,
     pub avatar_url: String,
 }
