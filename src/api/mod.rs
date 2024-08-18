@@ -6,6 +6,7 @@ use crate::{
     AppState,
 };
 
+mod auth;
 mod players;
 mod songs;
 
@@ -14,6 +15,7 @@ pub fn routes() -> Router<AppState> {
         .route("/healthCheck", get(health_check))
         .nest("/songs", songs::song_routes())
         .nest("/players", players::player_routes())
+        .nest("/auth", auth::auth_routes())
 }
 
 #[derive(Serialize)]

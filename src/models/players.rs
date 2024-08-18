@@ -94,7 +94,9 @@ where
 pub struct Player {
     pub id: i32,
     pub username: String,
+    #[serde(skip)]
     pub steam_id: SteamIdWrapper,
+    #[serde(skip)]
     pub steam_account_num: i32,
     pub location_id: i32,
     pub account_type: AccountType,
