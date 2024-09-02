@@ -11,12 +11,15 @@ Config example (``Wavebreaker.toml``):
 address = "localhost:1337"
 database = "postgres://user:owaranai_future_sound_o@localhost/wavebreaker"
 redis = "redis://localhost:6379"
+jwt_secret = "kono oto o kiku subete ga 「　　　」"
 
 [radio]
 cgr_location = "./radio"
 
 [external]
 steam_key = "music_bokura_zutto_so_hype"
+steam_realm = "http://localhost:1337"
+steam_return_path = "/api/auth/return"
 ```
 
 Radio song list example (``WavebreakerRadio.toml``):
