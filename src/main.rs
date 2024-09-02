@@ -67,6 +67,7 @@ struct Main {
     address: String,
     database: String,
     redis: String,
+    jwt_secret: String,
 }
 
 #[derive(Deserialize, Clone)]
@@ -79,7 +80,6 @@ struct External {
     steam_key: String,
     steam_realm: String,
     steam_return_path: String,
-    jwt_secret: String,
 }
 
 #[derive(Clone)]
@@ -150,7 +150,7 @@ async fn init_state() -> anyhow::Result<AppState> {
         steam_api: Arc::new(Steam::new(&wavebreaker_config.external.steam_key)),
         db: pool,
         redis: redis_pool,
-        jwt_keys: util::jwt::Keys::new(wavebreaker_config.external.jwt_secret.as_bytes()),
+        jwt_keys: util::jwt::Keys::new(wavebreaker_config.main.jwt_secret.as_bytes()),
         config: Arc::new(wavebreaker_config),
     })
 }
