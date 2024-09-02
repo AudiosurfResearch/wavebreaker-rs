@@ -79,6 +79,7 @@ struct External {
     steam_key: String,
     steam_realm: String,
     steam_return_path: String,
+    jwt_secret: String,
 }
 
 #[derive(Clone)]
@@ -87,6 +88,7 @@ pub struct AppState {
     config: Arc<Config>,
     db: Pool<diesel_async::AsyncPgConnection>,
     redis: deadpool_redis::Pool,
+    jwt_keys: util::jwt::Keys,
 }
 
 fn run_migrations(
@@ -146,9 +148,10 @@ async fn init_state() -> anyhow::Result<AppState> {
 
     Ok(AppState {
         steam_api: Arc::new(Steam::new(&wavebreaker_config.external.steam_key)),
-        config: Arc::new(wavebreaker_config),
         db: pool,
         redis: redis_pool,
+        jwt_keys: util::jwt::Keys::new(wavebreaker_config.external.jwt_secret.as_bytes()),
+        config: Arc::new(wavebreaker_config),
     })
 }
 

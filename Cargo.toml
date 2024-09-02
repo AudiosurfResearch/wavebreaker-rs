@@ -9,7 +9,7 @@ edition = "2021"
 [dependencies]
 anyhow = { version = "1.0", features = ["backtrace"] }
 axum = { version = "0.7", features = ["macros", "tracing"] }
-axum-serde = { version = "0.5", features = ["xml", "xml_encoding"] }
+axum-serde = { version = "0.6.1", features = ["xml", "xml_encoding"] }
 figment = { version = "0.10", features = ["toml", "env"] }
 num_enum = "0.7"
 quick-xml = { version = "0.36", features = ["serialize"] }
@@ -27,7 +27,7 @@ tower-http = { version = "0.5", features = ["fs", "trace"] }
 toml = "0.8"
 validator = { version = "0.18", features = ["derive"] }
 axum-valid = "0.19.0"
-axum-extra = { version = "0.9", features = ["form"] }
+axum-extra = { version = "0.9", features = ["form", "typed-header"] }
 regex = "1.10"
 redis = { version = "0.26.0", features = ["aio"] }
 deadpool-redis = "0.16"
@@ -39,3 +39,5 @@ url = "2.5.2"
 lazy_static = "1.5.0"
 serde_urlencoded = "0.7.1"
 reqwest = "0.12.5"
+jsonwebtoken = "9.3.0"
+async-trait = "0.1.82"
