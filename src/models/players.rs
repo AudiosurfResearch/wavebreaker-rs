@@ -132,7 +132,6 @@ impl Player {
     ///
     /// # Arguments
     /// * `id_to_find` - The Steam ID of the player to find.
-    /// * `conn` - A mutable reference to an `AsyncPgConnection`.
     ///
     /// # Returns
     /// Returns a query fragment
