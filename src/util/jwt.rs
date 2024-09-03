@@ -3,7 +3,7 @@
 use async_trait::async_trait;
 use axum::{
     extract::{FromRef, FromRequestParts},
-    http::request::Parts,
+    http::{request::Parts, StatusCode},
     RequestPartsExt,
 };
 use axum_extra::{
@@ -13,12 +13,12 @@ use axum_extra::{
 use jsonwebtoken::{decode, DecodingKey, EncodingKey, Validation};
 use serde::{Deserialize, Serialize};
 
-use super::errors::RouteError;
-use crate::AppState;
+use super::errors::{IntoRouteError, RouteError};
+use crate::{models::players::Player, AppState};
 #[derive(Clone)]
 pub struct Keys {
-    encoding: EncodingKey,
-    decoding: DecodingKey,
+    pub encoding: EncodingKey,
+    pub decoding: DecodingKey,
 }
 
 impl Keys {
@@ -31,13 +31,13 @@ impl Keys {
 }
 
 #[derive(Debug, Serialize)]
-struct AuthBody {
+pub struct AuthBody {
     access_token: String,
     token_type: String,
 }
 
 impl AuthBody {
-    fn new(access_token: String) -> Self {
+    pub fn new(access_token: String) -> Self {
         Self {
             access_token,
             token_type: "Bearer".to_string(),
@@ -47,8 +47,8 @@ impl AuthBody {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Claims {
-    username: String,
-    exp: usize,
+    pub profile: Player,
+    pub exp: i64,
 }
 
 #[async_trait]
@@ -66,14 +66,14 @@ where
         let TypedHeader(Authorization(bearer)) = parts
             .extract::<TypedHeader<Authorization<Bearer>>>()
             .await
-            .map_err(|_| RouteError::new_bad_request())?;
+            .http_status_error(StatusCode::BAD_REQUEST)?;
         // Decode the user data
-        let token_data = decode::<Claims>(
+        let token_data = decode::<Self>(
             bearer.token(),
             &state.jwt_keys.decoding,
             &Validation::default(),
         )
-        .map_err(|_| RouteError::new_unauthorized().set_public_error_message("Invalid token"))?;
+        .http_error("Invalid token", StatusCode::UNAUTHORIZED)?;
 
         Ok(token_data.claims)
     }

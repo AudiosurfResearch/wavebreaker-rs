@@ -9,7 +9,7 @@ use diesel::{
 };
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use steam_rs::steam_id::SteamId;
 
@@ -18,7 +18,7 @@ use crate::{
     schema::players,
 };
 
-#[derive(Serialize, AsExpression, FromSqlRow, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, AsExpression, FromSqlRow, Debug, PartialEq, Eq)]
 #[diesel(sql_type = diesel::sql_types::Text)]
 /// Wrapper around `SteamId` so we can use it in Diesel queries.
 /// Postgres doesn't natively have an uint type, so we have to store it as a string
@@ -88,15 +88,12 @@ where
     }
 }
 
-#[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Serialize)]
+#[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Serialize, Deserialize)]
 #[diesel(table_name = players, check_for_backend(diesel::pg::Pg))]
-#[serde(rename_all = "camelCase")]
 pub struct Player {
     pub id: i32,
     pub username: String,
-    #[serde(skip)]
     pub steam_id: SteamIdWrapper,
-    #[serde(skip)]
     pub steam_account_num: i32,
     pub location_id: i32,
     pub account_type: AccountType,
@@ -253,5 +250,30 @@ impl<'a> NewPlayer<'a> {
             .await?;
 
         Ok(player_result)
+    }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PlayerPublic {
+    pub id: i32,
+    pub username: String,
+    pub location_id: i32,
+    pub account_type: AccountType,
+    #[serde(serialize_with = "time::serde::iso8601::serialize")]
+    pub joined_at: time::OffsetDateTime,
+    pub avatar_url: String,
+}
+
+impl From<Player> for PlayerPublic {
+    fn from(player: Player) -> Self {
+        Self {
+            id: player.id,
+            username: player.username,
+            location_id: player.location_id,
+            account_type: player.account_type,
+            joined_at: player.joined_at,
+            avatar_url: player.avatar_url,
+        }
     }
 }

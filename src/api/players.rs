@@ -7,7 +7,11 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use serde::Serialize;
 
-use crate::{models::players::Player, util::errors::RouteError, AppState};
+use crate::{
+    models::players::{Player, PlayerPublic},
+    util::errors::RouteError,
+    AppState,
+};
 
 pub fn routes() -> Router<AppState> {
     Router::new().route("/:id", get(get_player))
@@ -17,7 +21,7 @@ pub fn routes() -> Router<AppState> {
 #[serde(rename_all = "camelCase")]
 struct PlayerResponse {
     #[serde(flatten)]
-    player: Player,
+    player: PlayerPublic,
 }
 
 async fn get_player(
@@ -30,5 +34,7 @@ async fn get_player(
 
     let player: Player = players::table.find(id).first(&mut conn).await?;
 
-    Ok(Json(PlayerResponse { player }))
+    Ok(Json(PlayerResponse {
+        player: player.into(),
+    }))
 }
