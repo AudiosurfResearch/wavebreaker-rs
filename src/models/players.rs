@@ -258,7 +258,6 @@ impl<'a> NewPlayer<'a> {
 pub struct PlayerPublic {
     pub id: i32,
     pub username: String,
-    pub location_id: i32,
     pub account_type: AccountType,
     #[serde(serialize_with = "time::serde::iso8601::serialize")]
     pub joined_at: time::OffsetDateTime,
@@ -270,7 +269,6 @@ impl From<Player> for PlayerPublic {
         Self {
             id: player.id,
             username: player.username,
-            location_id: player.location_id,
             account_type: player.account_type,
             joined_at: player.joined_at,
             avatar_url: player.avatar_url,
