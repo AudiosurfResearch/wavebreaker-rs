@@ -1,5 +1,6 @@
 use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
+use serde::{Deserialize, Serialize};
 
 use crate::{models::players::Player, schema::rivalries};
 
@@ -59,14 +60,21 @@ impl NewRivalry {
     ///
     /// # Returns
     /// A `QueryResult` containing the created `Rivalry` instance.
-    ///
-    /// # Errors
-    /// This fails if:
-    /// - The query fails
     pub async fn create(&self, conn: &mut AsyncPgConnection) -> QueryResult<Rivalry> {
         diesel::insert_into(rivalries::table)
             .values(self)
             .get_result(conn)
             .await
     }
+}
+
+#[derive(Queryable, Deserialize, Serialize)]
+#[diesel(table_name = rivalries, check_for_backend(diesel::pg::Pg))]
+#[serde(rename_all = "camelCase")]
+pub struct RivalryView {
+    #[serde(deserialize_with = "time::serde::iso8601::deserialize")]
+    #[serde(serialize_with = "time::serde::iso8601::serialize")]
+    pub established_at: time::OffsetDateTime,
+    #[diesel(embed)]
+    pub rival: Player,
 }

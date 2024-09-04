@@ -13,6 +13,7 @@ use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use steam_rs::steam_id::SteamId;
 
+use super::rivalries::RivalryView;
 use crate::{
     models::{rivalries::Rivalry, scores::Score},
     schema::players,
@@ -98,6 +99,7 @@ pub struct Player {
     pub location_id: i32,
     pub account_type: AccountType,
     #[serde(serialize_with = "time::serde::iso8601::serialize")]
+    #[serde(deserialize_with = "time::serde::iso8601::deserialize")]
     pub joined_at: time::OffsetDateTime,
     pub avatar_url: String,
 }
@@ -109,9 +111,6 @@ type BySteamId = diesel::dsl::Filter<All, WithSteamId>;
 
 impl Player {
     /// Returns the total skill points a player has earned with their scores.
-    ///
-    /// # Errors
-    /// This fails if something goes wrong with the database.
     pub async fn get_skill_points(&self, conn: &mut AsyncPgConnection) -> QueryResult<i32> {
         use crate::schema::scores::dsl::*;
 
@@ -131,12 +130,7 @@ impl Player {
     /// * `id_to_find` - The Steam ID of the player to find.
     ///
     /// # Returns
-    /// Returns a query fragment
-    ///
-    /// # Errors
-    /// This fails if:
-    /// - The player fails to be found in the database
-    /// - The database connection fails
+    /// Returns a query fragment, not the player!
     #[must_use]
     pub fn find_by_steam_id(id_to_find: SteamId) -> BySteamId {
         use crate::schema::players::dsl::*;
@@ -151,15 +145,6 @@ impl Player {
     }
 
     /// Retrieves the rivals of a player.
-    ///
-    /// # Arguments
-    /// * `conn` - A mutable reference to an `AsyncPgConnection`.
-    ///
-    /// # Returns
-    /// Returns a `QueryResult` containing a vector of players.
-    ///
-    /// # Errors
-    /// This fails if the database connection fails
     pub async fn get_rivals(&self, conn: &mut AsyncPgConnection) -> QueryResult<Vec<Self>> {
         use crate::schema::{players::dsl::*, rivalries::dsl::*};
 
@@ -174,6 +159,24 @@ impl Player {
         players
             .filter(id.eq_any(rival_ids))
             .load::<Self>(conn)
+            .await
+    }
+
+    /// Retrieves rivalries, with the date they were established, and the profiles of the rivals.
+    /// This is **not** like `get_rivals`, which only returns a `Vec<Player>` of the rivals and nothing else.
+    pub async fn get_rivalry_views(
+        &self,
+        conn: &mut AsyncPgConnection,
+    ) -> QueryResult<Vec<RivalryView>> {
+        use crate::schema::rivalries::dsl::*;
+
+        rivalries
+            .inner_join(
+                crate::schema::players::table.on(rival_id.eq(crate::schema::players::dsl::id)),
+            )
+            .filter(challenger_id.eq(self.id))
+            .select((established_at, Self::as_select()))
+            .load::<RivalryView>(conn)
             .await
     }
 }

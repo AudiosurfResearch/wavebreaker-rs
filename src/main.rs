@@ -13,6 +13,10 @@
     clippy::todo
 )]
 #![allow(clippy::wildcard_imports)]
+// because every time I leave out error documentation, it's because it's EXTREMELY obvious.
+// I don't need to tell people that a function which returns something from the database will fail if it can't connect to the database!
+// I'm not kidding, the error descriptions were almost always "This function will fail if something is wrong with the database". That's not helpful.
+#![allow(clippy::missing_errors_doc)]
 
 mod api;
 mod game;

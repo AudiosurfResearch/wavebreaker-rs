@@ -8,6 +8,7 @@ use crate::{
 
 mod auth;
 mod players;
+mod rivals;
 mod songs;
 
 pub fn routes() -> Router<AppState> {
@@ -16,6 +17,7 @@ pub fn routes() -> Router<AppState> {
         .nest("/songs", songs::routes())
         .nest("/players", players::routes())
         .nest("/auth", auth::routes())
+        .nest("/rivals", rivals::routes())
 }
 
 #[derive(Serialize)]

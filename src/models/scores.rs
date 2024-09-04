@@ -121,21 +121,14 @@ impl Score {
         Ok(())
     }
 
-    //ALL OF THE game_get_* FUNCTIONS ARE ONLY FOR IN-GAME LEADERBOARDS
-    //therefore the score count is limited to 11
-
     /// Retrieves the scores for a specific song and league, for display in-game.
+    /// **ALL OF THE `game_get_*` FUNCTIONS ARE ONLY FOR IN-GAME LEADERBOARDS.**
+    ///  Therefore, the score count is limited to 11.
     ///
     /// # Arguments
     /// * `find_song_id` - The ID of the song to find scores for.
     /// * `find_league` - The league to filter scores by.
     /// * `conn` - The database connection.
-    ///
-    /// # Returns
-    /// A vector of `ScoreWithPlayer` structs.
-    ///
-    /// # Errors
-    /// This fails if the database query fails.
     pub async fn game_get_global(
         find_song_id: i32,
         find_league: League,
@@ -166,12 +159,6 @@ impl Score {
     /// * `find_league` - The league to filter scores by.
     /// *  `rival_ids` - The IDs of the rivals to filter scores by.
     /// * `conn` - The database connection.
-    ///
-    /// # Returns
-    /// A vector of `ScoreWithPlayer` structs.
-    ///
-    /// # Errors
-    /// This fails if the database query fails.
     pub async fn game_get_rivals(
         find_song_id: i32,
         find_league: League,
@@ -204,12 +191,6 @@ impl Score {
     /// * `find_song_id` - The ID of the song to find scores for.
     /// * `find_league` - The league to filter scores by.
     /// * `conn` - The database connection.
-    ///
-    /// # Returns
-    /// A vector of `ScoreWithPlayer` structs.
-    ///
-    /// # Errors
-    /// This fails if the database query fails.
     pub async fn game_get_nearby(
         find_song_id: i32,
         find_league: League,
