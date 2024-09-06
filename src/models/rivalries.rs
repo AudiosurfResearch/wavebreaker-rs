@@ -2,6 +2,7 @@ use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde::{Deserialize, Serialize};
 
+use super::players::PlayerPublic;
 use crate::{models::players::Player, schema::rivalries};
 
 #[derive(Identifiable, Selectable, Queryable, Associations, Debug)]
@@ -76,5 +77,5 @@ pub struct RivalryView {
     #[serde(serialize_with = "time::serde::iso8601::serialize")]
     pub established_at: time::OffsetDateTime,
     #[diesel(embed)]
-    pub rival: Player,
+    pub rival: PlayerPublic,
 }

@@ -175,7 +175,7 @@ impl Player {
                 crate::schema::players::table.on(rival_id.eq(crate::schema::players::dsl::id)),
             )
             .filter(challenger_id.eq(self.id))
-            .select((established_at, Self::as_select()))
+            .select((established_at, PlayerPublic::as_select()))
             .load::<RivalryView>(conn)
             .await
     }
@@ -256,8 +256,9 @@ impl<'a> NewPlayer<'a> {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Selectable, Queryable, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
+#[diesel(table_name = players, check_for_backend(diesel::pg::Pg))]
 pub struct PlayerPublic {
     pub id: i32,
     pub username: String,

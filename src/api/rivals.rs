@@ -1,8 +1,4 @@
-use axum::{
-    extract::{Path, State},
-    routing::get,
-    Json, Router,
-};
+use axum::{extract::State, routing::get, Json, Router};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use serde::Serialize;
