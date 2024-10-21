@@ -33,7 +33,6 @@ use axum::{
     Router,
 };
 use clap::Parser;
-use deadpool_redis::Runtime;
 use diesel::pg::Pg;
 use diesel_async::{
     async_connection_wrapper::AsyncConnectionWrapper,
@@ -44,6 +43,7 @@ use figment::{
     providers::{Env, Format, Toml},
     Figment,
 };
+use fred::prelude::*;
 use serde::Deserialize;
 use steam_rs::Steam;
 use tower_http::trace::TraceLayer;
@@ -91,7 +91,7 @@ pub struct AppState {
     steam_api: Arc<Steam>,
     config: Arc<Config>,
     db: Pool<diesel_async::AsyncPgConnection>,
-    redis: deadpool_redis::Pool,
+    redis: Arc<RedisPool>,
     jwt_keys: util::jwt::Keys,
 }
 
@@ -140,9 +140,11 @@ async fn init_state() -> anyhow::Result<AppState> {
     })
     .await?;
 
-    let redis_cfg = deadpool_redis::Config::from_url(&wavebreaker_config.main.redis);
-    let redis_pool = redis_cfg
-        .create_pool(Some(Runtime::Tokio1))
+    let redis_cfg = RedisConfig::from_url(&wavebreaker_config.main.redis)?;
+    let redis_builder = Builder::from_config(redis_cfg);
+
+    let redis_pool = redis_builder
+        .build_pool(3)
         .context("Failed to build Redis pool!")?;
 
     // Set global user agent so MusicBrainz can contact us if we're messing up
@@ -153,7 +155,7 @@ async fn init_state() -> anyhow::Result<AppState> {
     Ok(AppState {
         steam_api: Arc::new(Steam::new(&wavebreaker_config.external.steam_key)),
         db: pool,
-        redis: redis_pool,
+        redis: Arc::new(redis_pool),
         jwt_keys: util::jwt::Keys::new(wavebreaker_config.main.jwt_secret.as_bytes()),
         config: Arc::new(wavebreaker_config),
     })

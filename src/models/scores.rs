@@ -10,7 +10,7 @@ use diesel::{
     sql_types::SmallInt,
 };
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
-use redis::AsyncCommands;
+use fred::prelude::*;
 use serde::Serialize;
 use time::OffsetDateTime;
 
@@ -105,14 +105,14 @@ impl Score {
     pub async fn delete(
         &self,
         conn: &mut AsyncPgConnection,
-        redis_conn: &mut deadpool_redis::Connection,
+        redis_pool: &RedisPool,
     ) -> anyhow::Result<()> {
         use crate::schema::scores::dsl::*;
 
         // Subtract the skill points from the player on Redis
         let sub_amount = 0 - self.get_skill_points();
-        redis_conn
-            .zincr::<&str, i32, i32, i32>("leaderboard", self.player_id, sub_amount)
+        let _: () = redis_pool
+            .zincrby("leaderboard", sub_amount.into(), self.player_id)
             .await?;
 
         diesel::delete(scores.filter(id.eq(self.id)))
@@ -308,7 +308,7 @@ impl<'a> NewScore<'a> {
     pub async fn create_or_update(
         &self,
         conn: &mut AsyncPgConnection,
-        redis_conn: &mut deadpool_redis::Connection,
+        redis_conn: &RedisPool,
     ) -> anyhow::Result<Score> {
         use crate::schema::scores::dsl::*;
 
@@ -324,12 +324,8 @@ impl<'a> NewScore<'a> {
             if existing_score.score < self.score {
                 // Subtract the skill points of the old score from the Redis leaderboard
                 let sub_amount = 0 - existing_score.get_skill_points();
-                redis_conn
-                    .zincr::<&str, i32, i32, i32>(
-                        "leaderboard",
-                        existing_score.player_id,
-                        sub_amount,
-                    )
+                let _: () = redis_conn
+                    .zincrby("leaderboard", sub_amount.into(), existing_score.player_id)
                     .await?;
 
                 let updated_score = diesel::update(scores)
@@ -356,12 +352,8 @@ impl<'a> NewScore<'a> {
 
                 // Add the skill points of the new score to the Redis leaderboard
                 let add_amount = updated_score.get_skill_points();
-                redis_conn
-                    .zincr::<&str, i32, i32, i32>(
-                        "leaderboard",
-                        updated_score.player_id,
-                        add_amount,
-                    )
+                let _: () = redis_conn
+                    .zincrby("leaderboard", add_amount.into(), updated_score.player_id)
                     .await?;
 
                 Ok(updated_score)
@@ -377,8 +369,8 @@ impl<'a> NewScore<'a> {
 
             // Add the skill points of the new score to the Redis leaderboard
             let add_amount = new_score.get_skill_points();
-            redis_conn
-                .zincr::<&str, i32, i32, i32>("leaderboard", new_score.player_id, add_amount)
+            let _: () = redis_conn
+                .zincrby("leaderboard", add_amount.into(), new_score.player_id)
                 .await?;
 
             Ok(new_score)

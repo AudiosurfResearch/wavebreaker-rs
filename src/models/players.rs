@@ -8,6 +8,7 @@ use diesel::{
     sql_types::{SmallInt, Text},
 };
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
+use fred::prelude::*;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
@@ -19,7 +20,7 @@ use crate::{
     schema::players,
 };
 
-#[derive(Serialize, Deserialize, AsExpression, FromSqlRow, Debug, PartialEq, Eq)]
+#[derive(Serialize, Deserialize, AsExpression, FromSqlRow, Debug, PartialEq, Eq, Clone)]
 #[diesel(sql_type = diesel::sql_types::Text)]
 /// Wrapper around `SteamId` so we can use it in Diesel queries.
 /// Postgres doesn't natively have an uint type, so we have to store it as a string
@@ -89,7 +90,9 @@ where
     }
 }
 
-#[derive(Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Serialize, Deserialize)]
+#[derive(
+    Queryable, Selectable, Identifiable, PartialEq, Eq, Debug, Serialize, Deserialize, Clone,
+)]
 #[diesel(table_name = players, check_for_backend(diesel::pg::Pg))]
 pub struct Player {
     pub id: i32,
@@ -221,14 +224,10 @@ impl<'a> NewPlayer<'a> {
     }
 
     /// Creates or updates the player in the database.
-    ///
-    /// # Errors
-    /// This fails if:
-    /// - The player fails to be inserted/updated in the database
     pub async fn create_or_update(
         &self,
         conn: &mut AsyncPgConnection,
-        redis_conn: &mut deadpool_redis::Connection,
+        redis_conn: &RedisPool,
     ) -> anyhow::Result<Player> {
         // Register player
         // Update info if already registered
@@ -244,12 +243,15 @@ impl<'a> NewPlayer<'a> {
             .await?;
 
         // If the player doesn't exist in the Redis sorted set, add them with a score of 0
-        redis::cmd("ZADD")
-            .arg("leaderboard")
-            .arg("NX")
-            .arg(0i32)
-            .arg(player_result.id)
-            .query_async::<()>(redis_conn)
+        redis_conn
+            .zadd::<(), _, _>(
+                "leaderboard",
+                Some(SetOptions::NX),
+                None,
+                false,
+                false,
+                (0f64, player_result.id),
+            )
             .await?;
 
         Ok(player_result)

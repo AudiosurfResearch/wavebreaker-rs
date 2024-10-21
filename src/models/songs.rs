@@ -1,5 +1,6 @@
 use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl, SaveChangesDsl};
+use fred::prelude::*;
 use serde::Serialize;
 use tracing::debug;
 
@@ -34,7 +35,7 @@ impl Song {
     pub async fn delete(
         &self,
         conn: &mut AsyncPgConnection,
-        redis_conn: &mut deadpool_redis::Connection,
+        redis_conn: &RedisPool,
     ) -> anyhow::Result<()> {
         use crate::schema::{
             scores::dsl::{scores, song_id},
@@ -67,7 +68,7 @@ impl Song {
         target: i32,
         should_alias: bool,
         conn: &mut AsyncPgConnection,
-        redis_conn: &mut deadpool_redis::Connection,
+        redis_pool: &RedisPool,
     ) -> anyhow::Result<()> {
         use crate::schema::{scores::dsl::*, songs::dsl::*};
 
@@ -93,14 +94,14 @@ impl Song {
                     // If the score on the song we want to merge into is lower, we delete that score
                     // then, we add our song's score to the merge target song
                     if target_score.score < own_score.score {
-                        target_score.delete(conn, redis_conn).await?;
+                        target_score.delete(conn, redis_pool).await?;
                         own_score.song_id = target.id;
                         own_score.play_count += target_score.play_count;
                         own_score.save_changes::<Score>(conn).await?;
                     } else {
                         target_score.play_count += own_score.play_count;
                         target_score.save_changes::<Score>(conn).await?;
-                        own_score.delete(conn, redis_conn).await?;
+                        own_score.delete(conn, redis_pool).await?;
                     }
                 }
                 None => {
@@ -148,7 +149,7 @@ impl Song {
         }
 
         //Delete this song!
-        self.delete(conn, redis_conn).await?;
+        self.delete(conn, redis_pool).await?;
 
         Ok(())
     }
