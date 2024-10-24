@@ -15,11 +15,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@v3
-    - name: Install nightly toolchain
-      run: rustup toolchain install nightly
-    - name: Default to nightly toolchain
-      run: rustup default nightly
+    - uses: actions/checkout@v4
+    - name: Install stable toolchain
+      run: rustup toolchain install stable --profile minimal --no-self-update
+    - name: Default to stable toolchain
+      run: rustup default stable
+    - uses: Swatinem/rust-cache@v2
     - name: Build
       run: cargo build --verbose
     - uses: actions/upload-artifact@v4
