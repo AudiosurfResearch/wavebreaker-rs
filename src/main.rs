@@ -46,12 +46,15 @@ use figment::{
 use fred::prelude::*;
 use serde::Deserialize;
 use steam_rs::Steam;
+use time::Duration;
 use tower_http::trace::TraceLayer;
+use tower_sessions::{Expiry, SessionManagerLayer};
 use tracing::{debug, info};
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{
     fmt::writer::MakeWriterExt, layer::SubscriberExt, util::SubscriberInitExt,
 };
+use util::session_store::RedisStore;
 
 use crate::{
     api::routes,
@@ -147,6 +150,11 @@ async fn init_state() -> anyhow::Result<AppState> {
         .build_pool(3)
         .context("Failed to build Redis pool!")?;
 
+    redis_pool
+        .init()
+        .await
+        .context("Clients failed to connect to Redis!")?;
+
     // Set global user agent so MusicBrainz can contact us if we're messing up
     musicbrainz_rs::config::set_user_agent(
         "wavebreaker-rs/0.1.0 (https://github.com/AudiosurfResearch/wavebreaker-rs)",
@@ -162,11 +170,18 @@ async fn init_state() -> anyhow::Result<AppState> {
 }
 
 fn make_router(state: AppState) -> Router {
+    let session_store = RedisStore::new((*state.redis).clone());
+    //TODO: Make with_secure configurable
+    let session_layer = SessionManagerLayer::new(session_store)
+        .with_secure(true)
+        .with_expiry(Expiry::OnInactivity(Duration::days(30)));
+
     Router::new()
         .nest("/as_steamlogin", routes_steam())
         .nest("//as_steamlogin", routes_steam_doubleslash()) // for that one edge case
         .nest("/as", routes_as(&state.config.radio.cgr_location))
         .nest("/api", routes())
+        .layer(session_layer)
         .layer(
             // TAKEN FROM: https://github.com/tokio-rs/axum/blob/d1fb14ead1063efe31ae3202e947ffd569875c0b/examples/error-handling/src/main.rs#L60-L77
             TraceLayer::new_for_http() // Create our own span for the request and include the matched path. The matched
