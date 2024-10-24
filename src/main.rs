@@ -21,7 +21,7 @@ mod util;
 
 use std::{io::stdout, sync::Arc};
 
-use anyhow::Context;
+use anyhow::{anyhow, Context};
 use axum::{
     extract::{MatchedPath, Request},
     Router,
@@ -39,6 +39,7 @@ use figment::{
 };
 use fred::prelude::*;
 use serde::Deserialize;
+use steam_openid::SteamOpenId;
 use steam_rs::Steam;
 use time::Duration;
 use tower_http::trace::TraceLayer;
@@ -86,6 +87,7 @@ struct External {
 #[derive(Clone)]
 pub struct AppState {
     steam_api: Arc<Steam>,
+    steam_openid: Arc<SteamOpenId>,
     config: Arc<Config>,
     db: Pool<diesel_async::AsyncPgConnection>,
     redis: Arc<RedisPool>,
@@ -154,8 +156,15 @@ async fn init_state() -> anyhow::Result<AppState> {
         "wavebreaker-rs/0.1.0 (https://github.com/AudiosurfResearch/wavebreaker-rs)",
     );
 
+    let steam_openid = SteamOpenId::new(
+        &wavebreaker_config.external.steam_realm,
+        &wavebreaker_config.external.steam_return_path,
+    )
+    .map_err(|e| anyhow!("Failed to construct SteamOpenId: {e:?}"))?;
+
     Ok(AppState {
         steam_api: Arc::new(Steam::new(&wavebreaker_config.external.steam_key)),
+        steam_openid: Arc::new(steam_openid),
         db: pool,
         redis: Arc::new(redis_pool),
         jwt_keys: util::jwt::Keys::new(wavebreaker_config.main.jwt_secret.as_bytes()),

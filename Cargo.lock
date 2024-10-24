@@ -2480,6 +2480,20 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "6980e8d7511241f8acf4aebddbb1ff938df5eebe98691418c4468d0b72a96a67"
 
 [[package]]
+name = "steam-openid"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b87d7fa6404e4d3227681e436ec9b2255cc91acd93a1b6a7fa00a87484e9c7e0"
+dependencies = [
+ "lazy_static",
+ "regex",
+ "reqwest 0.11.27",
+ "serde",
+ "serde_urlencoded",
+ "url",
+]
+
+[[package]]
 name = "steam-rs"
 version = "0.4.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3275,6 +3289,7 @@ dependencies = [
  "serde_json",
  "serde_repr",
  "serde_urlencoded",
+ "steam-openid",
  "steam-rs",
  "thiserror",
  "time",
