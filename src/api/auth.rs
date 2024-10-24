@@ -1,3 +1,4 @@
+use anyhow::anyhow;
 use axum::{
     extract::{Query, State},
     http::StatusCode,
@@ -7,14 +8,10 @@ use axum::{
 };
 use diesel_async::RunQueryDsl;
 use tower_sessions::Session;
-use url::Url;
 
 use crate::{
     models::players::Player,
-    util::{
-        errors::{IntoRouteError, RouteError},
-        steam_openid::{get_redirect_url, verify_return, VerifyForm},
-    },
+    util::errors::{IntoRouteError, RouteError},
     AppState,
 };
 
@@ -25,28 +22,23 @@ pub fn routes() -> Router<AppState> {
 }
 
 async fn auth_login(State(state): State<AppState>) -> Result<Redirect, RouteError> {
-    Ok(Redirect::permanent(&get_redirect_url(
-        &state.config.external.steam_realm,
-        &state.config.external.steam_return_path,
-    )?))
+    Ok(Redirect::permanent(state.steam_openid.get_redirect_url()))
 }
 
 async fn auth_return(
     State(state): State<AppState>,
-    Query(mut query): Query<VerifyForm>,
+    Query(query): Query<String>,
     session: Session,
 ) -> Result<(), RouteError> {
-    let steamid64 = verify_return(
-        Url::parse(&state.config.external.steam_realm)?
-            .join(&state.config.external.steam_return_path)?
-            .as_ref(),
-        &mut query,
-    )
-    .await
-    .http_error(
-        "Couldn't verify Steam OpenID return",
-        StatusCode::BAD_REQUEST,
-    )?;
+    let steamid64 = state
+        .steam_openid
+        .verify(&query)
+        .await
+        .map_err(|e| anyhow!("OpenID verification failed: {e:?}"))
+        .http_error(
+            "Couldn't verify Steam OpenID return",
+            StatusCode::BAD_REQUEST,
+        )?;
 
     let mut conn = state.db.get().await?;
 
