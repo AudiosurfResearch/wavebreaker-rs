@@ -4,7 +4,6 @@ use diesel::{associations::HasTable, prelude::*};
 use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
-use tokio::try_join;
 use tracing::{error, info, instrument};
 
 use super::helpers::ticket_auth;
@@ -428,28 +427,27 @@ pub async fn get_rides(
         .iter()
         .map(|r| r.id)
         .collect();
-    rival_ids.push(player.id); // So the player can see themself in rival scores
+
+    // Add the player to the rivals list so they're visible in rival scores
+    rival_ids.push(player.id);
 
     let mut global_rides: Vec<LeagueRides> = vec![];
     let mut rival_rides: Vec<LeagueRides> = vec![];
     let mut nearby_rides: Vec<LeagueRides> = vec![];
 
     for league in ALL_LEAGUES {
-        // can't borrow that one connection as mutable multiple times, so we need more
-        let mut conn1 = state.db.get().await?;
-        let mut conn2 = state.db.get().await?;
-
-        let global_future = Score::game_get_global(payload.song_id, league, &mut conn);
-        let rival_future = Score::game_get_rivals(payload.song_id, league, &rival_ids, &mut conn1);
-        let nearby_future =
-            Score::game_get_nearby(payload.song_id, league, player.location_id, &mut conn2);
-
-        let (global_scores, rival_scores, nearby_scores) =
-            try_join!(global_future, rival_future, nearby_future)?;
-
-        global_rides.push(create_league_rides(league, global_scores));
-        rival_rides.push(create_league_rides(league, rival_scores));
-        nearby_rides.push(create_league_rides(league, nearby_scores));
+        global_rides.push(create_league_rides(
+            league,
+            Score::game_get_global(payload.song_id, league, &mut conn).await?,
+        ));
+        rival_rides.push(create_league_rides(
+            league,
+            Score::game_get_rivals(payload.song_id, league, &rival_ids, &mut conn).await?,
+        ));
+        nearby_rides.push(create_league_rides(
+            league,
+            Score::game_get_nearby(payload.song_id, league, player.location_id, &mut conn).await?,
+        ));
     }
 
     Ok(Xml(GetRidesResponse {
