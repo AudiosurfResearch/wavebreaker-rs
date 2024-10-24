@@ -24,9 +24,9 @@ pub enum RedisStoreError {
 impl From<RedisStoreError> for session_store::Error {
     fn from(err: RedisStoreError) -> Self {
         match err {
-            RedisStoreError::Redis(inner) => session_store::Error::Backend(inner.to_string()),
-            RedisStoreError::Decode(inner) => session_store::Error::Decode(inner.to_string()),
-            RedisStoreError::Encode(inner) => session_store::Error::Encode(inner.to_string()),
+            RedisStoreError::Redis(inner) => Self::Backend(inner.to_string()),
+            RedisStoreError::Decode(inner) => Self::Decode(inner.to_string()),
+            RedisStoreError::Encode(inner) => Self::Encode(inner.to_string()),
         }
     }
 }
@@ -54,7 +54,7 @@ impl<C: KeysInterface + Send + Sync> RedisStore<C> {
     /// let session_store = RedisStore::new(pool);
     /// })
     /// ```
-    pub fn new(client: C) -> Self {
+    pub const fn new(client: C) -> Self {
         Self { client }
     }
 

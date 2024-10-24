@@ -28,7 +28,13 @@ pub struct SongIdRequest {
     artist: String,
     song: String,
     league: League,
-    //Wavebreaker-specific
+    #[serde(flatten)]
+    wavebreaker: WavebreakerSongIdReqSection,
+}
+
+/// Wavebreaker-specific song ID request information
+#[derive(Deserialize)]
+pub struct WavebreakerSongIdReqSection {
     ticket: String,
     mbid: Option<String>,
     #[serde(rename = "releasembid")]
@@ -62,14 +68,14 @@ pub async fn fetch_song_id(
         util::modifiers::{parse_from_title, remove_from_title},
     };
 
-    let steam_player = ticket_auth(&payload.ticket, &state.steam_api).await?;
+    let steam_player = ticket_auth(&payload.wavebreaker.ticket, &state.steam_api).await?;
 
     let mut conn = state.db.get().await?;
     let parsed_modifiers = parse_from_title(&payload.song);
 
     // if recording MBID is provided, look it up using that + modifiers from the title
     // else, look up the song by title and artist
-    if let Some(recording_mbid) = &payload.mbid {
+    if let Some(recording_mbid) = &payload.wavebreaker.mbid {
         let song = songs
             .inner_join(extra_song_info)
             .filter(
@@ -85,7 +91,7 @@ pub async fn fetch_song_id(
         if let Some((song, _)) = song {
             info!(
                 "Song {} - {} looked up by {} (Steam), league {:?}, MBID {:?}, release MBID {:?} (successful existing MBID lookup)",
-                song.artist, song.title, steam_player, payload.league, payload.mbid, payload.release_mbid
+                song.artist, song.title, steam_player, payload.league, payload.wavebreaker.mbid, payload.wavebreaker.release_mbid
             );
 
             Ok(Xml(SongIdResponse {
@@ -95,7 +101,7 @@ pub async fn fetch_song_id(
         } else {
             info!(
                 "Song {} - {} looked up by {} (Steam), league {:?}, MBID {:?}, release MBID {:?} (new MBID lookup)",
-                payload.artist, payload.song, steam_player, payload.league, payload.mbid, payload.release_mbid
+                payload.artist, payload.song, steam_player, payload.league, payload.wavebreaker.mbid, payload.wavebreaker.release_mbid
             );
 
             let song = NewSong::new(
@@ -106,8 +112,12 @@ pub async fn fetch_song_id(
             .find_or_create(&mut conn)
             .await?;
 
-            song.add_metadata_mbid(recording_mbid, payload.release_mbid.as_deref(), &mut conn)
-                .await?;
+            song.add_metadata_mbid(
+                recording_mbid,
+                payload.wavebreaker.release_mbid.as_deref(),
+                &mut conn,
+            )
+            .await?;
 
             Ok(Xml(SongIdResponse {
                 status: "allgood".to_owned(),
@@ -129,8 +139,8 @@ pub async fn fetch_song_id(
             song.title,
             steam_player,
             payload.league,
-            payload.mbid,
-            payload.release_mbid
+            payload.wavebreaker.mbid,
+            payload.wavebreaker.release_mbid
         );
 
         Ok(Xml(SongIdResponse {
@@ -159,7 +169,13 @@ pub struct SendRideRequest {
     gold_threshold: i32,
     iss: i32,
     isj: i32,
-    //Wavebreaker-specific
+    #[serde(flatten)]
+    wavebreaker: WavebreakerRideSection,
+}
+
+/// Wavebreaker-specific ride request information
+#[derive(Deserialize)]
+pub struct WavebreakerRideSection {
     mbid: Option<String>,
     #[serde(rename = "releasembid")]
     release_mbid: Option<String>,
@@ -211,7 +227,7 @@ pub async fn send_ride(
 
     info!(
         "Score received on {} from {} (Steam) with score {}, using {:?}. MBID {:?}, release MBID {:?}",
-        &payload.song_id, &steam_player, &payload.score, &payload.vehicle, &payload.mbid, &payload.release_mbid
+        &payload.song_id, &steam_player, &payload.score, &payload.vehicle, &payload.wavebreaker.mbid, &payload.wavebreaker.release_mbid
     );
 
     let mut conn = state.db.get().await?;
