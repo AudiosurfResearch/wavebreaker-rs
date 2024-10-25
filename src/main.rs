@@ -56,6 +56,15 @@ use crate::{
 };
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
 
+/// Wavebreaker-specific user agent
+pub const WAVEBREAKER_USER_AGENT: &str = concat!(
+    concat!(
+        concat!(env!("CARGO_PKG_NAME"), "/"),
+        env!("CARGO_PKG_VERSION")
+    ),
+    concat!(concat!(" (", env!("CARGO_PKG_REPOSITORY")), ")")
+);
+
 #[derive(Deserialize, Clone)]
 struct Config {
     main: Main,
@@ -149,10 +158,7 @@ async fn init_state() -> anyhow::Result<AppState> {
         .await
         .context("Clients failed to connect to Redis!")?;
 
-    // Set global user agent so MusicBrainz can contact us if we're messing up
-    musicbrainz_rs::config::set_user_agent(
-        "wavebreaker-rs/0.1.0 (https://github.com/AudiosurfResearch/wavebreaker-rs)",
-    );
+    musicbrainz_rs::config::set_user_agent(WAVEBREAKER_USER_AGENT);
 
     Ok(AppState {
         steam_api: Arc::new(Steam::new(&wavebreaker_config.external.steam_key)),
