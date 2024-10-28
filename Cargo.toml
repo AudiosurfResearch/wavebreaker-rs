@@ -23,6 +23,7 @@ tracing-subscriber = { version = "0.3", features = ["env-filter"] }
 diesel = { version = "2.2", features = ["time"] }
 diesel-async = { version = "0.5", features = ["postgres", "deadpool", "async-connection-wrapper"] }
 steam-rs = "0.4"
+steam-openid = "0.2"
 time = { version = "0.3", features = ["formatting", "serde"] }
 tower-http = { version = "0.6", features = ["fs", "trace"] }
 toml = "0.8"
