@@ -1,6 +1,6 @@
 use anyhow::anyhow;
 use axum::{
-    extract::{Query, State},
+    extract::{RawQuery, State},
     http::StatusCode,
     response::Redirect,
     routing::get,
@@ -8,6 +8,7 @@ use axum::{
 };
 use diesel_async::RunQueryDsl;
 use tower_sessions::Session;
+use tracing::info;
 
 use crate::{
     models::players::Player,
@@ -27,12 +28,12 @@ async fn auth_login(State(state): State<AppState>) -> Result<Redirect, RouteErro
 
 async fn auth_return(
     State(state): State<AppState>,
-    Query(query): Query<String>,
+    RawQuery(query): RawQuery,
     session: Session,
 ) -> Result<(), RouteError> {
     let steamid64 = state
         .steam_openid
-        .verify(&query)
+        .verify(&query.ok_or_else(|| anyhow!("No query string to verify!"))?)
         .await
         .map_err(|e| anyhow!("OpenID verification failed: {e:?}"))
         .http_error(
@@ -46,6 +47,8 @@ async fn auth_return(
         .first(&mut conn)
         .await
         .http_error("Profile not found", StatusCode::NOT_FOUND)?;
+
+    info!("Player {} logged in via Steam OpenID", player.id);
 
     // TODO: Give the player a session?
     Ok(())
