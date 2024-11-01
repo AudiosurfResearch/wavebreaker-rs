@@ -1,18 +1,22 @@
 use anyhow::anyhow;
 use axum::{
     extract::{RawQuery, State},
-    http::StatusCode,
+    http::{response, StatusCode},
     response::Redirect,
     routing::get,
-    Router,
+    Json, Router,
 };
+use axum_extra::{extract::CookieJar, headers::Cookie};
 use diesel_async::RunQueryDsl;
-use tower_sessions::Session;
+use jsonwebtoken::{encode, Header};
 use tracing::info;
 
 use crate::{
     models::players::Player,
-    util::errors::{IntoRouteError, RouteError},
+    util::{
+        errors::{IntoRouteError, RouteError},
+        jwt::{AuthBody, Claims},
+    },
     AppState,
 };
 
@@ -29,8 +33,7 @@ async fn auth_login(State(state): State<AppState>) -> Result<Redirect, RouteErro
 async fn auth_return(
     State(state): State<AppState>,
     RawQuery(query): RawQuery,
-    session: Session,
-) -> Result<(), RouteError> {
+) -> Result<(Json<AuthBody>), RouteError> {
     let steamid64 = state
         .steam_openid
         .verify(&query.ok_or_else(|| anyhow!("No query string to verify!"))?)
@@ -50,6 +53,16 @@ async fn auth_return(
 
     info!("Player {} logged in via Steam OpenID", player.id);
 
-    // TODO: Give the player a session?
-    Ok(())
+    // expiry in 7 days
+    let exp = time::OffsetDateTime::now_utc().unix_timestamp() + 60 * 60 * 24 * 7;
+
+    let claims = Claims {
+        profile: player,
+        exp,
+    };
+    // Create the authorization token
+    let token = encode(&Header::default(), &claims, &state.jwt_keys.encoding)
+        .http_internal_error("Failed to create token")?;
+
+    Ok(Json(AuthBody::new(token)))
 }

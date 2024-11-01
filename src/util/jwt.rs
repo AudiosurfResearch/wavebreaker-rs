@@ -66,7 +66,7 @@ where
         let TypedHeader(Authorization(bearer)) = parts
             .extract::<TypedHeader<Authorization<Bearer>>>()
             .await
-            .http_status_error(StatusCode::BAD_REQUEST)?;
+            .http_status_error(StatusCode::UNAUTHORIZED)?;
         // Decode the user data
         let token_data = decode::<Self>(
             bearer.token(),
