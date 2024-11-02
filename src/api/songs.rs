@@ -1,11 +1,12 @@
 use axum::{
     extract::{Path, Query, State},
     routing::get,
-    Json, Router,
+    Json,
 };
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
+use utoipa_axum::router::OpenApiRouter;
 
 use crate::{
     models::{extra_song_info::ExtraSongInfo, songs::Song},
@@ -13,8 +14,8 @@ use crate::{
     AppState,
 };
 
-pub fn routes() -> Router<AppState> {
-    Router::new().route("/:id", get(get_song))
+pub fn routes() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new().route("/:id", get(get_song))
 }
 
 #[derive(Serialize)]

@@ -1,15 +1,15 @@
 use anyhow::anyhow;
 use axum::{
     extract::{RawQuery, State},
-    http::{response, StatusCode},
+    http::StatusCode,
     response::Redirect,
     routing::get,
-    Json, Router,
+    Json,
 };
-use axum_extra::{extract::CookieJar, headers::Cookie};
 use diesel_async::RunQueryDsl;
 use jsonwebtoken::{encode, Header};
 use tracing::info;
+use utoipa_axum::router::OpenApiRouter;
 
 use crate::{
     models::players::Player,
@@ -20,8 +20,8 @@ use crate::{
     AppState,
 };
 
-pub fn routes() -> Router<AppState> {
-    Router::new()
+pub fn routes() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new()
         .route("/return", get(auth_return))
         .route("/login", get(auth_login))
 }
@@ -33,7 +33,7 @@ async fn auth_login(State(state): State<AppState>) -> Result<Redirect, RouteErro
 async fn auth_return(
     State(state): State<AppState>,
     RawQuery(query): RawQuery,
-) -> Result<(Json<AuthBody>), RouteError> {
+) -> Result<Json<AuthBody>, RouteError> {
     let steamid64 = state
         .steam_openid
         .verify(&query.ok_or_else(|| anyhow!("No query string to verify!"))?)

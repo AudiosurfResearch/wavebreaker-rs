@@ -24,7 +24,8 @@ use std::{io::stdout, sync::Arc};
 use anyhow::{anyhow, Context};
 use axum::{
     extract::{MatchedPath, Request},
-    Router,
+    routing::get,
+    Json, Router,
 };
 use clap::Parser;
 use diesel::pg::Pg;
@@ -49,7 +50,8 @@ use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{
     fmt::writer::MakeWriterExt, layer::SubscriberExt, util::SubscriberInitExt,
 };
-use util::session_store::RedisStore;
+use util::{errors::RouteError, session_store::RedisStore};
+use utoipa_scalar::{Scalar, Servable};
 
 use crate::{
     api::routes,
@@ -179,6 +181,8 @@ async fn init_state() -> anyhow::Result<AppState> {
 }
 
 fn make_router(state: AppState) -> Router {
+    let (api_router, openapi) = api::routes();
+
     let session_store = RedisStore::new((*state.redis).clone());
     //TODO: Make with_secure configurable
     let session_layer = SessionManagerLayer::new(session_store)
@@ -189,7 +193,8 @@ fn make_router(state: AppState) -> Router {
         .nest("/as_steamlogin", routes_steam())
         .nest("//as_steamlogin", routes_steam_doubleslash()) // for that one edge case
         .nest("/as", routes_as(&state.config.radio.cgr_location))
-        .nest("/api", routes())
+        .nest("/api", api_router)
+        .merge(Scalar::with_url("/scalar", openapi))
         .layer(session_layer)
         .layer(
             // TAKEN FROM: https://github.com/tokio-rs/axum/blob/d1fb14ead1063efe31ae3202e947ffd569875c0b/examples/error-handling/src/main.rs#L60-L77

@@ -1,7 +1,8 @@
-use axum::{extract::State, routing::get, Json, Router};
+use axum::{extract::State, routing::get, Json};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use serde::Serialize;
+use utoipa_axum::router::OpenApiRouter;
 
 use crate::{
     models::{players::Player, rivalries::RivalryView},
@@ -9,8 +10,8 @@ use crate::{
     AppState,
 };
 
-pub fn routes() -> Router<AppState> {
-    Router::new().route("/own", get(get_own_rivals))
+pub fn routes() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new().route("/own", get(get_own_rivals))
 }
 
 #[derive(Serialize)]

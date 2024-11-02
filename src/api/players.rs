@@ -1,11 +1,12 @@
 use axum::{
     extract::{Path, State},
     routing::get,
-    Json, Router,
+    Json,
 };
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use serde::Serialize;
+use utoipa_axum::router::OpenApiRouter;
 
 use crate::{
     models::players::{Player, PlayerPublic},
@@ -13,8 +14,8 @@ use crate::{
     AppState,
 };
 
-pub fn routes() -> Router<AppState> {
-    Router::new()
+pub fn routes() -> OpenApiRouter<AppState> {
+    OpenApiRouter::new()
         .route("/:id", get(get_player))
         .route("/self", get(get_self))
 }
