@@ -70,7 +70,10 @@ struct HealthCheck {
     responses(
         (status = OK, description = "Success",
         body = HealthCheck, content_type = "application/json",
-        examples = (json!(r#"{ "status": "ok", "radioStatus": "2 song(s)" }"#))),
+        example = json!(r#"{ "status": "ok", "radioStatus": "2 song(s)" }"#)),
+        (status = OK, description = "Server works, Radio has no songs",
+        body = HealthCheck, content_type = "application/json",
+        example = json!(r#"{ "status": "ok", "radioStatus": "no songs" }"#)),
         (status = OK, description = "Server works, but Radio is broken",
         body = HealthCheck, content_type = "application/json",
         example = json!(r#"{ "status": "ok", "radioStatus": "error" }"#)),
