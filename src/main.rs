@@ -24,8 +24,7 @@ use std::{io::stdout, sync::Arc};
 use anyhow::{anyhow, Context};
 use axum::{
     extract::{MatchedPath, Request},
-    routing::get,
-    Json, Router,
+    Router,
 };
 use clap::Parser;
 use diesel::pg::Pg;
@@ -50,13 +49,10 @@ use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{
     fmt::writer::MakeWriterExt, layer::SubscriberExt, util::SubscriberInitExt,
 };
-use util::{errors::RouteError, session_store::RedisStore};
+use util::session_store::RedisStore;
 use utoipa_scalar::{Scalar, Servable};
 
-use crate::{
-    api::routes,
-    game::{routes_as, routes_steam, routes_steam_doubleslash},
-};
+use crate::game::{routes_as, routes_steam, routes_steam_doubleslash};
 pub const MIGRATIONS: EmbeddedMigrations = embed_migrations!();
 
 /// Wavebreaker-specific user agent

@@ -47,6 +47,6 @@ fred = { version = "9.3.0", features = ["i-sorted-sets"] }
 tower-sessions = "0.13.0"
 rmp-serde = "1.3.0"
 thiserror = "1.0"
-utoipa = { version = "5.1.3", features = ["axum_extras", "time"] }
+utoipa = { version = "5.1.3", features = ["axum_extras", "non_strict_integers", "repr", "time"] }
 utoipa-axum = "0.1.2"
 utoipa-scalar = { version = "0.2.0", features = ["axum"] }

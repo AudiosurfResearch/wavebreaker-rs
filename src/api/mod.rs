@@ -22,7 +22,7 @@ mod songs;
 #[derive(OpenApiTrait)]
 #[openapi(
     modifiers(&SecurityAddon),
-    servers((url = "/api")), security(
+    servers((url = "/api"), (url = "/rust/api")), security(
     (),
     ("token_jwt" = [])
 ))]
@@ -70,13 +70,22 @@ struct HealthCheck {
     responses(
         (status = OK, description = "Success",
         body = HealthCheck, content_type = "application/json",
-        example = json!(r#"{ "status": "ok", "radioStatus": "2 song(s)" }"#)),
+        example = json!(HealthCheck {
+            status: "ok",
+            radio_status: "1 song(s)".to_owned()
+        })),
         (status = OK, description = "Server works, Radio has no songs",
         body = HealthCheck, content_type = "application/json",
-        example = json!(r#"{ "status": "ok", "radioStatus": "no songs" }"#)),
+        example = json!(HealthCheck {
+            status: "ok",
+            radio_status: "no songs".to_owned()
+        })),
         (status = OK, description = "Server works, but Radio is broken",
         body = HealthCheck, content_type = "application/json",
-        example = json!(r#"{ "status": "ok", "radioStatus": "error" }"#)),
+        example = json!(HealthCheck {
+            status: "ok",
+            radio_status: "error".to_owned()
+        })),
     )
 )]
 async fn health_check() -> Result<Json<HealthCheck>, RouteError> {

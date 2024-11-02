@@ -13,6 +13,7 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use steam_rs::steam_id::SteamId;
+use utoipa::ToSchema;
 
 use super::rivalries::RivalryView;
 use crate::{
@@ -60,6 +61,7 @@ where
     Copy,
     TryFromPrimitive,
     IntoPrimitive,
+    ToSchema,
 )]
 #[diesel(sql_type = diesel::sql_types::SmallInt)]
 #[repr(i16)]
@@ -258,7 +260,7 @@ impl<'a> NewPlayer<'a> {
     }
 }
 
-#[derive(Selectable, Queryable, Debug, Serialize, Deserialize)]
+#[derive(Selectable, Queryable, Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 #[diesel(table_name = players, check_for_backend(diesel::pg::Pg))]
 pub struct PlayerPublic {
