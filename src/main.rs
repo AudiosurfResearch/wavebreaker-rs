@@ -194,7 +194,7 @@ fn make_router(state: AppState) -> Router {
         .nest("//as_steamlogin", routes_steam_doubleslash()) // for that one edge case
         .nest("/as", routes_as(&state.config.radio.cgr_location))
         .nest("/api", api_router)
-        .merge(Scalar::with_url("/scalar", openapi))
+        .merge(Scalar::with_url("/api/docs", openapi))
         .layer(session_layer)
         .layer(
             // TAKEN FROM: https://github.com/tokio-rs/axum/blob/d1fb14ead1063efe31ae3202e947ffd569875c0b/examples/error-handling/src/main.rs#L60-L77
