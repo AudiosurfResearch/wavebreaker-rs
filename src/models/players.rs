@@ -49,6 +49,13 @@ where
     }
 }
 
+//todo: use OpenAPI extensions to show the names of the numbers in the API docs?
+//https://docs.rs/utoipa/latest/utoipa/index.html?search=extensions
+//https://openapi-ts.dev/advanced#enum-extensions
+
+/// Represents the type of account a player has.
+///
+/// 0 = User, 1 = Moderator, 2 = Wavebreaker Team
 #[derive(
     AsExpression,
     FromSqlRow,

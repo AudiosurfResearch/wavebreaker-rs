@@ -15,6 +15,7 @@ use axum::{
     Json,
 };
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 /// This is for **exposing internal errors publicly.**
 /// It is desirable for internal services, where you do want to expose
@@ -25,6 +26,15 @@ pub type RouteInternalError<S = ()> = RouteError<S, true>;
 pub struct RouteInternalErrorOutput {
     pub name: String,
     pub debug: String,
+}
+
+// Type to use with utoipa for OpenAPI schema
+// since RouteErrorOutput desperately wants a generic
+// for extra_data to be specified, even if we don't use it.
+/// Route error with only an error message.
+#[derive(Debug, Deserialize, Serialize, ToSchema)]
+pub struct SimpleRouteErrorOutput {
+    pub error: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
