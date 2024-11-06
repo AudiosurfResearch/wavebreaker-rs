@@ -17,7 +17,6 @@ use crate::{
 };
 
 pub fn routes() -> OpenApiRouter<AppState> {
-    //hack because it'll panic otherwise, see https://github.com/juhaku/utoipa/issues/1183
     OpenApiRouter::new()
         .routes(routes!(get_player))
         .routes(routes!(get_self))

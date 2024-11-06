@@ -43,7 +43,12 @@ async fn get_song(
 
     let mut conn = state.db.get().await?;
 
-    let song: Song = songs::table.find(id).first(&mut conn).await?;
+    let song: Song = songs::table
+        .find(id)
+        .first(&mut conn)
+        .await
+        .optional()?
+        .ok_or_else(RouteError::new_not_found)?;
     if query.with_extra_info {
         let extra_info: Option<ExtraSongInfo> = ExtraSongInfo::belonging_to(&song)
             .first(&mut conn)
