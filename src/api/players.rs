@@ -82,6 +82,9 @@ async fn get_player(
         "joinedAt":"+002023-05-23T18:56:24.726000000Z",
         "avatarUrl":"https://avatars.steamstatic.com/d72c8ef0f183faf564b9407572d51751794acd15_full.jpg"}"#)),
         (status = UNAUTHORIZED, description = "Not logged in or invalid token", body = SimpleRouteErrorOutput, content_type = "application/json")
+    ),
+    security(
+        ("token_jwt" = [])
     )
 )]
 async fn get_self(
