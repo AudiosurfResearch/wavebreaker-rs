@@ -40,7 +40,7 @@ struct GetSongParams {
     path = "/{id}",
     params(
         ("id" = i32, Path, description = "ID of song to get"),
-        ("with_extra_info" = bool, Query, description = "Include extra info")
+        ("withExtraInfo" = bool, Query, description = "Include extra info")
     ),
     responses(
         (status = OK, description = "Success", body = SongResponse, content_type = "application/json"),
