@@ -38,13 +38,7 @@ struct PlayerResponse {
     ),
     responses(
         (status = OK, description = "Success",
-        body = PlayerPublic, content_type = "application/json",
-        example = json!(r#"{
-        "id":1,
-        "username":"m1nt_",
-        "accountType":2,
-        "joinedAt":"+002023-05-23T18:56:24.726000000Z",
-        "avatarUrl":"https://avatars.steamstatic.com/d72c8ef0f183faf564b9407572d51751794acd15_full.jpg"}"#)),
+        body = PlayerPublic, content_type = "application/json"),
         (status = NOT_FOUND, description = "Player not found", body = SimpleRouteErrorOutput, content_type = "application/json")
     )
 )]
@@ -73,14 +67,7 @@ async fn get_player(
     method(get),
     path = "/self",
     responses(
-        (status = OK, description = "Success",
-        body = PlayerPublic, content_type = "application/json",
-        example = json!(r#"{
-        "id":1,
-        "username":"m1nt_",
-        "accountType":2,
-        "joinedAt":"+002023-05-23T18:56:24.726000000Z",
-        "avatarUrl":"https://avatars.steamstatic.com/d72c8ef0f183faf564b9407572d51751794acd15_full.jpg"}"#)),
+        (status = OK, description = "Success", body = PlayerPublic, content_type = "application/json"),
         (status = UNAUTHORIZED, description = "Not logged in or invalid token", body = SimpleRouteErrorOutput, content_type = "application/json")
     ),
     security(

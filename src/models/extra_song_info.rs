@@ -1,6 +1,7 @@
 use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde::Serialize;
+use utoipa::ToSchema;
 
 use crate::schema::extra_song_info;
 
@@ -17,6 +18,7 @@ use crate::schema::extra_song_info;
     Serialize,
     Default,
     AsChangeset,
+    ToSchema,
 )]
 #[diesel(belongs_to(super::songs::Song))]
 #[diesel(table_name = extra_song_info, check_for_backend(diesel::pg::Pg))]

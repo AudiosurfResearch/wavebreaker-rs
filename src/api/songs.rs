@@ -1,24 +1,24 @@
 use axum::{
     extract::{Path, Query, State},
-    routing::get,
     Json,
 };
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
-use utoipa_axum::router::OpenApiRouter;
+use utoipa::ToSchema;
+use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{
     models::{extra_song_info::ExtraSongInfo, songs::Song},
-    util::errors::RouteError,
+    util::errors::{RouteError, SimpleRouteErrorOutput},
     AppState,
 };
 
 pub fn routes() -> OpenApiRouter<AppState> {
-    OpenApiRouter::new().route("/:id", get(get_song))
+    OpenApiRouter::new().routes(routes!(get_song))
 }
 
-#[derive(Serialize)]
+#[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 struct SongResponse {
     #[serde(flatten)]
@@ -34,6 +34,19 @@ struct GetSongParams {
     with_extra_info: bool,
 }
 
+/// Get a song by ID
+#[utoipa::path(
+    method(get),
+    path = "/{id}",
+    params(
+        ("id" = i32, Path, description = "ID of song to get"),
+        ("with_extra_info" = bool, Query, description = "Include extra info")
+    ),
+    responses(
+        (status = OK, description = "Success", body = SongResponse, content_type = "application/json"),
+        (status = NOT_FOUND, description = "Song not found", body = SimpleRouteErrorOutput, content_type = "application/json")
+    )
+)]
 async fn get_song(
     State(state): State<AppState>,
     Path(id): Path<i32>,

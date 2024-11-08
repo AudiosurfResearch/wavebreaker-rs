@@ -3,6 +3,7 @@ use diesel_async::{AsyncPgConnection, RunQueryDsl, SaveChangesDsl};
 use fred::prelude::*;
 use serde::Serialize;
 use tracing::debug;
+use utoipa::ToSchema;
 
 use crate::{
     models::{
@@ -13,7 +14,7 @@ use crate::{
     schema::{extra_song_info, songs},
 };
 
-#[derive(Identifiable, Selectable, Queryable, Debug, Serialize)]
+#[derive(Identifiable, Selectable, Queryable, Debug, Serialize, ToSchema)]
 #[diesel(table_name = songs, check_for_backend(diesel::pg::Pg))]
 #[diesel(primary_key(id))]
 #[serde(rename_all = "camelCase")]

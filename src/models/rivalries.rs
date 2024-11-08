@@ -1,6 +1,7 @@
 use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde::{Deserialize, Serialize};
+use utoipa::ToSchema;
 
 use super::players::PlayerPublic;
 use crate::{models::players::Player, schema::rivalries};
@@ -69,7 +70,7 @@ impl NewRivalry {
     }
 }
 
-#[derive(Queryable, Deserialize, Serialize)]
+#[derive(Queryable, Deserialize, Serialize, ToSchema)]
 #[diesel(table_name = rivalries, check_for_backend(diesel::pg::Pg))]
 #[serde(rename_all = "camelCase")]
 pub struct RivalryView {
