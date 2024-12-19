@@ -266,6 +266,43 @@ impl Song {
             None => Ok(false),
         }
     }
+
+    pub async fn user_can_delete(
+        &self,
+        player_id: i32,
+        conn: &mut AsyncPgConnection,
+    ) -> anyhow::Result<bool> {
+        use crate::schema::{
+            players::dsl::players,
+            scores::dsl::{scores, song_id},
+        };
+
+        let player = players.find(player_id).first::<Player>(conn).await?;
+
+        if player.account_type == AccountType::Moderator || player.account_type == AccountType::Team
+        {
+            return Ok(true);
+        }
+
+        // If there isn't exactly one score, the player can't delete the song
+        let scores_count = scores.filter(song_id.eq(self.id)).count().get_result::<i64>(conn).await?;
+        if scores_count != 1 {
+            return Ok(false);
+        }
+
+        //Get first score of song (the only one)
+        let first_score = scores
+            .filter(song_id.eq(self.id))
+            .first::<Score>(conn)
+            .await
+            .optional()?;
+
+        // If there is exactly one score, and it was set by the player, they can delete the song
+        match first_score {
+            Some(score) => Ok(score.player_id == player.id),
+            None => Ok(false),
+        }
+    }
 }
 
 #[derive(Insertable)]

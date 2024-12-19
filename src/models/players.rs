@@ -24,6 +24,7 @@ use crate::{
 #[derive(Serialize, Deserialize, AsExpression, FromSqlRow, Debug, PartialEq, Eq, Clone)]
 #[diesel(sql_type = diesel::sql_types::Text)]
 /// Wrapper around `SteamId` so we can use it in Diesel queries.
+///
 /// Postgres doesn't natively have an uint type, so we have to store it as a string
 /// and convert it back to a `SteamId` when we get it from the DB.
 pub struct SteamIdWrapper(pub SteamId);
