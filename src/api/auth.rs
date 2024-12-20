@@ -3,7 +3,6 @@ use axum::{
     extract::{RawQuery, State},
     http::StatusCode,
     response::Redirect,
-    routing::get,
     Json,
 };
 use diesel_async::RunQueryDsl;
@@ -41,6 +40,7 @@ async fn auth_login(State(state): State<AppState>) -> Result<Redirect, RouteErro
 
 /// Wrapper for jwt crate's AuthBody because it doesn't implement ToSchema
 #[derive(ToSchema)]
+#[allow(dead_code)]
 pub struct AuthBodySchema {
     access_token: String,
     token_type: String,
