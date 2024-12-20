@@ -9,12 +9,13 @@ use axum::{
 use diesel_async::RunQueryDsl;
 use jsonwebtoken::{encode, Header};
 use tracing::info;
-use utoipa_axum::router::OpenApiRouter;
+use utoipa::ToSchema;
+use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{
     models::players::Player,
     util::{
-        errors::{IntoRouteError, RouteError},
+        errors::{IntoRouteError, RouteError, SimpleRouteErrorOutput},
         jwt::{AuthBody, Claims},
     },
     AppState,
@@ -22,14 +23,39 @@ use crate::{
 
 pub fn routes() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
-        .route("/return", get(auth_return))
-        .route("/login", get(auth_login))
+        .routes(routes!(auth_login))
+        .routes(routes!(auth_return))
 }
 
+/// Start login
+#[utoipa::path(
+    method(get),
+    path = "/login",
+    responses(
+        (status = 308, description = "Redirect to Steam", body = ())
+    )
+)]
 async fn auth_login(State(state): State<AppState>) -> Result<Redirect, RouteError> {
     Ok(Redirect::permanent(state.steam_openid.get_redirect_url()))
 }
 
+/// Wrapper for jwt crate's AuthBody because it doesn't implement ToSchema
+#[derive(ToSchema)]
+pub struct AuthBodySchema {
+    access_token: String,
+    token_type: String,
+}
+
+/// Return after Steam login
+#[utoipa::path(
+    method(get),
+    path = "/return",
+    responses(
+        (status = OK, description = "Success", body = AuthBodySchema),
+        (status = BAD_REQUEST, description = "OpenID verification failed", body = SimpleRouteErrorOutput),
+        (status = NOT_FOUND, description = "Profile not found", body = SimpleRouteErrorOutput)
+    )
+)]
 async fn auth_return(
     State(state): State<AppState>,
     RawQuery(query): RawQuery,

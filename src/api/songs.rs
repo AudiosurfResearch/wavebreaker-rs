@@ -87,7 +87,7 @@ async fn get_song(
         ("id" = i32, Path, description = "ID of song to get")
     ),
     responses(
-        (status = OK, description = "Success", body = ()),
+        (status = OK, description = "Success"),
         (status = UNAUTHORIZED, description = "No permission", body = SimpleRouteErrorOutput, content_type = "application/json"),
         (status = NOT_FOUND, description = "Song not found", body = SimpleRouteErrorOutput, content_type = "application/json")
     ),
