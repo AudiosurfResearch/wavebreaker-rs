@@ -10,23 +10,23 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = { version = "1.0.93", features = ["backtrace"] }
+anyhow = { version = "1.0.94", features = ["backtrace"] }
 axum = { version = "0.7.9", features = ["macros", "tracing"] }
 axum-serde = { version = "0.7.0", features = ["xml", "xml_encoding"] }
 figment = { version = "0.10.19", features = ["toml", "env"] }
 num_enum = "0.7.3"
 quick-xml = { version = "0.37.1", features = ["serialize"] }
-serde = { version = "1.0.215", features = ["derive"] }
+serde = { version = "1.0.216", features = ["derive"] }
 serde_json = "1.0.133"
 serde_repr = "0.1.19"
-tokio = "1.41.1"
+tokio = "1.42.0"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
-diesel = { version = "2.2.5", features = ["time"] }
+diesel = { version = "2.2.6", features = ["time"] }
 diesel-async = { version = "0.5.2", features = ["postgres", "deadpool", "async-connection-wrapper"] }
 steam-rs = "0.4.4"
 steam-openid = "0.2.0"
-time = { version = "0.3.36", features = ["formatting", "serde"] }
+time = { version = "0.3.37", features = ["formatting", "serde"] }
 tower-http = { version = "0.6.2", features = ["fs", "trace"] }
 toml = "0.8.19"
 validator = { version = "0.19.0", features = ["derive"] }
@@ -34,7 +34,7 @@ axum-valid = "0.21.0"
 axum-extra = { version = "0.9.6", features = ["form", "typed-header"] }
 regex = "1.11.1"
 musicbrainz_rs = "0.5.0"
-clap = { version = "4.5.21", features = ["derive"] }
+clap = { version = "4.5.23", features = ["derive"] }
 diesel_migrations = { version = "2.2.0", features = ["postgres"] }
 tracing-appender = "0.2.3"
 url = "2.5.4"
@@ -43,10 +43,10 @@ serde_urlencoded = "0.7.1"
 reqwest = "0.12.9"
 jsonwebtoken = "9.3.0"
 async-trait = "0.1.83"
-fred = { version = "9.4.0", features = ["i-sorted-sets"] }
+fred = { version = "10.0.1", features = ["i-sorted-sets"] }
 tower-sessions = "0.13.0"
 rmp-serde = "1.3.0"
-thiserror = "2.0.3"
-utoipa = { version = "5.2.0", features = ["axum_extras", "non_strict_integers", "repr", "time"] }
-utoipa-axum = "0.1.2"
+thiserror = "2.0.8"
+utoipa = { version = "5.3.0", features = ["axum_extras", "non_strict_integers", "repr", "time"] }
+utoipa-axum = "0.1.3"
 utoipa-scalar = { version = "0.2.0", features = ["axum"] }

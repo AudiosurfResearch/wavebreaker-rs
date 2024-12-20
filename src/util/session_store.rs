@@ -12,7 +12,7 @@ use tower_sessions::{
 #[derive(Debug, thiserror::Error)]
 pub enum RedisStoreError {
     #[error(transparent)]
-    Redis(#[from] fred::error::RedisError),
+    Redis(#[from] fred::error::Error),
 
     #[error(transparent)]
     Decode(#[from] rmp_serde::decode::Error),

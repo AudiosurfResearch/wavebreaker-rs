@@ -1,6 +1,6 @@
 use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl, SaveChangesDsl};
-use fred::prelude::*;
+use fred::prelude::Pool as RedisPool;
 use serde::Serialize;
 use tracing::debug;
 use utoipa::ToSchema;

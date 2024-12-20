@@ -11,6 +11,7 @@ use diesel::{
 };
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use fred::prelude::*;
+use fred::prelude::Pool as RedisPool;
 use serde::Serialize;
 use time::OffsetDateTime;
 
