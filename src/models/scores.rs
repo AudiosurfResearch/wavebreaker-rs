@@ -10,8 +10,7 @@ use diesel::{
     sql_types::SmallInt,
 };
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
-use fred::prelude::*;
-use fred::clients::Pool as RedisPool;
+use fred::{clients::Pool as RedisPool, prelude::*};
 use serde::Serialize;
 use time::OffsetDateTime;
 

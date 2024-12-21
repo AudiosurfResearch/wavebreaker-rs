@@ -7,12 +7,14 @@ use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
+use validator::Validate;
 
 use crate::{
     models::{extra_song_info::ExtraSongInfo, songs::Song},
     util::{
         errors::{RouteError, SimpleRouteErrorOutput},
         jwt::Claims,
+        validator::ValidatedQuery,
     },
     AppState,
 };
@@ -120,4 +122,26 @@ async fn delete_song(
     } else {
         Err(RouteError::new_unauthorized())
     }
+}
+
+#[derive(Deserialize, Validate)]
+#[serde(rename_all = "camelCase")]
+struct GetTopSongParams {
+    #[serde(default)] // default to false
+    with_extra_info: bool,
+
+    page: i32,
+    #[validate(range(min = 1, max = 50))]
+    page_size: i32,
+}
+
+async fn get_top_songs(
+    State(state): State<AppState>,
+    ValidatedQuery(query): ValidatedQuery<GetTopSongParams>,
+) -> Result<Json<Vec<SongResponse>>, RouteError> {
+    use crate::schema::songs;
+
+    let mut conn = state.db.get().await?;
+
+    todo!()
 }

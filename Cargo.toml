@@ -30,7 +30,6 @@ time = { version = "0.3.37", features = ["formatting", "serde"] }
 tower-http = { version = "0.6.2", features = ["fs", "trace"] }
 toml = "0.8.19"
 validator = { version = "0.19.0", features = ["derive"] }
-axum-valid = "0.21.0"
 axum-extra = { version = "0.9.6", features = ["form", "typed-header"] }
 regex = "1.11.1"
 musicbrainz_rs = "0.5.0"

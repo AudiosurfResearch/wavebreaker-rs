@@ -37,9 +37,7 @@ use figment::{
     providers::{Env, Format, Toml},
     Figment,
 };
-use fred::prelude::*;
-use fred::types::config::Config as RedisConfig;
-use fred::clients::Pool as RedisPool;
+use fred::{clients::Pool as RedisPool, prelude::*, types::config::Config as RedisConfig};
 use serde::Deserialize;
 use steam_openid::SteamOpenId;
 use steam_rs::Steam;

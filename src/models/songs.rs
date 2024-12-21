@@ -285,7 +285,11 @@ impl Song {
         }
 
         // If there isn't exactly one score, the player can't delete the song
-        let scores_count = scores.filter(song_id.eq(self.id)).count().get_result::<i64>(conn).await?;
+        let scores_count = scores
+            .filter(song_id.eq(self.id))
+            .count()
+            .get_result::<i64>(conn)
+            .await?;
         if scores_count != 1 {
             return Ok(false);
         }

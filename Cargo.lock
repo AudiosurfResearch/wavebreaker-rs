@@ -246,16 +246,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "axum-valid"
-version = "0.21.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5ff61f1c3e1ecd33562d08ade818500dc8c802d89406d60ff4a0790ff13d8308"
-dependencies = [
- "axum",
- "validator",
-]
-
-[[package]]
 name = "backtrace"
 version = "0.3.74"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3531,7 +3521,6 @@ dependencies = [
  "axum",
  "axum-extra",
  "axum-serde",
- "axum-valid",
  "clap",
  "diesel",
  "diesel-async",

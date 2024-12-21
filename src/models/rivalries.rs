@@ -86,7 +86,11 @@ impl RivalryView {
     pub async fn from_rivalry(rivalry: Rivalry, conn: &mut AsyncPgConnection) -> QueryResult<Self> {
         use crate::schema::players::dsl::*;
 
-        let rival = players.find(rivalry.rival_id).first::<Player>(conn).await?.into();
+        let rival = players
+            .find(rivalry.rival_id)
+            .first::<Player>(conn)
+            .await?
+            .into();
         Ok(Self {
             established_at: rivalry.established_at,
             rival,
@@ -94,10 +98,17 @@ impl RivalryView {
     }
 
     /// Creates a `RivalryView` that shows the **challenger's** public profile
-    pub async fn from_rivalry_challenger(rivalry: Rivalry, conn: &mut AsyncPgConnection) -> QueryResult<Self> {
+    pub async fn from_rivalry_challenger(
+        rivalry: Rivalry,
+        conn: &mut AsyncPgConnection,
+    ) -> QueryResult<Self> {
         use crate::schema::players::dsl::*;
 
-        let challenger = players.find(rivalry.challenger_id).first::<Player>(conn).await?.into();
+        let challenger = players
+            .find(rivalry.challenger_id)
+            .first::<Player>(conn)
+            .await?
+            .into();
         Ok(Self {
             established_at: rivalry.established_at,
             rival: challenger,

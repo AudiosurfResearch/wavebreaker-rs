@@ -5,3 +5,4 @@ pub mod modifiers;
 pub mod musicbrainz;
 pub mod radio;
 pub mod session_store;
+pub mod validator;

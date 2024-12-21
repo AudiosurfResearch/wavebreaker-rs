@@ -8,8 +8,7 @@ use diesel::{
     sql_types::{SmallInt, Text},
 };
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
-use fred::prelude::*;
-use fred::clients::Pool as RedisPool;
+use fred::{clients::Pool as RedisPool, prelude::*};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
