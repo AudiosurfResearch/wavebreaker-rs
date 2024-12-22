@@ -11,7 +11,11 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
 use crate::{
-    models::{extra_song_info::ExtraSongInfo, songs::Song},
+    models::{
+        extra_song_info::{self, ExtraSongInfo},
+        songs::Song,
+    },
+    schema,
     util::{
         errors::{RouteError, SimpleRouteErrorOutput},
         jwt::Claims,
@@ -147,12 +151,31 @@ struct TopSongResponse {
     times_played: i64,
 }
 
+allow_columns_to_appear_in_same_group_by_clause!(
+    schema::songs::id,
+    schema::songs::title,
+    schema::songs::artist,
+    schema::songs::created_at,
+    schema::songs::modifiers,
+    schema::extra_song_info::id,
+    schema::extra_song_info::song_id,
+    schema::extra_song_info::cover_url,
+    schema::extra_song_info::cover_url_small,
+    schema::extra_song_info::mbid,
+    schema::extra_song_info::musicbrainz_title,
+    schema::extra_song_info::musicbrainz_artist,
+    schema::extra_song_info::musicbrainz_length,
+    schema::extra_song_info::mistag_lock,
+    schema::extra_song_info::aliases_artist,
+    schema::extra_song_info::aliases_title,
+);
+
 /// Get global most played songs
 #[utoipa::path(
     method(get),
     path = "/top",
     params(
-        ("withExtraInfo" = bool, Query, description = "Include extra info. !!TODO!! Not implemented yet"),
+        ("withExtraInfo" = bool, Query, description = "Include extra info"),
         ("page" = i64, Query, description = "Page number", minimum = 1),
         ("pageSize" = i64, Query, description = "Page size", minimum = 1, maximum = 50)
     ),
@@ -167,33 +190,77 @@ async fn get_top_songs(
 ) -> Result<Json<Vec<TopSongResponse>>, RouteError> {
     use diesel::{dsl::sql, sql_types::BigInt};
 
-    use crate::schema::{scores, songs};
+    use crate::schema::{extra_song_info, scores, songs};
 
     let mut conn = state.db.get().await?;
 
-    let songs: Vec<(Song, i64)> = songs::table
-        .left_join(scores::table)
-        .select((
-            songs::all_columns,
-            sql::<BigInt>("COUNT(scores.song_id) AS score_count"),
-        ))
-        .group_by(songs::id)
-        .order_by(sql::<BigInt>("score_count DESC"))
-        .offset((query.page - 1) * query.page_size)
-        .limit(query.page_size)
-        .load::<(Song, i64)>(&mut conn)
-        .await?;
+    if query.with_extra_info {
+        let songs_with_extra: Vec<(Song, i64, Option<ExtraSongInfo>)> = songs::table
+            .left_join(scores::table)
+            .left_join(extra_song_info::table)
+            .group_by((
+                songs::id,
+                songs::title,
+                songs::artist,
+                songs::created_at,
+                songs::modifiers,
+                schema::extra_song_info::id,
+                schema::extra_song_info::song_id,
+                schema::extra_song_info::cover_url,
+                schema::extra_song_info::cover_url_small,
+                schema::extra_song_info::mbid,
+                schema::extra_song_info::musicbrainz_title,
+                schema::extra_song_info::musicbrainz_artist,
+                schema::extra_song_info::musicbrainz_length,
+                schema::extra_song_info::mistag_lock,
+                schema::extra_song_info::aliases_artist,
+                schema::extra_song_info::aliases_title,
+            ))
+            .select((
+                Song::as_select(),
+                sql::<BigInt>("COUNT(scores.song_id) AS score_count"),
+                extra_song_info::all_columns.nullable(),
+            ))
+            .order_by(sql::<BigInt>("score_count DESC"))
+            .offset((query.page - 1) * query.page_size)
+            .limit(query.page_size)
+            .load::<(Song, i64, Option<ExtraSongInfo>)>(&mut conn)
+            .await?;
 
-    let songs: Vec<TopSongResponse> = songs
-        .into_iter()
-        .map(|(song, times_played)| TopSongResponse {
-            song_data: SongResponse {
-                song,
-                extra_info: None,
-            },
-            times_played,
-        })
-        .collect();
+        let songs: Vec<TopSongResponse> = songs_with_extra
+            .into_iter()
+            .map(|(song, times_played, extra_info)| TopSongResponse {
+                song_data: SongResponse { song, extra_info },
+                times_played,
+            })
+            .collect();
 
-    Ok(Json(songs))
+        Ok(Json(songs))
+    } else {
+        let songs: Vec<(Song, i64)> = songs::table
+            .left_join(scores::table)
+            .select((
+                Song::as_select(),
+                sql::<BigInt>("COUNT(scores.song_id) AS score_count"),
+            ))
+            .group_by(songs::id)
+            .order_by(sql::<BigInt>("score_count DESC"))
+            .offset((query.page - 1) * query.page_size)
+            .limit(query.page_size)
+            .load::<(Song, i64)>(&mut conn)
+            .await?;
+
+        let songs: Vec<TopSongResponse> = songs
+            .into_iter()
+            .map(|(song, times_played)| TopSongResponse {
+                song_data: SongResponse {
+                    song,
+                    extra_info: None,
+                },
+                times_played,
+            })
+            .collect();
+
+        Ok(Json(songs))
+    }
 }
