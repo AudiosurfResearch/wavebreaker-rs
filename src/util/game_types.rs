@@ -1,6 +1,7 @@
 use diesel::{deserialize::FromSqlRow, expression::AsExpression};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde_repr::{Deserialize_repr, Serialize_repr};
+use utoipa::ToSchema;
 
 /// Represents the three skill levels represented on the leaderboard.
 #[derive(
@@ -15,6 +16,7 @@ use serde_repr::{Deserialize_repr, Serialize_repr};
     Copy,
     TryFromPrimitive,
     IntoPrimitive,
+    ToSchema,
 )]
 #[diesel(sql_type = diesel::sql_types::SmallInt)]
 #[repr(i16)]
@@ -37,6 +39,7 @@ pub enum League {
     Copy,
     TryFromPrimitive,
     IntoPrimitive,
+    ToSchema,
 )]
 #[diesel(sql_type = diesel::sql_types::SmallInt)]
 #[repr(i16)]

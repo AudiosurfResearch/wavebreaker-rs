@@ -13,6 +13,7 @@ use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use fred::{clients::Pool as RedisPool, prelude::*};
 use serde::Serialize;
 use time::OffsetDateTime;
+use utoipa::ToSchema;
 
 use crate::{
     models::{players::Player, songs::Song},
@@ -71,6 +72,7 @@ where
     Debug,
     Serialize,
     QueryableByName,
+    ToSchema,
 )]
 #[diesel(belongs_to(Player))]
 #[diesel(belongs_to(Song))]

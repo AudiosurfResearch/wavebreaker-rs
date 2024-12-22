@@ -17,6 +17,7 @@ use crate::{
 mod auth;
 mod players;
 mod rivals;
+mod scores;
 mod songs;
 
 #[derive(OpenApiTrait)]
@@ -53,6 +54,7 @@ pub fn routes() -> (Router<AppState>, OpenApi) {
         .nest("/players", players::routes())
         .nest("/auth", auth::routes())
         .nest("/rivals", rivals::routes())
+        .nest("/scores", scores::routes())
         .split_for_parts()
 }
 

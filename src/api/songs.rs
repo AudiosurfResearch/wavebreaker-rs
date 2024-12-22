@@ -11,10 +11,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
 use crate::{
-    models::{
-        extra_song_info::{self, ExtraSongInfo},
-        songs::Song,
-    },
+    models::{extra_song_info::ExtraSongInfo, songs::Song},
     schema,
     util::{
         errors::{RouteError, SimpleRouteErrorOutput},
@@ -121,9 +118,7 @@ async fn delete_song(
         .ok_or_else(RouteError::new_not_found)?;
 
     if song.user_can_delete(claims.profile.id, &mut conn).await? {
-        diesel::delete(songs::table.filter(songs::id.eq(id)))
-            .execute(&mut conn)
-            .await?;
+        song.delete(&mut conn, &state.redis).await?;
 
         Ok(())
     } else {
