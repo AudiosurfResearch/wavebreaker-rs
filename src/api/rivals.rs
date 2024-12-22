@@ -64,7 +64,7 @@ struct ModifyRivalParams {
     rival_id: i32,
 }
 
-/// Get own rivals
+/// Add rival
 #[utoipa::path(
     method(post),
     path = "/add",
@@ -122,7 +122,7 @@ async fn add_rival(
     }
 }
 
-/// Get own rivals
+/// Remove rival
 #[utoipa::path(
     method(delete),
     path = "/remove",

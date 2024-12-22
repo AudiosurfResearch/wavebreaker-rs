@@ -27,7 +27,10 @@ where
 
     async fn from_request(req: Request, state: &S) -> Result<Self, Self::Rejection> {
         let Form(value) = Form::<T>::from_request(req, state).await?;
-        value.validate()?;
+        value.validate().map_err(|e| {
+            let message = format!("Form validation error: [{e}]").replace('\n', ", ");
+            RouteError::new_bad_request().set_public_error_message(&message)
+        })?;
         Ok(Self(value))
     }
 }
@@ -40,13 +43,16 @@ impl<T, S> FromRequestParts<S> for ValidatedQuery<T>
 where
     T: DeserializeOwned + Validate,
     S: Send + Sync,
-    Form<T>: FromRequestParts<S, Rejection = QueryRejection>,
+    Query<T>: FromRequestParts<S, Rejection = QueryRejection>,
 {
     type Rejection = RouteError;
 
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let Query(value) = Query::<T>::from_request_parts(parts, state).await?;
-        value.validate()?;
+        value.validate().map_err(|e| {
+            let message = format!("Query validation error: [{e}]").replace('\n', ", ");
+            RouteError::new_bad_request().set_public_error_message(&message)
+        })?;
         Ok(Self(value))
     }
 }

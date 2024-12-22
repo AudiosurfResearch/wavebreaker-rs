@@ -2450,6 +2450,17 @@ dependencies = [
 ]
 
 [[package]]
+name = "serde-inline-default"
+version = "0.2.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "59fb1bedd774187d304179493b0d3c41fbe97b04b14305363f68d2bdf5e47cb9"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn 2.0.87",
+]
+
+[[package]]
 name = "serde_derive"
 version = "1.0.216"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -3536,6 +3547,7 @@ dependencies = [
  "reqwest 0.12.9",
  "rmp-serde",
  "serde",
+ "serde-inline-default",
  "serde_json",
  "serde_repr",
  "serde_urlencoded",

@@ -5,6 +5,7 @@ use axum::{
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
+use serde_inline_default::serde_inline_default;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
@@ -20,7 +21,9 @@ use crate::{
 };
 
 pub fn routes() -> OpenApiRouter<AppState> {
-    OpenApiRouter::new().routes(routes!(get_song, delete_song))
+    OpenApiRouter::new()
+        .routes(routes!(get_song, delete_song))
+        .routes(routes!(get_top_songs))
 }
 
 #[derive(Serialize, ToSchema)]
@@ -124,24 +127,73 @@ async fn delete_song(
     }
 }
 
+#[serde_inline_default]
 #[derive(Deserialize, Validate)]
 #[serde(rename_all = "camelCase")]
 struct GetTopSongParams {
     #[serde(default)] // default to false
     with_extra_info: bool,
-
-    page: i32,
+    #[validate(range(min = 1))]
+    #[serde_inline_default(1)]
+    page: i64,
     #[validate(range(min = 1, max = 50))]
-    page_size: i32,
+    #[serde_inline_default(10)]
+    page_size: i64,
 }
 
+#[derive(Serialize, ToSchema)]
+struct TopSongResponse {
+    song_data: SongResponse,
+    times_played: i64,
+}
+
+/// Get global most played songs
+#[utoipa::path(
+    method(get),
+    path = "/top",
+    params(
+        ("withExtraInfo" = bool, Query, description = "Include extra info. !!TODO!! Not implemented yet"),
+        ("page" = i64, Query, description = "Page number", minimum = 1),
+        ("pageSize" = i64, Query, description = "Page size", minimum = 1, maximum = 50)
+    ),
+    responses(
+        (status = OK, description = "Success", body = Vec<TopSongResponse>, content_type = "application/json"),
+        (status = BAD_REQUEST, description = "Invalid query parameters", body = SimpleRouteErrorOutput, content_type = "application/json")
+    )
+)]
 async fn get_top_songs(
     State(state): State<AppState>,
     ValidatedQuery(query): ValidatedQuery<GetTopSongParams>,
-) -> Result<Json<Vec<SongResponse>>, RouteError> {
-    use crate::schema::songs;
+) -> Result<Json<Vec<TopSongResponse>>, RouteError> {
+    use diesel::{dsl::sql, sql_types::BigInt};
+
+    use crate::schema::{scores, songs};
 
     let mut conn = state.db.get().await?;
 
-    todo!()
+    let songs: Vec<(Song, i64)> = songs::table
+        .left_join(scores::table)
+        .select((
+            songs::all_columns,
+            sql::<BigInt>("COUNT(scores.song_id) AS score_count"),
+        ))
+        .group_by(songs::id)
+        .order_by(sql::<BigInt>("score_count DESC"))
+        .offset((query.page - 1) * query.page_size)
+        .limit(query.page_size)
+        .load::<(Song, i64)>(&mut conn)
+        .await?;
+
+    let songs: Vec<TopSongResponse> = songs
+        .into_iter()
+        .map(|(song, times_played)| TopSongResponse {
+            song_data: SongResponse {
+                song,
+                extra_info: None,
+            },
+            times_played,
+        })
+        .collect();
+
+    Ok(Json(songs))
 }
