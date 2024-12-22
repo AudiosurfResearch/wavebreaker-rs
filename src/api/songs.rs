@@ -11,7 +11,11 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
 use crate::{
-    models::{extra_song_info::ExtraSongInfo, songs::Song},
+    models::{
+        extra_song_info::{self, ExtraSongInfo},
+        songs::Song,
+    },
+    schema,
     util::{
         errors::{RouteError, SimpleRouteErrorOutput},
         jwt::Claims,
@@ -147,6 +151,8 @@ struct TopSongResponse {
     times_played: i64,
 }
 
+allow_columns_to_appear_in_same_group_by_clause!(schema::scores::id, schema::extra_song_info::id);
+
 /// Get global most played songs
 #[utoipa::path(
     method(get),
@@ -167,14 +173,31 @@ async fn get_top_songs(
 ) -> Result<Json<Vec<TopSongResponse>>, RouteError> {
     use diesel::{dsl::sql, sql_types::BigInt};
 
-    use crate::schema::{scores, songs};
+    use crate::schema::{extra_song_info, scores, songs};
 
     let mut conn = state.db.get().await?;
 
+    // broken as fuck
+    let songs_with_extra: Vec<(Song, Option<i64>, Option<ExtraSongInfo>)> = songs::table
+        .left_join(scores::table)
+        .left_join(extra_song_info::table)
+        .group_by(songs::id)
+        .select((
+            Song::as_select(),
+            sql::<BigInt>("COUNT(scores.song_id) AS score_count").nullable(),
+            ExtraSongInfo::as_select().nullable(),
+        ))
+        .order_by(sql::<BigInt>("score_count DESC"))
+        .offset((query.page - 1) * query.page_size)
+        .limit(query.page_size)
+        .load::<(Song, Option<i64>, Option<ExtraSongInfo>)>(&mut conn)
+        .await?;
+
+    // unfinished but actually works from here
     let songs: Vec<(Song, i64)> = songs::table
         .left_join(scores::table)
         .select((
-            songs::all_columns,
+            Song::as_select(),
             sql::<BigInt>("COUNT(scores.song_id) AS score_count"),
         ))
         .group_by(songs::id)
@@ -182,6 +205,14 @@ async fn get_top_songs(
         .offset((query.page - 1) * query.page_size)
         .limit(query.page_size)
         .load::<(Song, i64)>(&mut conn)
+        .await?;
+
+    let song_ids: Vec<i32> = songs.iter().map(|(song, _)| song.id).collect();
+    let extra_info: Vec<Option<ExtraSongInfo>> = songs::table
+        .left_join(extra_song_info::table)
+        .filter(songs::id.eq_any(song_ids))
+        .select(Option::<ExtraSongInfo>::as_select())
+        .load(&mut conn)
         .await?;
 
     let songs: Vec<TopSongResponse> = songs
