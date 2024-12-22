@@ -175,7 +175,7 @@ allow_columns_to_appear_in_same_group_by_clause!(
     method(get),
     path = "/top",
     params(
-        ("withExtraInfo" = bool, Query, description = "Include extra info. !!TODO!! Not implemented yet"),
+        ("withExtraInfo" = bool, Query, description = "Include extra info"),
         ("page" = i64, Query, description = "Page number", minimum = 1),
         ("pageSize" = i64, Query, description = "Page size", minimum = 1, maximum = 50)
     ),
