@@ -167,28 +167,30 @@ async fn get_top_songs(
 ) -> Result<Json<Vec<TopSongResponse>>, RouteError> {
     use diesel::{dsl::sql, sql_types::BigInt};
 
-    use crate::schema::{extra_song_info, scores, songs};
+    use crate::schema::{scores, songs};
 
     let mut conn = state.db.get().await?;
 
-    let songs_with_extra: Vec<(Song, i64, Option<ExtraSongInfo>)> = songs::table
+    let songs: Vec<(Song, i64)> = songs::table
         .left_join(scores::table)
-        .left_join(extra_song_info::table)
         .select((
-            Song::as_select(),
+            songs::all_columns,
             sql::<BigInt>("COUNT(scores.song_id) AS score_count"),
-            Option::<ExtraSongInfo>::as_select(),
         ))
+        .group_by(songs::id)
         .order_by(sql::<BigInt>("score_count DESC"))
         .offset((query.page - 1) * query.page_size)
         .limit(query.page_size)
-        .load::<(Song, i64, Option<ExtraSongInfo>)>(&mut conn)
+        .load::<(Song, i64)>(&mut conn)
         .await?;
 
-    let songs: Vec<TopSongResponse> = songs_with_extra
+    let songs: Vec<TopSongResponse> = songs
         .into_iter()
-        .map(|(song, times_played, extra_info)| TopSongResponse {
-            song_data: SongResponse { song, extra_info },
+        .map(|(song, times_played)| TopSongResponse {
+            song_data: SongResponse {
+                song,
+                extra_info: None,
+            },
             times_played,
         })
         .collect();
