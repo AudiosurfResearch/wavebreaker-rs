@@ -83,6 +83,7 @@ pub struct Score {
     pub song_id: i32,
     pub player_id: i32,
     pub league: League,
+    #[serde(serialize_with = "time::serde::iso8601::serialize")]
     pub submitted_at: time::OffsetDateTime,
     pub play_count: i32,
     pub score: i32,
