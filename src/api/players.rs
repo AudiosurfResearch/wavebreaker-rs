@@ -29,7 +29,7 @@ struct PlayerResponse {
     player: PlayerPublic,
 }
 
-/// Get a player by ID
+/// Get player by ID
 #[utoipa::path(
     method(get),
     path = "/{id}",
@@ -37,8 +37,7 @@ struct PlayerResponse {
         ("id" = i32, Path, description = "ID of player to get"),
     ),
     responses(
-        (status = OK, description = "Success",
-        body = PlayerPublic, content_type = "application/json"),
+        (status = OK, description = "Success", body = PlayerPublic, content_type = "application/json"),
         (status = NOT_FOUND, description = "Player not found", body = SimpleRouteErrorOutput, content_type = "application/json")
     )
 )]

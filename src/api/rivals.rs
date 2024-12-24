@@ -1,7 +1,4 @@
-use axum::{
-    extract::{Query, State},
-    Json,
-};
+use axum::{extract::State, Json};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
@@ -58,9 +55,9 @@ async fn get_own_rivals(
     Ok(Json(RivalryResponse { rivalries }))
 }
 
-#[derive(Deserialize)]
+#[derive(Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
-struct ModifyRivalParams {
+struct ModifyRivalRequest {
     rival_id: i32,
 }
 
@@ -68,9 +65,6 @@ struct ModifyRivalParams {
 #[utoipa::path(
     method(post),
     path = "/add",
-    params(
-        ("rivalId" = i32, Query, description = "ID of player to add as rival")
-    ),
     responses(
         (status = OK, body = RivalryView, description = "Success", content_type = "application/json"),
         (status = NOT_FOUND, description = "Couldn't find player to rival", body = SimpleRouteErrorOutput, content_type = "application/json"),
@@ -84,8 +78,8 @@ struct ModifyRivalParams {
 ]
 async fn add_rival(
     State(state): State<AppState>,
-    query: Query<ModifyRivalParams>,
     claims: Claims,
+    Json(payload): Json<ModifyRivalRequest>,
 ) -> Result<Json<RivalryView>, RouteError> {
     use crate::schema::{players::dsl::*, rivalries::dsl::*};
 
@@ -93,7 +87,7 @@ async fn add_rival(
 
     let player: Player = players.find(claims.profile.id).first(&mut conn).await?;
     let rival: Player = players
-        .find(query.rival_id)
+        .find(payload.rival_id)
         .first(&mut conn)
         .await
         .optional()?
@@ -141,8 +135,8 @@ async fn add_rival(
 ]
 async fn remove_rival(
     State(state): State<AppState>,
-    query: Query<ModifyRivalParams>,
     claims: Claims,
+    Json(payload): Json<ModifyRivalRequest>,
 ) -> Result<(), RouteError> {
     use crate::schema::{players::dsl::*, rivalries::dsl::*};
 
@@ -150,7 +144,7 @@ async fn remove_rival(
 
     let player: Player = players.find(claims.profile.id).first(&mut conn).await?;
     let rival: Player = players
-        .find(query.rival_id)
+        .find(payload.rival_id)
         .first(&mut conn)
         .await
         .optional()?
