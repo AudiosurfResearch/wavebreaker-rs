@@ -177,9 +177,9 @@ allow_columns_to_appear_in_same_group_by_clause!(
     method(get),
     path = "/top",
     params(
-        ("withExtraInfo" = bool, Query, description = "Include extra info"),
-        ("page" = i64, Query, description = "Page number", minimum = 1),
-        ("pageSize" = i64, Query, description = "Page size", minimum = 1, maximum = 50)
+        ("withExtraInfo" = Option<bool>, Query, description = "Include extra info"),
+        ("page" = Option<i64>, Query, description = "Page number", minimum = 1),
+        ("pageSize" = Option<i64>, Query, description = "Page size", minimum = 1, maximum = 50)
     ),
     responses(
         (status = OK, description = "Success", body = Vec<TopSongResponse>, content_type = "application/json"),
@@ -281,6 +281,7 @@ struct GetSongScoresParams {
     page_size: i64,
     league: Option<League>,
     character: Option<Character>,
+    player_id: Option<i32>,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -292,17 +293,18 @@ struct ScoreResponse {
     player: Option<PlayerPublic>,
 }
 
-/// Get a song's scores
+/// Get song's scores
 #[utoipa::path(
     method(get),
     path = "/{id}/scores",
     params(
         ("id" = i32, Path, description = "ID of song to get"),
-        ("withPlayer" = bool, Query, description = "Include player info"),
-        ("page" = i64, Query, description = "Page number", minimum = 1),
-        ("pageSize" = i64, Query, description = "Page size", minimum = 1, maximum = 50),
+        ("withPlayer" = Option<bool>, Query, description = "Include player info"),
+        ("page" = Option<i64>, Query, description = "Page number", minimum = 1),
+        ("pageSize" = Option<i64>, Query, description = "Page size", minimum = 1, maximum = 50),
         ("league" = Option<League>, Query, description = "League to filter by"),
-        ("character" = Option<Character>, Query, description = "Character to filter by")
+        ("character" = Option<Character>, Query, description = "Character to filter by"),
+        ("playerId" = Option<i32>, Query, description = "Player ID to filter by"),
     ),
     responses(
         (status = OK, description = "Success", body = SongResponse, content_type = "application/json"),
@@ -333,6 +335,9 @@ async fn get_song_scores(
     }
     if let Some(character) = query.character {
         db_query = db_query.filter(scores::vehicle.eq(character));
+    }
+    if let Some(player_id) = query.player_id {
+        db_query = db_query.filter(scores::player_id.eq(player_id));
     }
     db_query = db_query
         .order(scores::score.desc())
