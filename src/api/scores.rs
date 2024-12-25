@@ -13,11 +13,13 @@ use crate::{
     models::{
         players::{AccountType, Player, PlayerPublic},
         scores::Score,
+        songs::Song,
     },
     util::{
         errors::{RouteError, SimpleRouteErrorOutput},
         game_types::{Character, League},
-        jwt::Claims, query::SortType,
+        jwt::Claims,
+        query::SortType,
     },
     AppState,
 };
@@ -34,14 +36,18 @@ pub fn routes() -> OpenApiRouter<AppState> {
 struct GetScoreParams {
     #[serde_inline_default(true)]
     with_player: bool,
+    #[serde_inline_default(true)]
+    with_song: bool,
 }
 
 #[derive(serde::Serialize, utoipa::ToSchema)]
-struct ScoreResponse {
+struct ScoreSearchResponse {
     #[serde(flatten)]
     score: Score,
     #[serde(skip_serializing_if = "Option::is_none")]
     player: Option<PlayerPublic>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    song: Option<Song>,
 }
 
 /// Get score by ID
@@ -50,10 +56,11 @@ struct ScoreResponse {
     path = "/{id}",
     params(
         ("id" = i32, Path, description = "ID of score to get"),
-        ("withPlayer" = Option<bool>, Query, description = "Include player info")
+        ("withPlayer" = Option<bool>, Query, description = "Include player info"),
+        ("withSong" = Option<bool>, Query, description = "Include song info"),
     ),
     responses(
-        (status = OK, description = "Success", body = ScoreResponse, content_type = "application/json"),
+        (status = OK, description = "Success", body = ScoreSearchResponse, content_type = "application/json"),
         (status = NOT_FOUND, description = "Score not found", body = SimpleRouteErrorOutput, content_type = "application/json")
     )
 )]
@@ -61,8 +68,8 @@ async fn get_score(
     State(state): State<AppState>,
     Path(id): Path<i32>,
     query: Query<GetScoreParams>,
-) -> Result<Json<ScoreResponse>, RouteError> {
-    use crate::schema::{players, scores};
+) -> Result<Json<ScoreSearchResponse>, RouteError> {
+    use crate::schema::{players, scores, songs};
 
     let mut conn = state.db.get().await?;
 
@@ -73,24 +80,33 @@ async fn get_score(
         .optional()?
         .ok_or_else(RouteError::new_not_found)?;
 
-    let score_response = if query.with_player {
+    let player = if query.with_player {
         let player: Player = players::table
             .find(score.player_id)
             .first::<Player>(&mut conn)
             .await?;
 
-        ScoreResponse {
-            score,
-            player: Some(player.into()),
-        }
+        Some(player.into())
     } else {
-        ScoreResponse {
-            score,
-            player: None,
-        }
+        None
     };
 
-    Ok(Json(score_response))
+    let song = if query.with_song {
+        let song = songs::table
+            .find(score.song_id)
+            .first::<Song>(&mut conn)
+            .await?;
+
+        Some(song)
+    } else {
+        None
+    };
+
+    Ok(Json(ScoreSearchResponse {
+        score,
+        player,
+        song,
+    }))
 }
 
 ///Delete score by ID
@@ -141,6 +157,8 @@ async fn delete_score(
 struct GetScoresParams {
     #[serde_inline_default(false)]
     with_player: bool,
+    #[serde_inline_default(true)]
+    with_song: bool,
     #[validate(range(min = 1))]
     #[serde_inline_default(1)]
     page: i64,
@@ -161,6 +179,7 @@ struct GetScoresParams {
     path = "/",
     params(
         ("withPlayer" = Option<bool>, Query, description = "Include player info"),
+        ("withSong" = Option<bool>, Query, description = "Include song info"),
         ("page" = Option<i64>, Query, description = "Page number", minimum = 1),
         ("pageSize" = Option<i64>, Query, description = "Page size", minimum = 1, maximum = 50),
         ("scoreSort" = Option<SortType>, Query, description = "Sort by score"),
@@ -170,15 +189,15 @@ struct GetScoresParams {
         ("playerId" = Option<i32>, Query, description = "Player ID to filter by"),
     ),
     responses(
-        (status = OK, description = "Success", body = ScoreResponse, content_type = "application/json"),
+        (status = OK, description = "Success", body = ScoreSearchResponse, content_type = "application/json"),
         (status = NOT_FOUND, description = "Song not found", body = SimpleRouteErrorOutput, content_type = "application/json")
     )
 )]
 async fn get_scores(
     State(state): State<AppState>,
     query: Query<GetScoresParams>,
-) -> Result<Json<Vec<ScoreResponse>>, RouteError> {
-    use crate::schema::{players, scores};
+) -> Result<Json<Vec<ScoreSearchResponse>>, RouteError> {
+    use crate::schema::{players, scores, songs};
 
     let mut conn = state.db.get().await?;
 
@@ -207,33 +226,73 @@ async fn get_scores(
     db_query = db_query
         .offset((query.page - 1) * query.page_size)
         .limit(query.page_size);
-    if query.with_player {
-        let scores_with_player: Vec<(Score, Player)> = db_query
-            .inner_join(players::table)
-            .select((Score::as_select(), Player::as_select()))
-            .load::<(Score, Player)>(&mut conn)
-            .await?;
 
-        let scores: Vec<ScoreResponse> = scores_with_player
-            .into_iter()
-            .map(|(score, player)| ScoreResponse {
-                score,
-                player: Some(player.into()),
-            })
-            .collect();
+    //TODO: This is messed up. What. Is there a better way to do this???
+    //I don't get to dynamically join stuff or change selects because it changes the return type
+    match (query.with_player, query.with_song) {
+        (true, true) => {
+            let items: Vec<(Score, Player, Song)> = db_query
+                .inner_join(players::table)
+                .inner_join(songs::table)
+                .select((Score::as_select(), Player::as_select(), Song::as_select()))
+                .load(&mut conn)
+                .await?;
 
-        Ok(Json(scores))
-    } else {
-        let scores: Vec<Score> = db_query.load::<Score>(&mut conn).await?;
+            let scores = items
+                .into_iter()
+                .map(|(score, player, song)| ScoreSearchResponse {
+                    score,
+                    player: Some(player.into()),
+                    song: Some(song),
+                })
+                .collect();
+            Ok(Json(scores))
+        }
+        (true, false) => {
+            let items: Vec<(Score, Player)> = db_query
+                .inner_join(players::table)
+                .select((Score::as_select(), Player::as_select()))
+                .load(&mut conn)
+                .await?;
 
-        let scores: Vec<ScoreResponse> = scores
-            .into_iter()
-            .map(|score| ScoreResponse {
-                score,
-                player: None,
-            })
-            .collect();
+            let scores = items
+                .into_iter()
+                .map(|(score, player)| ScoreSearchResponse {
+                    score,
+                    player: Some(player.into()),
+                    song: None,
+                })
+                .collect();
+            Ok(Json(scores))
+        }
+        (false, true) => {
+            let items: Vec<(Score, Song)> = db_query
+                .inner_join(songs::table)
+                .select((Score::as_select(), Song::as_select()))
+                .load(&mut conn)
+                .await?;
 
-        Ok(Json(scores))
+            let scores = items
+                .into_iter()
+                .map(|(score, song)| ScoreSearchResponse {
+                    score,
+                    player: None,
+                    song: Some(song),
+                })
+                .collect();
+            Ok(Json(scores))
+        }
+        (false, false) => {
+            let scores_only: Vec<Score> = db_query.load(&mut conn).await?;
+            let scores = scores_only
+                .into_iter()
+                .map(|score| ScoreSearchResponse {
+                    score,
+                    player: None,
+                    song: None,
+                })
+                .collect();
+            Ok(Json(scores))
+        }
     }
 }
