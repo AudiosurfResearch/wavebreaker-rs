@@ -17,7 +17,7 @@ use crate::{
     util::{
         errors::{RouteError, SimpleRouteErrorOutput},
         game_types::{Character, League},
-        jwt::Claims,
+        jwt::Claims, query::SortType,
     },
     AppState,
 };
@@ -147,6 +147,9 @@ struct GetScoresParams {
     #[validate(range(min = 1, max = 50))]
     #[serde_inline_default(10)]
     page_size: i64,
+    #[serde_inline_default(Some(SortType::Desc))]
+    score_sort: Option<SortType>,
+    time_sort: Option<SortType>,
     league: Option<League>,
     character: Option<Character>,
     player_id: Option<i32>,
@@ -160,6 +163,8 @@ struct GetScoresParams {
         ("withPlayer" = Option<bool>, Query, description = "Include player info"),
         ("page" = Option<i64>, Query, description = "Page number", minimum = 1),
         ("pageSize" = Option<i64>, Query, description = "Page size", minimum = 1, maximum = 50),
+        ("scoreSort" = Option<SortType>, Query, description = "Sort by score"),
+        ("timeSort" = Option<SortType>, Query, description = "Sort by submission time"),
         ("league" = Option<League>, Query, description = "League to filter by"),
         ("character" = Option<Character>, Query, description = "Character to filter by"),
         ("playerId" = Option<i32>, Query, description = "Player ID to filter by"),
@@ -187,8 +192,19 @@ async fn get_scores(
     if let Some(player_id) = query.player_id {
         db_query = db_query.filter(scores::player_id.eq(player_id));
     }
+    if let Some(score_sort) = &query.score_sort {
+        match score_sort {
+            SortType::Asc => db_query = db_query.then_order_by(scores::score.asc()),
+            SortType::Desc => db_query = db_query.then_order_by(scores::score.desc()),
+        }
+    }
+    if let Some(time_sort) = &query.time_sort {
+        match time_sort {
+            SortType::Asc => db_query = db_query.then_order_by(scores::submitted_at.asc()),
+            SortType::Desc => db_query = db_query.then_order_by(scores::submitted_at.desc()),
+        }
+    }
     db_query = db_query
-        .order(scores::score.desc())
         .offset((query.page - 1) * query.page_size)
         .limit(query.page_size);
     if query.with_player {
