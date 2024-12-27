@@ -38,7 +38,7 @@ pub async fn get_custom_news(
     State(state): State<AppState>,
     Form(payload): Form<CustomNewsRequest>,
 ) -> Result<Xml<CustomNewsResponse>, RouteError> {
-    let steam_player = ticket_auth(&payload.ticket, &state.steam_api).await?;
+    let steam_player = ticket_auth(&payload.ticket, &state.steam_api, &state.redis).await?;
 
     let mut conn = state.db.get().await?;
 
@@ -162,7 +162,7 @@ pub async fn send_shout(
     State(state): State<AppState>,
     Form(payload): Form<SendShoutRequest>,
 ) -> Result<String, RouteError> {
-    let steam_player = ticket_auth(&payload.ticket, &state.steam_api).await?;
+    let steam_player = ticket_auth(&payload.ticket, &state.steam_api, &state.redis).await?;
 
     let mut conn = state.db.get().await?;
 

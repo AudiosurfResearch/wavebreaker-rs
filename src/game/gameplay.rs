@@ -67,7 +67,7 @@ pub async fn fetch_song_id(
         util::modifiers::{parse_from_title, remove_from_title},
     };
 
-    let steam_player = ticket_auth(&payload.wavebreaker.ticket, &state.steam_api).await?;
+    let steam_player = ticket_auth(&payload.wavebreaker.ticket, &state.steam_api, &state.redis).await?;
 
     let mut conn = state.db.get().await?;
     let parsed_modifiers = parse_from_title(&payload.song);
@@ -222,7 +222,7 @@ pub async fn send_ride(
 ) -> Result<Xml<SendRideResponse>, RouteError> {
     use crate::schema::{players::dsl::*, rivalries::dsl::*, scores::dsl::*, songs::dsl::songs};
 
-    let steam_player = ticket_auth(&payload.ticket, &state.steam_api).await?;
+    let steam_player = ticket_auth(&payload.ticket, &state.steam_api, &state.redis).await?;
 
     info!(
         "Score received on {} from {} (Steam) with score {}, using {:?}. MBID {:?}, release MBID {:?}",
@@ -425,7 +425,7 @@ pub async fn get_rides(
 ) -> Result<Xml<GetRidesResponse>, RouteError> {
     const ALL_LEAGUES: [League; 3] = [League::Casual, League::Pro, League::Elite];
 
-    let steam_player = ticket_auth(&payload.ticket, &state.steam_api).await?;
+    let steam_player = ticket_auth(&payload.ticket, &state.steam_api, &state.redis).await?;
     info!(
         "Player {} (Steam) requesting rides of song {}",
         steam_player, payload.song_id

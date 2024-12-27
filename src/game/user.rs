@@ -50,7 +50,7 @@ pub async fn login_steam(
     State(state): State<AppState>,
     Form(payload): Form<LoginSteamRequest>,
 ) -> Result<Xml<LoginSteamResponse>, RouteError> {
-    let steam_player = ticket_auth(&payload.ticket, &state.steam_api)
+    let steam_player = ticket_auth(&payload.ticket, &state.steam_api, &state.redis)
         .await
         .http_internal_error("Failed to authenticate with Steam")?;
 
@@ -115,7 +115,7 @@ pub async fn steam_sync(
     let friend_nums: Vec<i32> =
         split_x_separated(&payload.snums).http_status_error(axum::http::StatusCode::BAD_REQUEST)?;
 
-    let steam_player = ticket_auth(&payload.ticket, &state.steam_api)
+    let steam_player = ticket_auth(&payload.ticket, &state.steam_api, &state.redis)
         .await
         .http_internal_error("Failed to authenticate with Steam")?;
     let mut conn = state.db.get().await?;
