@@ -23,7 +23,7 @@ pub struct MusicBrainzInfo {
 ///
 /// # Errors
 /// Fails if no song is found or lookup errors
-pub async fn lookup_metadata(song: &Song, duration: i32) -> anyhow::Result<MusicBrainzInfo> {
+pub async fn lookup_metadata(song: &Song, duration: i32) -> anyhow::Result<Option<MusicBrainzInfo>> {
     let query = format!(
         "query=(recording:\"{}\" OR alias:\"{0}\") AND artist:\"{}\" AND dur:\"[{} TO {}]\"",
         song.title,
@@ -37,7 +37,8 @@ pub async fn lookup_metadata(song: &Song, duration: i32) -> anyhow::Result<Music
     let query_result = Recording::search(query).execute().await?.entities;
 
     if query_result.is_empty() {
-        return Err(anyhow::anyhow!("No recording found"));
+        info!("No recording found for {} - {} (ID {})", song.artist, song.title, song.id);
+        return Ok(None);
     }
 
     let recording = query_result[0].clone();
@@ -89,14 +90,14 @@ pub async fn lookup_metadata(song: &Song, duration: i32) -> anyhow::Result<Music
     #[allow(clippy::cast_possible_wrap)]
     let musicbrainz_length = recording.length.map(|length| length as i32);
 
-    Ok(MusicBrainzInfo {
+    Ok(Some(MusicBrainzInfo {
         cover_url,
         cover_url_small,
         mbid,
         musicbrainz_title,
         musicbrainz_artist,
         musicbrainz_length: musicbrainz_length.unwrap_or_default(),
-    })
+    }))
 }
 
 /// Fetches song metadata using recording and release MBIDs

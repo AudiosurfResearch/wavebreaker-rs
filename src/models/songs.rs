@@ -178,6 +178,9 @@ impl Song {
 
         if extra_info.is_none() {
             let metadata = lookup_metadata(self, duration).await?;
+            if metadata.is_none() {
+                return Ok(());
+            }
 
             diesel::insert_into(extra_song_info::table)
                 .values((metadata, extra_song_info::song_id.eq(self.id)))
