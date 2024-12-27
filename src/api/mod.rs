@@ -10,7 +10,7 @@ use utoipa::{
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{
-    util::{errors::RouteError, radio::get_radio_songs},
+    util::{errors::RouteError, query::SortType, radio::get_radio_songs},
     AppState,
 };
 
@@ -22,6 +22,7 @@ mod songs;
 
 #[derive(OpenApiTrait)]
 #[openapi(
+    components(schemas(SortType)),
     modifiers(&SecurityAddon),
     servers((url = "/api"), (url = "/rust/api")), security(
     (),
@@ -42,7 +43,7 @@ impl Modify for SecurityAddon {
                         .bearer_format("JWT")
                         .build(),
                 ),
-            )
+            );
         }
     }
 }

@@ -227,7 +227,7 @@ async fn get_scores(
         .offset((query.page - 1) * query.page_size)
         .limit(query.page_size);
 
-    //TODO: This is messed up. What. Is there a better way to do this???
+    //FIXME This is messed up. What. Is there a better way to do this???
     //I don't get to dynamically join stuff or change selects because it changes the return type
     match (query.with_player, query.with_song) {
         (true, true) => {
