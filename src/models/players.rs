@@ -1,11 +1,12 @@
 use diesel::{
     backend::Backend,
     deserialize::{self, FromSql, FromSqlRow},
+    dsl::sql,
     expression::AsExpression,
     pg::Pg,
     prelude::*,
     serialize::{self, Output, ToSql},
-    sql_types::{SmallInt, Text},
+    sql_types::{BigInt, SmallInt, Text},
 };
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use fred::{clients::Pool as RedisPool, prelude::*};
@@ -19,6 +20,7 @@ use super::rivalries::RivalryView;
 use crate::{
     models::{rivalries::Rivalry, scores::Score},
     schema::players,
+    util::game_types::Character,
 };
 
 #[derive(Serialize, Deserialize, AsExpression, FromSqlRow, Debug, PartialEq, Eq, Clone)]
@@ -135,6 +137,47 @@ impl Player {
         let skill_points_sum = player_scores.iter().map(Score::get_skill_points).sum();
 
         Ok(skill_points_sum)
+    }
+
+    /// Returns the total number of the player's plays.
+    /// This is the sum of all `play_count`s across all scores, which increments on every score submission (no matter if high score or not).
+    pub async fn get_total_plays(&self, conn: &mut AsyncPgConnection) -> QueryResult<i32> {
+        use crate::schema::scores::dsl::*;
+
+        let player_scores = scores
+            .filter(player_id.eq(self.id))
+            .load::<Score>(conn)
+            .await?;
+
+        let play_count_sum = player_scores.iter().map(|s| s.play_count).sum();
+
+        Ok(play_count_sum)
+    }
+
+    /// Returns the player's favorite character.
+    /// This is the character that they have set the most scores with. Unlike `get_total_plays`, this only counts high scores,
+    /// since we do not track the character for submissions that aren't high scores.
+    pub async fn get_favorite_character(
+        &self,
+        conn: &mut AsyncPgConnection,
+    ) -> QueryResult<Option<FavoriteCharacter>> {
+        use crate::schema::scores::dsl::*;
+
+        let result: Option<(Character, i64)> = scores
+            .select((
+                vehicle,
+                sql::<BigInt>("COUNT(scores.vehicle) AS play_count"),
+            ))
+            .group_by(vehicle)
+            .order_by(sql::<BigInt>("play_count DESC"))
+            .first::<(Character, i64)>(conn)
+            .await
+            .optional()?;
+
+        Ok(result.map(|(character, times_used)| FavoriteCharacter {
+            character,
+            times_used,
+        }))
     }
 
     /// Finds a player by their Steam ID.
@@ -290,4 +333,11 @@ impl From<Player> for PlayerPublic {
             avatar_url: player.avatar_url,
         }
     }
+}
+
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct FavoriteCharacter {
+    pub character: Character,
+    pub times_used: i64,
 }
