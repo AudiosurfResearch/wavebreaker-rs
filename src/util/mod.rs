@@ -3,7 +3,7 @@ pub mod game_types;
 pub mod jwt;
 pub mod modifiers;
 pub mod musicbrainz;
+pub mod query;
 pub mod radio;
 pub mod session_store;
 pub mod validator;
-pub mod query;

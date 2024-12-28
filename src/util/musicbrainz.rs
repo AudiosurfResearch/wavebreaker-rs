@@ -23,7 +23,10 @@ pub struct MusicBrainzInfo {
 ///
 /// # Errors
 /// Fails if no song is found or lookup errors
-pub async fn lookup_metadata(song: &Song, duration: i32) -> anyhow::Result<Option<MusicBrainzInfo>> {
+pub async fn lookup_metadata(
+    song: &Song,
+    duration: i32,
+) -> anyhow::Result<Option<MusicBrainzInfo>> {
     let query = format!(
         "query=(recording:\"{}\" OR alias:\"{0}\") AND artist:\"{}\" AND dur:\"[{} TO {}]\"",
         song.title,
@@ -37,7 +40,10 @@ pub async fn lookup_metadata(song: &Song, duration: i32) -> anyhow::Result<Optio
     let query_result = Recording::search(query).execute().await?.entities;
 
     if query_result.is_empty() {
-        info!("No recording found for {} - {} (ID {})", song.artist, song.title, song.id);
+        info!(
+            "No recording found for {} - {} (ID {})",
+            song.artist, song.title, song.id
+        );
         return Ok(None);
     }
 

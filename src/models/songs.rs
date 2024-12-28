@@ -14,7 +14,9 @@ use crate::{
     schema::{extra_song_info, songs},
 };
 
-#[derive(Clone, Identifiable, Selectable, Queryable, Debug, Serialize, ToSchema, QueryableByName)]
+#[derive(
+    Clone, Identifiable, Selectable, Queryable, Debug, Serialize, ToSchema, QueryableByName,
+)]
 #[diesel(table_name = songs, check_for_backend(diesel::pg::Pg))]
 #[diesel(primary_key(id))]
 #[serde(rename_all = "camelCase")]

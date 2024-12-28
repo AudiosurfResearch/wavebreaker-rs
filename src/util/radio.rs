@@ -10,7 +10,7 @@ struct RadioConfig {
 #[derive(Deserialize, Clone)]
 #[allow(clippy::module_name_repetitions)]
 pub struct RadioSong {
-    pub id: u32,
+    pub id: i32,
     pub title: String,
     pub artist: String,
     pub external_url: String,

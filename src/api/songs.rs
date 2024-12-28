@@ -22,6 +22,7 @@ use crate::{
         errors::{RouteError, SimpleRouteErrorOutput},
         game_types::{Character, League},
         jwt::Claims,
+        radio::get_radio_songs as get_radio_songs_util,
         validator::ValidatedQuery,
     },
     AppState,
@@ -32,6 +33,7 @@ pub fn routes() -> OpenApiRouter<AppState> {
         .routes(routes!(get_song, delete_song))
         .routes(routes!(get_top_songs))
         .routes(routes!(get_song_scores))
+        .routes(routes!(get_radio_songs))
 }
 
 #[derive(Serialize, ToSchema)]
@@ -371,5 +373,78 @@ async fn get_song_scores(
             .collect();
 
         Ok(Json(scores))
+    }
+}
+
+#[derive(Serialize, ToSchema)]
+struct RadioSongResponse {
+    song: Song,
+    extra_info: Option<ExtraSongInfo>,
+    external_url: String,
+}
+
+/// Get radio songs
+#[utoipa::path(
+    method(get),
+    path = "/radio",
+    params(
+        ("withExtraInfo" = Option<bool>, Query, description = "Include extra info")
+    ),
+    responses(
+        (status = OK, description = "Success", body = RadioSongResponse, content_type = "application/json"),
+    )
+)]
+async fn get_radio_songs(
+    State(state): State<AppState>,
+    query: Query<GetSongParams>,
+) -> Result<Json<Vec<RadioSongResponse>>, RouteError> {
+    use crate::schema::{extra_song_info, songs};
+
+    let mut conn = state.db.get().await?;
+
+    let radio_songs = get_radio_songs_util()?;
+    match radio_songs {
+        Some(radio_songs) => {
+            let ids = radio_songs.iter().map(|song| song.id).collect::<Vec<_>>();
+            let external_urls = radio_songs
+                .iter()
+                .map(|song| song.external_url.clone())
+                .collect::<Vec<_>>();
+            if query.with_extra_info {
+                let songs_with_extra: Vec<(Song, Option<ExtraSongInfo>)> = songs::table
+                    .filter(songs::id.eq_any(ids))
+                    .left_join(extra_song_info::table)
+                    .select((Song::as_select(), extra_song_info::all_columns.nullable()))
+                    .load::<(Song, Option<ExtraSongInfo>)>(&mut conn)
+                    .await?;
+                let radio_song_responses: Vec<RadioSongResponse> = songs_with_extra
+                    .into_iter()
+                    .zip(external_urls)
+                    .map(|((song, extra_info), external_url)| RadioSongResponse {
+                        song,
+                        extra_info,
+                        external_url,
+                    })
+                    .collect();
+                Ok(Json(radio_song_responses))
+            } else {
+                let songs: Vec<Song> = songs::table
+                    .filter(songs::id.eq_any(ids))
+                    .load::<Song>(&mut conn)
+                    .await?;
+                let radio_song_responses: Vec<RadioSongResponse> = songs
+                    .into_iter()
+                    .zip(external_urls)
+                    .map(|(song, external_url)| RadioSongResponse {
+                        song,
+                        extra_info: None,
+                        external_url,
+                    })
+                    .collect();
+
+                Ok(Json(radio_song_responses))
+            }
+        }
+        None => Ok(Json(vec![])),
     }
 }

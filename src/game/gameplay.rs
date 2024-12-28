@@ -67,7 +67,8 @@ pub async fn fetch_song_id(
         util::modifiers::{parse_from_title, remove_from_title},
     };
 
-    let steam_player = ticket_auth(&payload.wavebreaker.ticket, &state.steam_api, &state.redis).await?;
+    let steam_player =
+        ticket_auth(&payload.wavebreaker.ticket, &state.steam_api, &state.redis).await?;
 
     let mut conn = state.db.get().await?;
     let parsed_modifiers = parse_from_title(&payload.song);
@@ -114,12 +115,13 @@ pub async fn fetch_song_id(
             let song_clone = song.clone();
             let recording_mbid = recording_mbid.clone();
             tokio::spawn(async move {
-                let _ = song_clone.add_metadata_mbid(
-                    &recording_mbid,
-                    payload.wavebreaker.release_mbid.as_deref(),
-                    &mut conn,
-                )
-                .await;
+                let _ = song_clone
+                    .add_metadata_mbid(
+                        &recording_mbid,
+                        payload.wavebreaker.release_mbid.as_deref(),
+                        &mut conn,
+                    )
+                    .await;
             });
 
             Ok(Xml(SongIdResponse {
