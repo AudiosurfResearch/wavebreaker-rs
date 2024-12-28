@@ -111,12 +111,16 @@ pub async fn fetch_song_id(
             .find_or_create(&mut conn)
             .await?;
 
-            song.add_metadata_mbid(
-                recording_mbid,
-                payload.wavebreaker.release_mbid.as_deref(),
-                &mut conn,
-            )
-            .await?;
+            let song_clone = song.clone();
+            let recording_mbid = recording_mbid.clone();
+            tokio::spawn(async move {
+                let _ = song_clone.add_metadata_mbid(
+                    &recording_mbid,
+                    payload.wavebreaker.release_mbid.as_deref(),
+                    &mut conn,
+                )
+                .await;
+            });
 
             Ok(Xml(SongIdResponse {
                 status: "allgood".to_owned(),
