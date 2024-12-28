@@ -164,6 +164,7 @@ impl Player {
         use crate::schema::scores::dsl::*;
 
         let result: Option<(Character, i64)> = scores
+            .filter(player_id.eq(self.id))
             .select((
                 vehicle,
                 sql::<BigInt>("COUNT(scores.vehicle) AS play_count"),
