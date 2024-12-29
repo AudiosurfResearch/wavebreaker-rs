@@ -1,4 +1,6 @@
-use axum::{Json, Router};
+use axum::{extract::State, Json, Router};
+use diesel::prelude::*;
+use diesel_async::RunQueryDsl;
 use serde::Serialize;
 use utoipa::{
     openapi::{
@@ -10,7 +12,7 @@ use utoipa::{
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{
-    util::{errors::RouteError, query::SortType, radio::get_radio_songs},
+    util::{errors::RouteError, query::SortType},
     AppState,
 };
 
@@ -50,7 +52,7 @@ impl Modify for SecurityAddon {
 
 pub fn routes() -> (Router<AppState>, OpenApi) {
     OpenApiRouter::with_openapi(ApiDoc::openapi())
-        .routes(routes!(health_check))
+        .routes(routes!(stats))
         .nest("/songs", songs::routes())
         .nest("/players", players::routes())
         .nest("/auth", auth::routes())
@@ -61,49 +63,32 @@ pub fn routes() -> (Router<AppState>, OpenApi) {
 
 #[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
-struct HealthCheck {
-    status: &'static str,
-    radio_status: String,
+struct ServerStats {
+    user_count: i64,
+    song_count: i64,
+    score_count: i64,
 }
 
-/// Get health of the server
+/// Get server stats
 #[utoipa::path(
     method(get),
-    path = "/healthCheck",
+    path = "/stats",
     responses(
-        (status = OK, description = "Success",
-        body = HealthCheck, content_type = "application/json",
-        example = json!(HealthCheck {
-            status: "ok",
-            radio_status: "1 song(s)".to_owned()
-        })),
-        (status = OK, description = "Server works, Radio has no songs",
-        body = HealthCheck, content_type = "application/json",
-        example = json!(HealthCheck {
-            status: "ok",
-            radio_status: "no songs".to_owned()
-        })),
-        (status = OK, description = "Server works, but Radio is broken",
-        body = HealthCheck, content_type = "application/json",
-        example = json!(HealthCheck {
-            status: "ok",
-            radio_status: "error".to_owned()
-        })),
+        (status = OK, description = "Success", body = ServerStats, content_type = "application/json"),
     )
 )]
-async fn health_check() -> Result<Json<HealthCheck>, RouteError> {
-    let radio_status: String = get_radio_songs().map_or_else(
-        |_| "error".to_owned(),
-        |radio_songs| {
-            radio_songs.map_or_else(
-                || "no songs".to_owned(),
-                |songs| format!("{} song(s)", songs.len()),
-            )
-        },
-    );
+async fn stats(State(state): State<AppState>) -> Result<Json<ServerStats>, RouteError> {
+    use crate::schema::{players, scores, songs};
 
-    Ok(Json(HealthCheck {
-        status: "ok",
-        radio_status,
+    let mut conn = state.db.get().await?;
+
+    let user_count: i64 = players::table.count().get_result(&mut conn).await?;
+    let song_count: i64 = songs::table.count().get_result(&mut conn).await?;
+    let score_count: i64 = scores::table.count().get_result(&mut conn).await?;
+
+    Ok(Json(ServerStats {
+        user_count,
+        song_count,
+        score_count,
     }))
 }
