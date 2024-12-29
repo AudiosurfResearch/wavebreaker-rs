@@ -24,7 +24,7 @@ FROM debian:bookworm-slim AS runtime
 WORKDIR /app
 # Copy the compiled binary from the builder environment 
 # to our runtime environment
-COPY --from=builder /app/target/release/wavebreaker wavebreaker
+COPY --from=builder /app/target/debug/wavebreaker wavebreaker
 # OpenSSL isn't statically linked so we need to install it
 RUN apt update && apt install openssl ca-certificates -y --no-install-recommends && apt autoremove -y && apt clean -y
 ENTRYPOINT ["./wavebreaker"]
