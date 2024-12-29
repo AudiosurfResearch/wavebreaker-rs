@@ -139,6 +139,16 @@ impl Player {
         Ok(skill_points_sum)
     }
 
+    /// Returns the player's global leaderboard rank
+    pub async fn get_rank(&self, redis_conn: &RedisPool) -> anyhow::Result<i32> {
+        let rank = redis_conn
+            .zrevrank::<i32, _, _>("leaderboard", self.id, false)
+            .await?
+            + 1; // index starts with 0
+
+        Ok(rank)
+    }
+
     /// Returns the total number of the player's plays.
     /// This is the sum of all `play_count`s across all scores, which increments on every score submission (no matter if high score or not).
     pub async fn get_total_plays(&self, conn: &mut AsyncPgConnection) -> QueryResult<i32> {
