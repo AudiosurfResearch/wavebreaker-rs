@@ -4,6 +4,7 @@ use axum::{
 };
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
+use fred::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_inline_default::serde_inline_default;
 use utoipa::ToSchema;
@@ -22,6 +23,7 @@ pub fn routes() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(get_player))
         .routes(routes!(get_self))
+        .routes(routes!(get_player_rankings))
 }
 
 #[derive(Serialize, ToSchema)]
@@ -176,13 +178,40 @@ struct GetRankingsParams {
         (status = OK, description = "Success", body = PlayerRankingResponse, content_type = "application/json"),
     )
 )]
-async fn get_rankings(
+async fn get_player_rankings(
     State(state): State<AppState>,
-    query: Query<GetPlayerParams>,
+    query: Query<GetRankingsParams>,
 ) -> Result<Json<PlayerRankingResponse>, RouteError> {
     use crate::schema::players;
 
     let mut conn = state.db.get().await?;
 
-    todo!()
+    let leaderboard: Vec<i32> = state
+        .redis
+        .zrevrange(
+            "leaderboard",
+            (query.page - 1) * query.page_size,
+            query.page * query.page_size - 1,
+            false,
+        )
+        .await?;
+
+    let mut players = players::table
+        .filter(players::id.eq_any(&leaderboard))
+        .load::<Player>(&mut conn)
+        .await?;
+    players.sort_by_key(|p| leaderboard.iter().position(|&id| id == p.id).unwrap());
+
+    let mut results: Vec<PlayerWithRanking> = vec![];
+    for player in players {
+        results.push(PlayerWithRanking {
+            player: player.clone().into(),
+            skill_points: player.get_skill_points(&mut conn).await?,
+        });
+    }
+
+    Ok(Json(PlayerRankingResponse {
+        results,
+        total: state.redis.zcard("leaderboard").await?,
+    }))
 }

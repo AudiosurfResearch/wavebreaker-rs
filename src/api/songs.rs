@@ -177,7 +177,7 @@ allow_columns_to_appear_in_same_group_by_clause!(
 /// Get global most played songs
 #[utoipa::path(
     method(get),
-    path = "/top",
+    path = "/rankings",
     params(
         ("withExtraInfo" = Option<bool>, Query, description = "Include extra info"),
         ("page" = Option<i64>, Query, description = "Page number", minimum = 1),
