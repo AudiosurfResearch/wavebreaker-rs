@@ -42,6 +42,12 @@ struct GetScoreParams {
 
 #[derive(serde::Serialize, utoipa::ToSchema)]
 struct ScoreSearchResponse {
+    results: Vec<ScoreSearchResult>,
+    total: i64,
+}
+
+#[derive(serde::Serialize, utoipa::ToSchema)]
+struct ScoreSearchResult {
     #[serde(flatten)]
     score: Score,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -60,7 +66,7 @@ struct ScoreSearchResponse {
         ("withSong" = Option<bool>, Query, description = "Include song info"),
     ),
     responses(
-        (status = OK, description = "Success", body = ScoreSearchResponse, content_type = "application/json"),
+        (status = OK, description = "Success", body = ScoreSearchResult, content_type = "application/json"),
         (status = NOT_FOUND, description = "Score not found", body = SimpleRouteErrorOutput, content_type = "application/json")
     )
 )]
@@ -68,7 +74,7 @@ async fn get_score(
     State(state): State<AppState>,
     Path(id): Path<i32>,
     query: Query<GetScoreParams>,
-) -> Result<Json<ScoreSearchResponse>, RouteError> {
+) -> Result<Json<ScoreSearchResult>, RouteError> {
     use crate::schema::{players, scores, songs};
 
     let mut conn = state.db.get().await?;
@@ -102,7 +108,7 @@ async fn get_score(
         None
     };
 
-    Ok(Json(ScoreSearchResponse {
+    Ok(Json(ScoreSearchResult {
         score,
         player,
         song,
@@ -195,7 +201,7 @@ struct GetScoresParams {
 async fn get_scores(
     State(state): State<AppState>,
     query: Query<GetScoresParams>,
-) -> Result<Json<Vec<ScoreSearchResponse>>, RouteError> {
+) -> Result<Json<ScoreSearchResponse>, RouteError> {
     use crate::schema::{players, scores, songs};
 
     let mut conn = state.db.get().await?;
@@ -210,6 +216,7 @@ async fn get_scores(
     if let Some(player_id) = query.player_id {
         db_query = db_query.filter(scores::player_id.eq(player_id));
     }
+
     if let Some(time_sort) = &query.time_sort {
         match time_sort {
             SortType::Asc => db_query = db_query.then_order_by(scores::submitted_at.asc()),
@@ -226,6 +233,18 @@ async fn get_scores(
         .offset((query.page - 1) * query.page_size)
         .limit(query.page_size);
 
+    let mut total_count_query = scores::table.into_boxed();
+    if let Some(league) = query.league {
+        total_count_query = total_count_query.filter(scores::league.eq(league));
+    }
+    if let Some(character) = query.character {
+        total_count_query = total_count_query.filter(scores::vehicle.eq(character));
+    }
+    if let Some(player_id) = query.player_id {
+        total_count_query = total_count_query.filter(scores::player_id.eq(player_id));
+    }
+    let total: i64 = total_count_query.count().get_result(&mut conn).await?;
+
     //FIXME This is messed up. What. Is there a better way to do this???
     //I don't get to dynamically join stuff or change selects because it changes the return type
     match (query.with_player, query.with_song) {
@@ -237,15 +256,15 @@ async fn get_scores(
                 .load(&mut conn)
                 .await?;
 
-            let scores = items
+            let results = items
                 .into_iter()
-                .map(|(score, player, song)| ScoreSearchResponse {
+                .map(|(score, player, song)| ScoreSearchResult {
                     score,
                     player: Some(player.into()),
                     song: Some(song),
                 })
                 .collect();
-            Ok(Json(scores))
+            Ok(Json(ScoreSearchResponse { results, total }))
         }
         (true, false) => {
             let items: Vec<(Score, Player)> = db_query
@@ -254,15 +273,15 @@ async fn get_scores(
                 .load(&mut conn)
                 .await?;
 
-            let scores = items
+            let results = items
                 .into_iter()
-                .map(|(score, player)| ScoreSearchResponse {
+                .map(|(score, player)| ScoreSearchResult {
                     score,
                     player: Some(player.into()),
                     song: None,
                 })
                 .collect();
-            Ok(Json(scores))
+            Ok(Json(ScoreSearchResponse { results, total }))
         }
         (false, true) => {
             let items: Vec<(Score, Song)> = db_query
@@ -271,27 +290,27 @@ async fn get_scores(
                 .load(&mut conn)
                 .await?;
 
-            let scores = items
+            let results = items
                 .into_iter()
-                .map(|(score, song)| ScoreSearchResponse {
+                .map(|(score, song)| ScoreSearchResult {
                     score,
                     player: None,
                     song: Some(song),
                 })
                 .collect();
-            Ok(Json(scores))
+            Ok(Json(ScoreSearchResponse { results, total }))
         }
         (false, false) => {
             let scores_only: Vec<Score> = db_query.load(&mut conn).await?;
-            let scores = scores_only
+            let results = scores_only
                 .into_iter()
-                .map(|score| ScoreSearchResponse {
+                .map(|score| ScoreSearchResult {
                     score,
                     player: None,
                     song: None,
                 })
                 .collect();
-            Ok(Json(scores))
+            Ok(Json(ScoreSearchResponse { results, total }))
         }
     }
 }

@@ -137,3 +137,49 @@ async fn get_self(
         stats,
     }))
 }
+
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+struct PlayerRankingResponse {
+    results: Vec<PlayerWithRanking>,
+    total: i64,
+}
+
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+struct PlayerWithRanking {
+    player: PlayerPublic,
+    skill_points: i32,
+}
+
+#[serde_inline_default]
+#[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct GetRankingsParams {
+    page: i64,
+    #[serde_inline_default(10)]
+    page_size: i64,
+}
+
+/// Get player rankings
+#[utoipa::path(
+    method(get),
+    path = "/rankings",
+    params(
+        ("page" = Option<i64>, Query, description = "Page number", minimum = 1),
+        ("pageSize" = Option<i64>, Query, description = "Page size", minimum = 1, maximum = 50),
+    ),
+    responses(
+        (status = OK, description = "Success", body = PlayerRankingResponse, content_type = "application/json"),
+    )
+)]
+async fn get_rankings(
+    State(state): State<AppState>,
+    query: Query<GetPlayerParams>,
+) -> Result<Json<PlayerRankingResponse>, RouteError> {
+    use crate::schema::players;
+
+    let mut conn = state.db.get().await?;
+
+    todo!()
+}
