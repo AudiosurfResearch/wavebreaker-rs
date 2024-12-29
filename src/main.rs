@@ -41,15 +41,12 @@ use fred::{clients::Pool as RedisPool, prelude::*, types::config::Config as Redi
 use serde::Deserialize;
 use steam_openid::SteamOpenId;
 use steam_rs::Steam;
-use time::Duration;
 use tower_http::trace::TraceLayer;
-use tower_sessions::{Expiry, SessionManagerLayer};
 use tracing::{debug, info};
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{
     fmt::writer::MakeWriterExt, layer::SubscriberExt, util::SubscriberInitExt,
 };
-use util::session_store::RedisStore;
 use utoipa_scalar::{Scalar, Servable};
 
 use crate::game::{routes_as, routes_steam, routes_steam_doubleslash};
@@ -179,19 +176,12 @@ async fn init_state() -> anyhow::Result<AppState> {
 fn make_router(state: AppState) -> Router {
     let (api_router, openapi) = api::routes();
 
-    let session_store = RedisStore::new((*state.redis).clone());
-    //TODO: Make with_secure configurable
-    let session_layer = SessionManagerLayer::new(session_store)
-        .with_secure(true)
-        .with_expiry(Expiry::OnInactivity(Duration::days(30)));
-
     Router::new()
         .nest("/as_steamlogin", routes_steam())
         .nest("//as_steamlogin", routes_steam_doubleslash()) // for that one edge case
         .nest("/as", routes_as(&state.config.radio.cgr_location))
         .nest("/api", api_router)
         .merge(Scalar::with_url("/api/docs", openapi))
-        .layer(session_layer)
         .layer(
             // TAKEN FROM: https://github.com/tokio-rs/axum/blob/d1fb14ead1063efe31ae3202e947ffd569875c0b/examples/error-handling/src/main.rs#L60-L77
             TraceLayer::new_for_http() // Create our own span for the request and include the matched path. The matched
