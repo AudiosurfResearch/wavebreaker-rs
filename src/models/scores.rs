@@ -104,7 +104,7 @@ impl Score {
     /// Calculates and returns the skill points the player earned for this score.
     #[must_use]
     #[allow(clippy::cast_possible_truncation)]
-    pub fn get_skill_points(&self) -> i32 {
+    pub fn calc_skill_points(&self) -> i32 {
         let multiplier = (self.league as u32 + 1) * 100;
         ((f64::from(self.score) / f64::from(self.gold_threshold)) * f64::from(multiplier)).round()
             as i32
@@ -122,7 +122,7 @@ impl Score {
         use crate::schema::scores::dsl::*;
 
         // Subtract the skill points from the player on Redis
-        let sub_amount = 0 - self.get_skill_points();
+        let sub_amount = 0 - self.calc_skill_points();
         let _: () = redis_pool
             .zincrby("leaderboard", sub_amount.into(), self.player_id)
             .await?;
@@ -335,7 +335,7 @@ impl<'a> NewScore<'a> {
         if let Some(existing_score) = existing_score {
             if existing_score.score < self.score {
                 // Subtract the skill points of the old score from the Redis leaderboard
-                let sub_amount = 0 - existing_score.get_skill_points();
+                let sub_amount = 0 - existing_score.calc_skill_points();
                 let _: () = redis_conn
                     .zincrby("leaderboard", sub_amount.into(), existing_score.player_id)
                     .await?;
@@ -363,7 +363,7 @@ impl<'a> NewScore<'a> {
                     .context("Failed to update score")?;
 
                 // Add the skill points of the new score to the Redis leaderboard
-                let add_amount = updated_score.get_skill_points();
+                let add_amount = updated_score.calc_skill_points();
                 let _: () = redis_conn
                     .zincrby("leaderboard", add_amount.into(), updated_score.player_id)
                     .await?;
@@ -380,7 +380,7 @@ impl<'a> NewScore<'a> {
                 .context("Failed to insert score")?;
 
             // Add the skill points of the new score to the Redis leaderboard
-            let add_amount = new_score.get_skill_points();
+            let add_amount = new_score.calc_skill_points();
             let _: () = redis_conn
                 .zincrby("leaderboard", add_amount.into(), new_score.player_id)
                 .await?;

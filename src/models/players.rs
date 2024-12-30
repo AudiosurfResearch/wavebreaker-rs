@@ -125,8 +125,9 @@ type WithSteamId = diesel::dsl::Eq<players::steam_id, SteamIdWrapper>;
 type BySteamId = diesel::dsl::Filter<All, WithSteamId>;
 
 impl Player {
-    /// Returns the total skill points a player has earned with their scores.
-    pub async fn get_skill_points(&self, conn: &mut AsyncPgConnection) -> QueryResult<i32> {
+    /// Calculates the total skill points a player has earned with their scores.
+    /// This is not the value stored in the Redis leaderboard, this function calculates it again!
+    pub async fn calc_skill_points(&self, conn: &mut AsyncPgConnection) -> QueryResult<i32> {
         use crate::schema::scores::dsl::*;
 
         let player_scores = scores
@@ -134,7 +135,7 @@ impl Player {
             .load::<Score>(conn)
             .await?;
 
-        let skill_points_sum = player_scores.iter().map(Score::get_skill_points).sum();
+        let skill_points_sum = player_scores.iter().map(Score::calc_skill_points).sum();
 
         Ok(skill_points_sum)
     }

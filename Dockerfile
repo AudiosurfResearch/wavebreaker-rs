@@ -13,10 +13,10 @@ RUN cargo chef prepare --recipe-path recipe.json
 FROM chef AS builder 
 COPY --from=planner /app/recipe.json recipe.json
 # Build dependencies - this is the caching Docker layer!
-RUN cargo chef cook --recipe-path recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
 # Build application
 COPY . .
-RUN cargo build --bin wavebreaker
+RUN cargo build --release --bin wavebreaker
 
 # Runtime stage
 FROM debian:bookworm-slim AS runtime
@@ -24,7 +24,7 @@ FROM debian:bookworm-slim AS runtime
 WORKDIR /app
 # Copy the compiled binary from the builder environment 
 # to our runtime environment
-COPY --from=builder /app/target/debug/wavebreaker wavebreaker
+COPY --from=builder /app/target/release/wavebreaker wavebreaker
 # OpenSSL isn't statically linked so we need to install it
 RUN apt update && apt install openssl ca-certificates -y --no-install-recommends && apt autoremove -y && apt clean -y
 ENTRYPOINT ["./wavebreaker"]

@@ -30,6 +30,7 @@ pub enum Command {
     RefreshSkillPoints {
         player_to_refresh: i32,
     },
+    RefreshAllSkillPoints,
 }
 
 //skip state because it has members that don't implement Debug
@@ -73,21 +74,13 @@ pub async fn parse_command(command: &Command, state: AppState) -> anyhow::Result
             score_to_delete.delete(&mut conn, &state.redis).await
         }
         Command::RefreshSkillPoints { player_to_refresh } => {
-            use crate::{models::scores::Score, schema::scores::dsl::*};
+            use crate::{models::players::Player, schema::players::dsl::*};
 
             let mut conn = state.db.get().await?;
 
-            let all_player_scores: Vec<Score> = scores
-                .filter(player_id.eq(player_to_refresh))
-                .load::<Score>(&mut conn)
-                .await?;
+            let player: Player = players.find(player_to_refresh).first(&mut conn).await?;
 
-            //Add skill points of all scores
-            let skill_points: f64 = all_player_scores
-                .iter()
-                .map(Score::get_skill_points)
-                .sum::<i32>()
-                .into();
+            let skill_points = player.calc_skill_points(&mut conn).await?;
             let _: () = state
                 .redis
                 .zadd(
@@ -96,9 +89,33 @@ pub async fn parse_command(command: &Command, state: AppState) -> anyhow::Result
                     None,
                     false,
                     false,
-                    (skill_points, player_to_refresh.to_owned()),
+                    (skill_points.into(), player_to_refresh.to_owned()),
                 )
                 .await?;
+
+            Ok(())
+        }
+        Command::RefreshAllSkillPoints => {
+            use crate::{models::players::Player, schema::players};
+
+            let mut conn = state.db.get().await?;
+
+            let all_players = players::table.load::<Player>(&mut conn).await?;
+
+            for player in all_players {
+                let skill_points = player.calc_skill_points(&mut conn).await?;
+                let _: () = state
+                    .redis
+                    .zadd(
+                        "leaderboard",
+                        None,
+                        None,
+                        false,
+                        false,
+                        (skill_points.into(), player.id),
+                    )
+                    .await?;
+            }
 
             Ok(())
         }
