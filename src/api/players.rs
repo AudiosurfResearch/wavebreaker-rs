@@ -9,6 +9,7 @@ use serde::{Deserialize, Serialize};
 use serde_inline_default::serde_inline_default;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
+use validator::Validate;
 
 use crate::{
     models::players::{FavoriteCharacter, Player, PlayerPublic},
@@ -158,10 +159,13 @@ struct PlayerWithRanking {
 }
 
 #[serde_inline_default]
-#[derive(Deserialize)]
+#[derive(Deserialize, Validate)]
 #[serde(rename_all = "camelCase")]
 struct GetRankingsParams {
+    #[validate(range(min = 1))]
+    #[serde_inline_default(1)]
     page: i64,
+    #[validate(range(min = 1, max = 50))]
     #[serde_inline_default(10)]
     page_size: i64,
 }
