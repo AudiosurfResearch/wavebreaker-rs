@@ -84,7 +84,7 @@ async fn get_player(
     let stats = if query.with_stats {
         Some(PlayerStats {
             rank: player.get_rank(&state.redis).await?,
-            skill_points: player.calc_skill_points(&mut conn).await?,
+            skill_points: player.get_skill_points(&state.redis).await?,
             total_plays: player.get_total_plays(&mut conn).await?,
             favorite_character: player.get_favorite_character(&mut conn).await?,
         })
@@ -130,7 +130,7 @@ async fn get_self(
     let stats = if query.with_stats {
         Some(PlayerStats {
             rank: player.get_rank(&state.redis).await?,
-            skill_points: player.calc_skill_points(&mut conn).await?,
+            skill_points: player.get_skill_points(&state.redis).await?,
             total_plays: player.get_total_plays(&mut conn).await?,
             favorite_character: player.get_favorite_character(&mut conn).await?,
         })
@@ -206,7 +206,7 @@ async fn get_player_rankings(
     for player in players {
         results.push(PlayerWithRanking {
             player: player.clone().into(),
-            skill_points: player.calc_skill_points(&mut conn).await?,
+            skill_points: player.get_skill_points(&state.redis).await?,
         });
     }
 

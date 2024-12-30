@@ -125,6 +125,13 @@ type WithSteamId = diesel::dsl::Eq<players::steam_id, SteamIdWrapper>;
 type BySteamId = diesel::dsl::Filter<All, WithSteamId>;
 
 impl Player {
+    /// Get skill points from Redis.
+    pub async fn get_skill_points(&self, redis_conn: &RedisPool) -> anyhow::Result<i32> {
+        let skill_points: Option<i32> = redis_conn.zscore("leaderboard", self.id).await?;
+
+        Ok(skill_points.unwrap_or(0))
+    }
+
     /// Calculates the total skill points a player has earned with their scores.
     /// This is not the value stored in the Redis leaderboard, this function calculates it again!
     pub async fn calc_skill_points(&self, conn: &mut AsyncPgConnection) -> QueryResult<i32> {
