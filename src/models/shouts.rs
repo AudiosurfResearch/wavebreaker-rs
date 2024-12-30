@@ -1,11 +1,12 @@
 use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde::Serialize;
+use utoipa::ToSchema;
 
 use super::{players::Player, songs::Song};
 use crate::schema::shouts;
 
-#[derive(Identifiable, Selectable, Queryable, Associations, Debug, Serialize)]
+#[derive(Identifiable, Selectable, Queryable, Associations, Debug, Serialize, ToSchema)]
 #[diesel(belongs_to(Player, foreign_key = author_id))]
 #[diesel(belongs_to(Song))]
 #[diesel(table_name = shouts, check_for_backend(diesel::pg::Pg))]
@@ -14,6 +15,7 @@ pub struct Shout {
     pub id: i32,
     pub song_id: i32,
     pub author_id: i32,
+    #[serde(serialize_with = "time::serde::iso8601::serialize")]
     pub posted_at: time::OffsetDateTime,
     pub content: String,
 }

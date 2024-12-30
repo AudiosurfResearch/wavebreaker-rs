@@ -15,6 +15,7 @@ use crate::{
         extra_song_info::ExtraSongInfo,
         players::{Player, PlayerPublic},
         scores::Score,
+        shouts::Shout,
         songs::Song,
     },
     schema,
@@ -34,6 +35,7 @@ pub fn routes() -> OpenApiRouter<AppState> {
         .routes(routes!(get_top_songs))
         .routes(routes!(get_song_scores))
         .routes(routes!(get_radio_songs))
+        .routes(routes!(get_song_shouts))
 }
 
 #[derive(Serialize, ToSchema)]
@@ -316,7 +318,7 @@ struct ScoreResponse {
 async fn get_song_scores(
     State(state): State<AppState>,
     Path(id): Path<i32>,
-    query: Query<GetSongScoresParams>,
+    ValidatedQuery(query): ValidatedQuery<GetSongScoresParams>,
 ) -> Result<Json<Vec<ScoreResponse>>, RouteError> {
     use crate::schema::{players, scores, songs};
 
@@ -447,4 +449,83 @@ async fn get_radio_songs(
         }
         None => Ok(Json(vec![])),
     }
+}
+
+#[serde_inline_default]
+#[derive(Deserialize, Validate)]
+struct GetSongShoutsParams {
+    #[validate(range(min = 1))]
+    #[serde_inline_default(1)]
+    page: i32,
+    #[validate(range(min = 1, max = 50))]
+    #[serde_inline_default(10)]
+    page_size: i32,
+}
+
+#[derive(Serialize, ToSchema)]
+struct SongShoutsResult {
+    shout: Shout,
+    author: PlayerPublic,
+}
+
+#[derive(Serialize, ToSchema)]
+struct SongShoutsResponse {
+    results: Vec<SongShoutsResult>,
+    total: i64,
+}
+
+/// Get song's shouts
+#[utoipa::path(
+    method(get),
+    path = "/{id}/shouts",
+    params(
+        ("id" = i32, Path, description = "ID of song to get"),
+        ("page" = i32, Query, description = "Page number", minimum = 1),
+        ("pageSize" = i32, Query, description = "Page size", minimum = 1, maximum = 50)
+    ),
+    responses(
+        (status = OK, description = "Success", body = SongResponse, content_type = "application/json"),
+        (status = NOT_FOUND, description = "Song not found", body = SimpleRouteErrorOutput, content_type = "application/json")
+    )
+)]
+async fn get_song_shouts(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    ValidatedQuery(query): ValidatedQuery<GetSongScoresParams>,
+) -> Result<Json<SongShoutsResponse>, RouteError> {
+    use crate::schema::{players, shouts, songs};
+
+    let mut conn = state.db.get().await?;
+
+    let song: Song = songs::table
+        .find(id)
+        .first(&mut conn)
+        .await
+        .optional()?
+        .ok_or_else(RouteError::new_not_found)?;
+
+    let shouts: Vec<(Shout, Player)> = shouts::table
+        .filter(shouts::song_id.eq(song.id))
+        .inner_join(players::table)
+        .select((shouts::all_columns, players::all_columns))
+        .order(shouts::posted_at.desc())
+        .offset((query.page - 1) * query.page_size)
+        .limit(query.page_size)
+        .load::<(Shout, Player)>(&mut conn)
+        .await?;
+
+    let results = shouts
+        .into_iter()
+        .map(|(shout, author)| SongShoutsResult {
+            shout,
+            author: author.into(),
+        })
+        .collect();
+    let total: i64 = shouts::table
+        .filter(shouts::song_id.eq(song.id))
+        .count()
+        .get_result(&mut conn)
+        .await?;
+
+    Ok(Json(SongShoutsResponse { results, total }))
 }
