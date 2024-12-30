@@ -4,7 +4,7 @@ use serde::Serialize;
 use utoipa::ToSchema;
 
 use super::{players::Player, songs::Song};
-use crate::schema::shouts;
+use crate::{models::players::AccountType, schema::shouts};
 
 #[derive(Identifiable, Selectable, Queryable, Associations, Debug, Serialize, ToSchema)]
 #[diesel(belongs_to(Player, foreign_key = author_id))]
@@ -25,6 +25,24 @@ impl Shout {
     pub fn find_by_song_id(target_id: i32) -> shouts::BoxedQuery<'static, diesel::pg::Pg> {
         use crate::schema::shouts::dsl::*;
         shouts.filter(song_id.eq(target_id)).into_boxed()
+    }
+
+    pub async fn user_can_delete(
+        &self,
+        user_id: i32,
+        conn: &mut AsyncPgConnection,
+    ) -> anyhow::Result<bool> {
+        use crate::schema::players::dsl::*;
+        let player = players.find(user_id).first::<Player>(conn).await?;
+
+        if player.id == self.author_id
+            || player.account_type == AccountType::Moderator
+            || player.account_type == AccountType::Team
+        {
+            Ok(true)
+        } else {
+            Ok(false)
+        }
     }
 }
 

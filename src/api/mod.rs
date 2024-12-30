@@ -21,6 +21,7 @@ mod players;
 mod rivals;
 mod scores;
 mod songs;
+mod shouts;
 
 #[derive(OpenApiTrait)]
 #[openapi(
@@ -58,6 +59,7 @@ pub fn routes() -> (Router<AppState>, OpenApi) {
         .nest("/auth", auth::routes())
         .nest("/rivals", rivals::routes())
         .nest("/scores", scores::routes())
+        .nest("/shouts", shouts::routes())
         .split_for_parts()
 }
 

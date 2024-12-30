@@ -1,5 +1,5 @@
 # wavebreaker-rs
-**EXTREMELY WIP!!!** (Yes, so much so that it's worth three exclamation marks!!!)
+**EXTREMELY WIP!!** (Yes, so much so that it's worth two exclamation marks!!)
 
 This is a custom server for Dylan Fitterer's game [Audiosurf](https://store.steampowered.com/app/12900/AudioSurf/).
 
@@ -46,10 +46,11 @@ To connect, use the latest Wavebreaker client with ``forceInsecure`` set to ``tr
 - **MusicBrainz integration!** (fetches cover art and title)
 - **Proper dethrones and the Brutus achievement!** *(not present in TypeScript version)*
 - **Custom aliases for songs' title/artist names** *(not present in TypeScript version)*
+- **Non-game API for frontends/other applications to use** *(There's an OpenAPI spec, too!)*
 - Miscellaneous stuff (e.g. custom news)
 
 ## What still needs to be done?
-- Non-game API (for the frontend and other clients that want to get data from Wavebreaker)
+- Song and user search API (will most likely use [Meilisearch](https://www.meilisearch.com/))
 
 ## Contributing
 
