@@ -28,6 +28,7 @@ use axum::{
 };
 use clap::Parser;
 use diesel::pg::Pg;
+use meilisearch_sdk::client::Client as MeiliClient;
 use diesel_async::{
     async_connection_wrapper::AsyncConnectionWrapper,
     pooled_connection::{deadpool::Pool, AsyncDieselConnectionManager},
@@ -86,6 +87,8 @@ struct External {
     steam_key: String,
     steam_realm: String,
     steam_return_path: String,
+    meilisearch_url: String,
+    meilisearch_key: String,
 }
 
 #[derive(Clone)]
@@ -96,6 +99,7 @@ pub struct AppState {
     db: Pool<diesel_async::AsyncPgConnection>,
     redis: Arc<RedisPool>,
     jwt_keys: util::jwt::Keys,
+    meili: Arc<MeiliClient>,
 }
 
 fn run_migrations(
@@ -163,6 +167,11 @@ async fn init_state() -> anyhow::Result<AppState> {
     )
     .map_err(|e| anyhow!("Failed to construct SteamOpenId: {e:?}"))?;
 
+    let meilisearch_client = MeiliClient::new(
+        &wavebreaker_config.external.meilisearch_url,
+        Some(&wavebreaker_config.external.meilisearch_key),
+    )?;
+
     Ok(AppState {
         steam_api: Arc::new(Steam::new(&wavebreaker_config.external.steam_key)),
         steam_openid: Arc::new(steam_openid),
@@ -170,6 +179,7 @@ async fn init_state() -> anyhow::Result<AppState> {
         redis: Arc::new(redis_pool),
         jwt_keys: util::jwt::Keys::new(wavebreaker_config.main.jwt_secret.as_bytes()),
         config: Arc::new(wavebreaker_config),
+        meili: Arc::new(meilisearch_client),
     })
 }
 

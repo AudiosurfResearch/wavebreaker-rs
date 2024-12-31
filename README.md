@@ -20,6 +20,8 @@ cgr_location = "./radio"
 steam_key = "music_bokura_zutto_so_hype"
 steam_realm = "http://localhost:1337"
 steam_return_path = "/api/auth/return"
+meilisearch_url = "http://localhost:7700"
+meilisearch_key = "your-key"
 ```
 
 Radio song list example (``WavebreakerRadio.toml``):
