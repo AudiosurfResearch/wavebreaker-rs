@@ -2,11 +2,11 @@
 .cargo/
 .github/
 .vscode/
+.devcontainer/
 radio/
 target/
-tests/
+logs/
+Wavebreaker*.toml
+*.md
+*.rdb
 Dockerfile
-scripts/
-Wavebreaker.toml
-WavebreakerRadio.toml
-dump.rdb

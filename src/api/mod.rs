@@ -20,8 +20,8 @@ mod auth;
 mod players;
 mod rivals;
 mod scores;
-mod songs;
 mod shouts;
+mod songs;
 
 #[derive(OpenApiTrait)]
 #[openapi(
