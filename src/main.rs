@@ -28,7 +28,6 @@ use axum::{
 };
 use clap::Parser;
 use diesel::pg::Pg;
-use meilisearch_sdk::client::Client as MeiliClient;
 use diesel_async::{
     async_connection_wrapper::AsyncConnectionWrapper,
     pooled_connection::{deadpool::Pool, AsyncDieselConnectionManager},
@@ -39,6 +38,7 @@ use figment::{
     Figment,
 };
 use fred::{clients::Pool as RedisPool, prelude::*, types::config::Config as RedisConfig};
+use meilisearch_sdk::client::Client as MeiliClient;
 use serde::Deserialize;
 use steam_openid::SteamOpenId;
 use steam_rs::Steam;

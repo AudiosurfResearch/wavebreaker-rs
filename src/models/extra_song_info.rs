@@ -1,6 +1,7 @@
 use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use serde_with::skip_serializing_none;
 use utoipa::ToSchema;
 
 use crate::schema::extra_song_info;
@@ -43,9 +44,13 @@ pub struct ExtraSongInfo {
 }
 
 /// Used for inserting additional metadata from [MusicBrainz](https://musicbrainz.org).
-#[derive(Insertable, PartialEq, Eq, Debug, Default)]
+#[derive(
+    Insertable, AsChangeset, PartialEq, Eq, Debug, Default, ToSchema, Serialize, Deserialize,
+)]
 #[diesel(table_name = extra_song_info)]
 #[allow(clippy::module_name_repetitions)]
+#[serde(rename_all = "camelCase")]
+#[skip_serializing_none]
 pub struct NewExtraSongInfo {
     pub song_id: i32,
     pub cover_url: Option<String>,
