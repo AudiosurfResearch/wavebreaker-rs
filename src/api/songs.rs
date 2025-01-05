@@ -23,6 +23,7 @@ use crate::{
         errors::{RouteError, SimpleRouteErrorOutput},
         game_types::{Character, League},
         jwt::Claims,
+        musicbrainz,
         radio::get_radio_songs as get_radio_songs_util,
         validator::ValidatedQuery,
     },
@@ -37,6 +38,7 @@ pub fn routes() -> OpenApiRouter<AppState> {
         .routes(routes!(get_radio_songs))
         .routes(routes!(get_song_shouts))
         .routes(routes!(update_song_extra_info))
+        .routes(routes!(update_song_extra_info_mbid))
 }
 
 #[derive(Serialize, ToSchema)]
@@ -531,7 +533,7 @@ async fn get_song_shouts(
     Ok(Json(SongShoutsResponse { results, total }))
 }
 
-/// Update/add song's extra info
+/// Manually update song extra info
 #[utoipa::path(
     method(put),
     path = "/{id}/extraInfo",
@@ -586,6 +588,67 @@ async fn update_song_extra_info(
             .set(&new_extra_song_info)
             .execute(&mut conn)
             .await?;
+        Ok(())
+    } else {
+        Err(RouteError::new_unauthorized())
+    }
+}
+
+#[derive(Deserialize, ToSchema)]
+struct MbidRefreshBody {
+    recording_mbid: String,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    release_mbid: Option<String>,
+}
+
+/// Update song extra info by MBID
+#[utoipa::path(
+    method(put),
+    path = "/{id}/extraInfoByMbid",
+    params(
+        ("id" = i32, Path, description = "ID of song to update")
+    ),
+    responses(
+        (status = OK, description = "Success"),
+        (status = UNAUTHORIZED, description = "No permission", body = SimpleRouteErrorOutput, content_type = "application/json"),
+        (status = NOT_FOUND, description = "Song not found", body = SimpleRouteErrorOutput, content_type = "application/json")
+    ),
+    security(
+        ("token_jwt" = [])
+    )
+)]
+async fn update_song_extra_info_mbid(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    claims: Claims,
+    Json(payload): Json<MbidRefreshBody>,
+) -> Result<(), RouteError> {
+    use diesel::insert_into;
+
+    use crate::schema::{extra_song_info, songs};
+
+    let mut conn = state.db.get().await?;
+
+    let song: Song = songs::table
+        .find(id)
+        .first(&mut conn)
+        .await
+        .optional()?
+        .ok_or_else(RouteError::new_not_found)?;
+
+    if song.user_can_edit(claims.profile.id, &mut conn).await? {
+        let mb_info =
+            musicbrainz::lookup_mbid(&payload.recording_mbid, payload.release_mbid.as_deref())
+                .await?;
+
+        insert_into(extra_song_info::table)
+            .values(&mb_info)
+            .on_conflict(extra_song_info::song_id)
+            .do_update()
+            .set(&mb_info)
+            .execute(&mut conn)
+            .await?;
+
         Ok(())
     } else {
         Err(RouteError::new_unauthorized())
