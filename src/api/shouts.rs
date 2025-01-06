@@ -27,6 +27,7 @@ pub fn routes() -> OpenApiRouter<AppState> {
         (status = OK, description = "Success", content_type = "application/json"),
         (status = NOT_FOUND, description = "Shout not found", body = SimpleRouteErrorOutput, content_type = "application/json"),
         (status = UNAUTHORIZED, description = "Unauthorized", body = SimpleRouteErrorOutput, content_type = "application/json"),
+        (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     ),
     security(
         ("token_jwt" = [])

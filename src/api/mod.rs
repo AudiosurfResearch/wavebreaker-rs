@@ -12,7 +12,10 @@ use utoipa::{
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{
-    util::{errors::RouteError, query::SortType},
+    util::{
+        errors::{RouteError, SimpleRouteErrorOutput},
+        query::SortType,
+    },
     AppState,
 };
 
@@ -77,6 +80,7 @@ struct ServerStats {
     path = "/stats",
     responses(
         (status = OK, description = "Success", body = ServerStats, content_type = "application/json"),
+        (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     )
 )]
 async fn stats(State(state): State<AppState>) -> Result<Json<ServerStats>, RouteError> {

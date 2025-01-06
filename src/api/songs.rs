@@ -67,7 +67,8 @@ struct GetSongParams {
     ),
     responses(
         (status = OK, description = "Success", body = SongResponse, content_type = "application/json"),
-        (status = NOT_FOUND, description = "Song not found", body = SimpleRouteErrorOutput, content_type = "application/json")
+        (status = NOT_FOUND, description = "Song not found", body = SimpleRouteErrorOutput, content_type = "application/json"),
+        (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     )
 )]
 async fn get_song(
@@ -109,7 +110,8 @@ async fn get_song(
     responses(
         (status = OK, description = "Success"),
         (status = UNAUTHORIZED, description = "No permission", body = SimpleRouteErrorOutput, content_type = "application/json"),
-        (status = NOT_FOUND, description = "Song not found", body = SimpleRouteErrorOutput, content_type = "application/json")
+        (status = NOT_FOUND, description = "Song not found", body = SimpleRouteErrorOutput, content_type = "application/json"),
+        (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     ),
     security(
         ("token_jwt" = [])
@@ -190,7 +192,8 @@ allow_columns_to_appear_in_same_group_by_clause!(
     ),
     responses(
         (status = OK, description = "Success", body = Vec<TopSongResponse>, content_type = "application/json"),
-        (status = BAD_REQUEST, description = "Invalid query parameters", body = SimpleRouteErrorOutput, content_type = "application/json")
+        (status = BAD_REQUEST, description = "Invalid query parameters", body = SimpleRouteErrorOutput, content_type = "application/json"),
+        (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     )
 )]
 async fn get_top_songs(
@@ -315,7 +318,8 @@ struct ScoreResponse {
     ),
     responses(
         (status = OK, description = "Success", body = SongResponse, content_type = "application/json"),
-        (status = NOT_FOUND, description = "Song not found", body = SimpleRouteErrorOutput, content_type = "application/json")
+        (status = NOT_FOUND, description = "Song not found", body = SimpleRouteErrorOutput, content_type = "application/json"),
+        (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     )
 )]
 async fn get_song_scores(
@@ -397,6 +401,7 @@ struct RadioSongResponse {
     ),
     responses(
         (status = OK, description = "Success", body = RadioSongResponse, content_type = "application/json"),
+        (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     )
 )]
 async fn get_radio_songs(
@@ -488,7 +493,8 @@ struct SongShoutsResponse {
     ),
     responses(
         (status = OK, description = "Success", body = SongResponse, content_type = "application/json"),
-        (status = NOT_FOUND, description = "Song not found", body = SimpleRouteErrorOutput, content_type = "application/json")
+        (status = NOT_FOUND, description = "Song not found", body = SimpleRouteErrorOutput, content_type = "application/json"),
+        (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     )
 )]
 async fn get_song_shouts(
@@ -543,7 +549,8 @@ async fn get_song_shouts(
     responses(
         (status = OK, description = "Success"),
         (status = UNAUTHORIZED, description = "No permission", body = SimpleRouteErrorOutput, content_type = "application/json"),
-        (status = NOT_FOUND, description = "Song not found", body = SimpleRouteErrorOutput, content_type = "application/json")
+        (status = NOT_FOUND, description = "Song not found", body = SimpleRouteErrorOutput, content_type = "application/json"),
+        (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     ),
     security(
         ("token_jwt" = [])
@@ -611,7 +618,8 @@ struct MbidRefreshBody {
     responses(
         (status = OK, description = "Success"),
         (status = UNAUTHORIZED, description = "No permission", body = SimpleRouteErrorOutput, content_type = "application/json"),
-        (status = NOT_FOUND, description = "Song not found", body = SimpleRouteErrorOutput, content_type = "application/json")
+        (status = NOT_FOUND, description = "Song not found", body = SimpleRouteErrorOutput, content_type = "application/json"),
+        (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     ),
     security(
         ("token_jwt" = [])

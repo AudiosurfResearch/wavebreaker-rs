@@ -35,7 +35,8 @@ struct RivalryResponse {
     method(get),
     path = "/self",
     responses(
-        (status = OK, description = "Success", body = RivalryResponse, content_type = "application/json")
+        (status = OK, description = "Success", body = RivalryResponse, content_type = "application/json"),
+        (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     ),
     security(
         ("token_jwt" = [])
@@ -70,7 +71,8 @@ struct ModifyRivalRequest {
         (status = NOT_FOUND, description = "Couldn't find player to rival", body = SimpleRouteErrorOutput, content_type = "application/json"),
         (status = BAD_REQUEST, description = "Invalid parameters", body = SimpleRouteErrorOutput, content_type = "application/json"),
         (status = CONFLICT, description = "Rivalry already exists", body = SimpleRouteErrorOutput, content_type = "application/json"),
-        (status = UNAUTHORIZED, description = "Unauthorized", body = SimpleRouteErrorOutput, content_type = "application/json")
+        (status = UNAUTHORIZED, description = "Unauthorized", body = SimpleRouteErrorOutput, content_type = "application/json"),
+        (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     ),
     security(
         ("token_jwt" = [])
@@ -127,7 +129,8 @@ async fn add_rival(
         (status = OK, description = "Success"),
         (status = NOT_FOUND, description = "Couldn't find player to un-rival or they aren't a rival", body = SimpleRouteErrorOutput, content_type = "application/json"),
         (status = BAD_REQUEST, description = "Invalid parameters", body = SimpleRouteErrorOutput, content_type = "application/json"),
-        (status = UNAUTHORIZED, description = "Unauthorized", body = SimpleRouteErrorOutput, content_type = "application/json")
+        (status = UNAUTHORIZED, description = "Unauthorized", body = SimpleRouteErrorOutput, content_type = "application/json"),
+        (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     ),
     security(
         ("token_jwt" = [])

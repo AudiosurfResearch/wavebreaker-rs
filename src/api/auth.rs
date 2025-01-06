@@ -53,7 +53,8 @@ pub struct AuthBodySchema {
     responses(
         (status = OK, description = "Success", body = AuthBodySchema),
         (status = BAD_REQUEST, description = "OpenID verification failed", body = SimpleRouteErrorOutput),
-        (status = NOT_FOUND, description = "Profile not found", body = SimpleRouteErrorOutput)
+        (status = NOT_FOUND, description = "Profile not found", body = SimpleRouteErrorOutput),
+        (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     )
 )]
 async fn auth_return(

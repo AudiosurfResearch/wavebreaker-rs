@@ -67,7 +67,8 @@ struct ScoreSearchResult {
     ),
     responses(
         (status = OK, description = "Success", body = ScoreSearchResult, content_type = "application/json"),
-        (status = NOT_FOUND, description = "Score not found", body = SimpleRouteErrorOutput, content_type = "application/json")
+        (status = NOT_FOUND, description = "Score not found", body = SimpleRouteErrorOutput, content_type = "application/json"),
+        (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     )
 )]
 async fn get_score(
@@ -126,6 +127,7 @@ async fn get_score(
         (status = OK, description = "Success", content_type = "application/json"),
         (status = NOT_FOUND, description = "Score not found", body = SimpleRouteErrorOutput, content_type = "application/json"),
         (status = UNAUTHORIZED, description = "Unauthorized", body = SimpleRouteErrorOutput, content_type = "application/json"),
+        (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     ),
     security(
         ("token_jwt" = [])
@@ -195,7 +197,8 @@ struct GetScoresParams {
     ),
     responses(
         (status = OK, description = "Success", body = ScoreSearchResponse, content_type = "application/json"),
-        (status = NOT_FOUND, description = "Song not found", body = SimpleRouteErrorOutput, content_type = "application/json")
+        (status = NOT_FOUND, description = "Song not found", body = SimpleRouteErrorOutput, content_type = "application/json"),
+        (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     )
 )]
 async fn get_scores(

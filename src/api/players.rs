@@ -63,7 +63,8 @@ struct GetPlayerParams {
     ),
     responses(
         (status = OK, description = "Success", body = PlayerResponse, content_type = "application/json"),
-        (status = NOT_FOUND, description = "Player not found", body = SimpleRouteErrorOutput, content_type = "application/json")
+        (status = NOT_FOUND, description = "Player not found", body = SimpleRouteErrorOutput, content_type = "application/json"),
+        (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     )
 )]
 async fn get_player(
@@ -108,7 +109,8 @@ async fn get_player(
     ),
     responses(
         (status = OK, description = "Success", body = PlayerPublic, content_type = "application/json"),
-        (status = UNAUTHORIZED, description = "Not logged in or invalid token", body = SimpleRouteErrorOutput, content_type = "application/json")
+        (status = UNAUTHORIZED, description = "Not logged in or invalid token", body = SimpleRouteErrorOutput, content_type = "application/json"),
+        (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     ),
     security(
         ("token_jwt" = [])
@@ -180,6 +182,7 @@ struct GetRankingsParams {
     ),
     responses(
         (status = OK, description = "Success", body = PlayerRankingResponse, content_type = "application/json"),
+        (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     )
 )]
 async fn get_player_rankings(
