@@ -28,6 +28,7 @@ pub fn routes() -> OpenApiRouter<AppState> {
     OpenApiRouter::new()
         .routes(routes!(get_score, delete_score))
         .routes(routes!(get_scores))
+        .routes(routes!(get_rival_scores))
 }
 
 #[serde_inline_default]
@@ -250,6 +251,173 @@ async fn get_scores(
 
     //FIXME This is messed up. What. Is there a better way to do this???
     //I don't get to dynamically join stuff or change selects because it changes the return type
+    match (query.with_player, query.with_song) {
+        (true, true) => {
+            let items: Vec<(Score, Player, Song)> = db_query
+                .inner_join(players::table)
+                .inner_join(songs::table)
+                .select((Score::as_select(), Player::as_select(), Song::as_select()))
+                .load(&mut conn)
+                .await?;
+
+            let results = items
+                .into_iter()
+                .map(|(score, player, song)| ScoreSearchResult {
+                    score,
+                    player: Some(player.into()),
+                    song: Some(song),
+                })
+                .collect();
+            Ok(Json(ScoreSearchResponse { results, total }))
+        }
+        (true, false) => {
+            let items: Vec<(Score, Player)> = db_query
+                .inner_join(players::table)
+                .select((Score::as_select(), Player::as_select()))
+                .load(&mut conn)
+                .await?;
+
+            let results = items
+                .into_iter()
+                .map(|(score, player)| ScoreSearchResult {
+                    score,
+                    player: Some(player.into()),
+                    song: None,
+                })
+                .collect();
+            Ok(Json(ScoreSearchResponse { results, total }))
+        }
+        (false, true) => {
+            let items: Vec<(Score, Song)> = db_query
+                .inner_join(songs::table)
+                .select((Score::as_select(), Song::as_select()))
+                .load(&mut conn)
+                .await?;
+
+            let results = items
+                .into_iter()
+                .map(|(score, song)| ScoreSearchResult {
+                    score,
+                    player: None,
+                    song: Some(song),
+                })
+                .collect();
+            Ok(Json(ScoreSearchResponse { results, total }))
+        }
+        (false, false) => {
+            let scores_only: Vec<Score> = db_query.load(&mut conn).await?;
+            let results = scores_only
+                .into_iter()
+                .map(|score| ScoreSearchResult {
+                    score,
+                    player: None,
+                    song: None,
+                })
+                .collect();
+            Ok(Json(ScoreSearchResponse { results, total }))
+        }
+    }
+}
+
+#[serde_inline_default]
+#[derive(Deserialize, Validate)]
+#[serde(rename_all = "camelCase")]
+struct GetRivalScoresParams {
+    #[serde_inline_default(false)]
+    with_player: bool,
+    #[serde_inline_default(true)]
+    with_song: bool,
+    #[validate(range(min = 1))]
+    #[serde_inline_default(1)]
+    page: i64,
+    #[validate(range(min = 1, max = 50))]
+    #[serde_inline_default(10)]
+    page_size: i64,
+    time_sort: Option<SortType>,
+    score_sort: Option<SortType>,
+    league: Option<League>,
+    character: Option<Character>,
+}
+
+//FIXME: maybe duplicating all the code from the other route is not the best idea?
+/// Get rivals' scores
+#[utoipa::path(
+    method(get),
+    path = "/rivals",
+    params(
+        ("withPlayer" = Option<bool>, Query, description = "Include player info"),
+        ("withSong" = Option<bool>, Query, description = "Include song info"),
+        ("page" = Option<i64>, Query, description = "Page number", minimum = 1),
+        ("pageSize" = Option<i64>, Query, description = "Page size", minimum = 1, maximum = 50),
+        ("timeSort" = Option<SortType>, Query, description = "Sort by submission time"),
+        ("scoreSort" = Option<SortType>, Query, description = "Sort by score"),
+        ("league" = Option<League>, Query, description = "League to filter by"),
+        ("character" = Option<Character>, Query, description = "Character to filter by"),
+    ),
+    responses(
+        (status = OK, description = "Success", body = ScoreSearchResponse, content_type = "application/json"),
+        (status = NOT_FOUND, description = "Song not found", body = SimpleRouteErrorOutput, content_type = "application/json"),
+        (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput),
+        (status = UNAUTHORIZED, description = "Unauthorized", body = SimpleRouteErrorOutput, content_type = "application/json")
+    )
+)]
+async fn get_rival_scores(
+    State(state): State<AppState>,
+    query: Query<GetRivalScoresParams>,
+    claims: Claims,
+) -> Result<Json<ScoreSearchResponse>, RouteError> {
+    use crate::schema::{players, scores, songs};
+
+    let mut conn = state.db.get().await?;
+
+    let player: Player = players::table
+        .find(claims.profile.id)
+        .first::<Player>(&mut conn)
+        .await?;
+
+    let rivals: Vec<i32> = player
+        .get_rivals(&mut conn)
+        .await?
+        .into_iter()
+        .map(|r| r.id)
+        .collect();
+
+    let mut db_query = scores::table
+        .filter(scores::player_id.eq_any(rivals))
+        .into_boxed();
+
+    if let Some(league) = query.league {
+        db_query = db_query.filter(scores::league.eq(league));
+    }
+    if let Some(character) = query.character {
+        db_query = db_query.filter(scores::vehicle.eq(character));
+    }
+
+    if let Some(time_sort) = &query.time_sort {
+        match time_sort {
+            SortType::Asc => db_query = db_query.then_order_by(scores::submitted_at.asc()),
+            SortType::Desc => db_query = db_query.then_order_by(scores::submitted_at.desc()),
+        }
+    }
+    if let Some(score_sort) = &query.score_sort {
+        match score_sort {
+            SortType::Asc => db_query = db_query.then_order_by(scores::score.asc()),
+            SortType::Desc => db_query = db_query.then_order_by(scores::score.desc()),
+        }
+    }
+    db_query = db_query
+        .offset((query.page - 1) * query.page_size)
+        .limit(query.page_size);
+
+    let mut total_count_query = scores::table.into_boxed();
+    if let Some(league) = query.league {
+        total_count_query = total_count_query.filter(scores::league.eq(league));
+    }
+    if let Some(character) = query.character {
+        total_count_query = total_count_query.filter(scores::vehicle.eq(character));
+    }
+    let total: i64 = total_count_query.count().get_result(&mut conn).await?;
+
     match (query.with_player, query.with_song) {
         (true, true) => {
             let items: Vec<(Score, Player, Song)> = db_query
