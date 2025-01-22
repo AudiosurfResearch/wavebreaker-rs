@@ -1,5 +1,4 @@
 use axum::{
-    async_trait,
     extract::{
         rejection::{FormRejection, QueryRejection},
         Form, FromRequest, FromRequestParts, Query, Request,
@@ -16,7 +15,6 @@ use super::errors::RouteError;
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ValidatedForm<T>(pub T);
 
-#[async_trait]
 impl<T, S> FromRequest<S> for ValidatedForm<T>
 where
     T: DeserializeOwned + Validate,
@@ -38,7 +36,6 @@ where
 #[derive(Debug, Clone, Copy, Default)]
 pub struct ValidatedQuery<T>(pub T);
 
-#[async_trait]
 impl<T, S> FromRequestParts<S> for ValidatedQuery<T>
 where
     T: DeserializeOwned + Validate,

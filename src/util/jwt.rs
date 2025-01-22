@@ -1,6 +1,5 @@
 // shamelessly stolen from https://www.shuttle.rs/blog/2024/02/21/using-jwt-auth-rust
 
-use async_trait::async_trait;
 use axum::{
     extract::{FromRef, FromRequestParts},
     http::{request::Parts, StatusCode},
@@ -51,7 +50,6 @@ pub struct Claims {
     pub exp: i64,
 }
 
-#[async_trait]
 impl<S> FromRequestParts<S> for Claims
 where
     AppState: FromRef<S>,
