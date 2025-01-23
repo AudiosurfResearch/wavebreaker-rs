@@ -11,17 +11,13 @@ use validator::Validate;
 
 use crate::{
     models::{
-        players::{AccountType, Player, PlayerPublic},
-        scores::Score,
-        songs::Song,
-    },
-    util::{
+        extra_song_info::ExtraSongInfo, players::{AccountType, Player, PlayerPublic}, scores::Score, songs::Song
+    }, schema::extra_song_info, util::{
         errors::{RouteError, SimpleRouteErrorOutput},
         game_types::{Character, League},
         jwt::Claims,
         query::SortType,
-    },
-    AppState,
+    }, AppState
 };
 
 pub fn routes() -> OpenApiRouter<AppState> {
@@ -55,6 +51,8 @@ struct ScoreSearchResult {
     player: Option<PlayerPublic>,
     #[serde(skip_serializing_if = "Option::is_none")]
     song: Option<Song>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    extra_info: Option<ExtraSongInfo>,
 }
 
 /// Get score by ID
@@ -99,21 +97,24 @@ async fn get_score(
         None
     };
 
-    let song = if query.with_song {
-        let song = songs::table
+    let query_result: (Option<Song>, Option<ExtraSongInfo>) = if query.with_song {
+        let query_result: (Song, Option<ExtraSongInfo>) = songs::table
             .find(score.song_id)
-            .first::<Song>(&mut conn)
+            .left_join(extra_song_info::table)
+            .select((Song::as_select(), Option::<ExtraSongInfo>::as_select()))
+            .first::<(Song, Option<ExtraSongInfo>)>(&mut conn)
             .await?;
 
-        Some(song)
+        (Some(query_result.0), query_result.1)
     } else {
-        None
+        (None, None)
     };
 
     Ok(Json(ScoreSearchResult {
         score,
         player,
-        song,
+        song: query_result.0,
+        extra_info: query_result.1,
     }))
 }
 
@@ -253,19 +254,20 @@ async fn get_scores(
     //I don't get to dynamically join stuff or change selects because it changes the return type
     match (query.with_player, query.with_song) {
         (true, true) => {
-            let items: Vec<(Score, Player, Song)> = db_query
-                .inner_join(players::table)
-                .inner_join(songs::table)
-                .select((Score::as_select(), Player::as_select(), Song::as_select()))
+            let items: Vec<(Score, Player, Song, Option<ExtraSongInfo>)> = db_query
+            .inner_join(players::table)
+            .inner_join(songs::table.left_join(extra_song_info::table))
+            .select((Score::as_select(), Player::as_select(), Song::as_select(), Option::<ExtraSongInfo>::as_select()))
                 .load(&mut conn)
                 .await?;
 
             let results = items
                 .into_iter()
-                .map(|(score, player, song)| ScoreSearchResult {
+                .map(|(score, player, song, extra_info)| ScoreSearchResult {
                     score,
                     player: Some(player.into()),
                     song: Some(song),
+                    extra_info
                 })
                 .collect();
             Ok(Json(ScoreSearchResponse { results, total }))
@@ -283,23 +285,25 @@ async fn get_scores(
                     score,
                     player: Some(player.into()),
                     song: None,
+                    extra_info: None,
                 })
                 .collect();
             Ok(Json(ScoreSearchResponse { results, total }))
         }
         (false, true) => {
-            let items: Vec<(Score, Song)> = db_query
-                .inner_join(songs::table)
-                .select((Score::as_select(), Song::as_select()))
+            let items: Vec<(Score, Song, Option<ExtraSongInfo>)> = db_query
+                .inner_join(songs::table.left_join(extra_song_info::table))
+                .select((Score::as_select(), Song::as_select(), Option::<ExtraSongInfo>::as_select()))
                 .load(&mut conn)
                 .await?;
 
             let results = items
                 .into_iter()
-                .map(|(score, song)| ScoreSearchResult {
+                .map(|(score, song, extra_info)| ScoreSearchResult {
                     score,
                     player: None,
                     song: Some(song),
+                    extra_info,
                 })
                 .collect();
             Ok(Json(ScoreSearchResponse { results, total }))
@@ -312,6 +316,7 @@ async fn get_scores(
                     score,
                     player: None,
                     song: None,
+                    extra_info: None,
                 })
                 .collect();
             Ok(Json(ScoreSearchResponse { results, total }))
@@ -420,19 +425,20 @@ async fn get_rival_scores(
 
     match (query.with_player, query.with_song) {
         (true, true) => {
-            let items: Vec<(Score, Player, Song)> = db_query
-                .inner_join(players::table)
-                .inner_join(songs::table)
-                .select((Score::as_select(), Player::as_select(), Song::as_select()))
+            let items: Vec<(Score, Player, Song, Option<ExtraSongInfo>)> = db_query
+            .inner_join(players::table)
+            .inner_join(songs::table.left_join(extra_song_info::table))
+            .select((Score::as_select(), Player::as_select(), Song::as_select(), Option::<ExtraSongInfo>::as_select()))
                 .load(&mut conn)
                 .await?;
 
             let results = items
                 .into_iter()
-                .map(|(score, player, song)| ScoreSearchResult {
+                .map(|(score, player, song, extra_info)| ScoreSearchResult {
                     score,
                     player: Some(player.into()),
                     song: Some(song),
+                    extra_info
                 })
                 .collect();
             Ok(Json(ScoreSearchResponse { results, total }))
@@ -450,23 +456,25 @@ async fn get_rival_scores(
                     score,
                     player: Some(player.into()),
                     song: None,
+                    extra_info: None,
                 })
                 .collect();
             Ok(Json(ScoreSearchResponse { results, total }))
         }
         (false, true) => {
-            let items: Vec<(Score, Song)> = db_query
-                .inner_join(songs::table)
-                .select((Score::as_select(), Song::as_select()))
+            let items: Vec<(Score, Song, Option<ExtraSongInfo>)> = db_query
+                .inner_join(songs::table.left_join(extra_song_info::table))
+                .select((Score::as_select(), Song::as_select(), Option::<ExtraSongInfo>::as_select()))
                 .load(&mut conn)
                 .await?;
 
             let results = items
                 .into_iter()
-                .map(|(score, song)| ScoreSearchResult {
+                .map(|(score, song, extra_info)| ScoreSearchResult {
                     score,
                     player: None,
                     song: Some(song),
+                    extra_info,
                 })
                 .collect();
             Ok(Json(ScoreSearchResponse { results, total }))
@@ -479,6 +487,7 @@ async fn get_rival_scores(
                     score,
                     player: None,
                     song: None,
+                    extra_info: None,
                 })
                 .collect();
             Ok(Json(ScoreSearchResponse { results, total }))
