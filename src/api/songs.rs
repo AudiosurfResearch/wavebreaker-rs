@@ -400,7 +400,7 @@ struct RadioSongResponse {
         ("withExtraInfo" = Option<bool>, Query, description = "Include extra info")
     ),
     responses(
-        (status = OK, description = "Success", body = RadioSongResponse, content_type = "application/json"),
+        (status = OK, description = "Success", body = Vec<RadioSongResponse>, content_type = "application/json"),
         (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     )
 )]
