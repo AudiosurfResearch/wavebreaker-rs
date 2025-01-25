@@ -157,6 +157,7 @@ struct GetTopSongParams {
 }
 
 #[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 struct TopSongResponse {
     song_data: SongResponse,
     times_played: i64,
@@ -386,6 +387,7 @@ async fn get_song_scores(
 }
 
 #[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 struct RadioSongResponse {
     song: Song,
     extra_info: Option<ExtraSongInfo>,
@@ -471,12 +473,14 @@ struct GetSongShoutsParams {
 }
 
 #[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 struct SongShoutsResult {
     shout: Shout,
     author: PlayerPublic,
 }
 
 #[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
 struct SongShoutsResponse {
     results: Vec<SongShoutsResult>,
     total: i64,

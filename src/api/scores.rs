@@ -38,12 +38,14 @@ struct GetScoreParams {
 }
 
 #[derive(serde::Serialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 struct ScoreSearchResponse {
     results: Vec<ScoreSearchResult>,
     total: i64,
 }
 
 #[derive(serde::Serialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
 struct ScoreSearchResult {
     #[serde(flatten)]
     score: Score,
