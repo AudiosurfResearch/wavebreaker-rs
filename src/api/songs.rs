@@ -317,7 +317,7 @@ struct ScoreResponse {
         ("playerId" = Option<i32>, Query, description = "Player ID to filter by"),
     ),
     responses(
-        (status = OK, description = "Success", body = SongResponse, content_type = "application/json"),
+        (status = OK, description = "Success", body = Vec<ScoreResponse>, content_type = "application/json"),
         (status = NOT_FOUND, description = "Song not found", body = SimpleRouteErrorOutput, content_type = "application/json"),
         (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     )

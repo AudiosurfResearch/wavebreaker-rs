@@ -78,6 +78,7 @@ where
 #[diesel(belongs_to(Song))]
 #[diesel(table_name = scores, check_for_backend(diesel::pg::Pg))]
 #[diesel(primary_key(id))]
+#[serde(rename_all = "camelCase")]
 pub struct Score {
     pub id: i32,
     pub song_id: i32,
