@@ -63,7 +63,11 @@ async fn auth_return(
 ) -> Result<Json<AuthBody>, RouteError> {
     let steamid64 = state
         .steam_openid
-        .verify(&query.ok_or_else(|| anyhow!("No query string to verify!"))?)
+        .verify(
+            &query
+                .ok_or_else(|| anyhow!("No query string to verify!"))
+                .http_error("Query string is empty", StatusCode::BAD_REQUEST)?,
+        )
         .await
         .map_err(|e| anyhow!("OpenID verification failed: {e:?}"))
         .http_error(
