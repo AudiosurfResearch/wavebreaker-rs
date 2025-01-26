@@ -6,6 +6,7 @@ use axum::{
     RequestPartsExt,
 };
 use axum_extra::{
+    extract::CookieJar,
     headers::{authorization::Bearer, Authorization},
     TypedHeader,
 };
@@ -60,18 +61,25 @@ where
     async fn from_request_parts(parts: &mut Parts, state: &S) -> Result<Self, Self::Rejection> {
         let state = AppState::from_ref(state);
 
-        // Extract the token from the authorization header
-        let TypedHeader(Authorization(bearer)) = parts
-            .extract::<TypedHeader<Authorization<Bearer>>>()
-            .await
-            .http_status_error(StatusCode::UNAUTHORIZED)?;
+        // Extract the token from the authorization header, if it's not there, try the cookie
+        let token = match parts.extract::<TypedHeader<Authorization<Bearer>>>().await {
+            Ok(bearer) => bearer.token().to_owned(),
+            Err(_) => {
+                let jar = parts
+                    .extract::<CookieJar>()
+                    .await
+                    .http_status_error(StatusCode::UNAUTHORIZED)?;
+
+                jar.get("authorization")
+                    .map(|cookie| cookie.value().to_owned().replace("Bearer ", ""))
+                    .ok_or_else(|| anyhow::anyhow!("No token found"))
+                    .http_error("No token found", StatusCode::UNAUTHORIZED)?
+            }
+        };
+
         // Decode the user data
-        let token_data = decode::<Self>(
-            bearer.token(),
-            &state.jwt_keys.decoding,
-            &Validation::default(),
-        )
-        .http_error("Invalid token", StatusCode::UNAUTHORIZED)?;
+        let token_data = decode::<Self>(&token, &state.jwt_keys.decoding, &Validation::default())
+            .http_error("Invalid token", StatusCode::UNAUTHORIZED)?;
 
         Ok(token_data.claims)
     }
