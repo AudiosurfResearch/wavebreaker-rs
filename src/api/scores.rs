@@ -11,13 +11,19 @@ use validator::Validate;
 
 use crate::{
     models::{
-        extra_song_info::ExtraSongInfo, players::{AccountType, Player, PlayerPublic}, scores::Score, songs::Song
-    }, schema::extra_song_info, util::{
+        extra_song_info::ExtraSongInfo,
+        players::{AccountType, Player, PlayerPublic},
+        scores::Score,
+        songs::Song,
+    },
+    schema::extra_song_info,
+    util::{
         errors::{RouteError, SimpleRouteErrorOutput},
         game_types::{Character, League},
         jwt::Claims,
         query::SortType,
-    }, AppState
+    },
+    AppState,
 };
 
 pub fn routes() -> OpenApiRouter<AppState> {
@@ -257,9 +263,14 @@ async fn get_scores(
     match (query.with_player, query.with_song) {
         (true, true) => {
             let items: Vec<(Score, Player, Song, Option<ExtraSongInfo>)> = db_query
-            .inner_join(players::table)
-            .inner_join(songs::table.left_join(extra_song_info::table))
-            .select((Score::as_select(), Player::as_select(), Song::as_select(), Option::<ExtraSongInfo>::as_select()))
+                .inner_join(players::table)
+                .inner_join(songs::table.left_join(extra_song_info::table))
+                .select((
+                    Score::as_select(),
+                    Player::as_select(),
+                    Song::as_select(),
+                    Option::<ExtraSongInfo>::as_select(),
+                ))
                 .load(&mut conn)
                 .await?;
 
@@ -269,7 +280,7 @@ async fn get_scores(
                     score,
                     player: Some(player.into()),
                     song: Some(song),
-                    extra_info
+                    extra_info,
                 })
                 .collect();
             Ok(Json(ScoreSearchResponse { results, total }))
@@ -295,7 +306,11 @@ async fn get_scores(
         (false, true) => {
             let items: Vec<(Score, Song, Option<ExtraSongInfo>)> = db_query
                 .inner_join(songs::table.left_join(extra_song_info::table))
-                .select((Score::as_select(), Song::as_select(), Option::<ExtraSongInfo>::as_select()))
+                .select((
+                    Score::as_select(),
+                    Song::as_select(),
+                    Option::<ExtraSongInfo>::as_select(),
+                ))
                 .load(&mut conn)
                 .await?;
 
@@ -428,9 +443,14 @@ async fn get_rival_scores(
     match (query.with_player, query.with_song) {
         (true, true) => {
             let items: Vec<(Score, Player, Song, Option<ExtraSongInfo>)> = db_query
-            .inner_join(players::table)
-            .inner_join(songs::table.left_join(extra_song_info::table))
-            .select((Score::as_select(), Player::as_select(), Song::as_select(), Option::<ExtraSongInfo>::as_select()))
+                .inner_join(players::table)
+                .inner_join(songs::table.left_join(extra_song_info::table))
+                .select((
+                    Score::as_select(),
+                    Player::as_select(),
+                    Song::as_select(),
+                    Option::<ExtraSongInfo>::as_select(),
+                ))
                 .load(&mut conn)
                 .await?;
 
@@ -440,7 +460,7 @@ async fn get_rival_scores(
                     score,
                     player: Some(player.into()),
                     song: Some(song),
-                    extra_info
+                    extra_info,
                 })
                 .collect();
             Ok(Json(ScoreSearchResponse { results, total }))
@@ -466,7 +486,11 @@ async fn get_rival_scores(
         (false, true) => {
             let items: Vec<(Score, Song, Option<ExtraSongInfo>)> = db_query
                 .inner_join(songs::table.left_join(extra_song_info::table))
-                .select((Score::as_select(), Song::as_select(), Option::<ExtraSongInfo>::as_select()))
+                .select((
+                    Score::as_select(),
+                    Song::as_select(),
+                    Option::<ExtraSongInfo>::as_select(),
+                ))
                 .load(&mut conn)
                 .await?;
 
