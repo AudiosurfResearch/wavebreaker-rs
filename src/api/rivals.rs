@@ -124,9 +124,6 @@ async fn add_rival(
 #[utoipa::path(
     method(delete),
     path = "/remove",
-    params(
-        ("rivalId" = i32, Query, description = "ID of player to un-rival")
-    ),
     responses(
         (status = OK, description = "Success"),
         (status = NOT_FOUND, description = "Couldn't find player to un-rival or they aren't a rival", body = SimpleRouteErrorOutput, content_type = "application/json"),
