@@ -237,6 +237,24 @@ impl Player {
             .await
     }
 
+    /// Retrieves the challengers of a player.
+    pub async fn get_challengers(&self, conn: &mut AsyncPgConnection) -> QueryResult<Vec<Self>> {
+        use crate::schema::{players::dsl::*, rivalries::dsl::*};
+
+        let challenger_ids = rivalries
+            .filter(rival_id.eq(self.id))
+            .load::<Rivalry>(conn)
+            .await?
+            .into_iter()
+            .map(|rivalry| rivalry.challenger_id)
+            .collect::<Vec<i32>>();
+
+        players
+            .filter(id.eq_any(challenger_ids))
+            .load::<Self>(conn)
+            .await
+    }
+
     /// Retrieves rivalries, with the date they were established, and the profiles of the rivals.
     /// This is **not** like `get_rivals`, which only returns a `Vec<Player>` of the rivals and nothing else.
     pub async fn get_rivalry_views(
@@ -250,6 +268,23 @@ impl Player {
                 crate::schema::players::table.on(rival_id.eq(crate::schema::players::dsl::id)),
             )
             .filter(challenger_id.eq(self.id))
+            .select((established_at, PlayerPublic::as_select()))
+            .load::<RivalryView>(conn)
+            .await
+    }
+
+    /// Retrieves rivalries, with the date they were established, and the profiles of the **challengers**.
+    pub async fn get_challenger_rivalry_views(
+        &self,
+        conn: &mut AsyncPgConnection,
+    ) -> QueryResult<Vec<RivalryView>> {
+        use crate::schema::rivalries::dsl::*;
+
+        rivalries
+            .inner_join(
+                crate::schema::players::table.on(challenger_id.eq(crate::schema::players::dsl::id)),
+            )
+            .filter(rival_id.eq(self.id))
             .select((established_at, PlayerPublic::as_select()))
             .load::<RivalryView>(conn)
             .await

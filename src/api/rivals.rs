@@ -28,9 +28,10 @@ pub fn routes() -> OpenApiRouter<AppState> {
 #[serde(rename_all = "camelCase")]
 struct RivalryResponse {
     rivalries: Vec<RivalryView>,
+    challengers: Vec<RivalryView>,
 }
 
-/// Get own rivals
+/// Get own rivals and challengers
 #[utoipa::path(
     method(get),
     path = "/self",
@@ -52,8 +53,9 @@ async fn get_own_rivals(
 
     let player: Player = players.find(claims.profile.id).first(&mut conn).await?;
     let rivalries: Vec<RivalryView> = player.get_rivalry_views(&mut conn).await?;
+    let challengers: Vec<RivalryView> = player.get_challenger_rivalry_views(&mut conn).await?;
 
-    Ok(Json(RivalryResponse { rivalries }))
+    Ok(Json(RivalryResponse { rivalries, challengers }))
 }
 
 #[derive(Deserialize, ToSchema)]
