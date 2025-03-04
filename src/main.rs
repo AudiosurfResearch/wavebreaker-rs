@@ -38,7 +38,7 @@ use figment::{
     Figment,
 };
 use fred::{clients::Pool as RedisPool, prelude::*, types::config::Config as RedisConfig};
-//use meilisearch_sdk::client::Client as MeiliClient;
+use musicbrainz_rs::client::MusicBrainzClient;
 use serde::Deserialize;
 use steam_openid::SteamOpenId;
 use steam_rs::Steam;
@@ -99,7 +99,7 @@ pub struct AppState {
     db: Pool<diesel_async::AsyncPgConnection>,
     redis: Arc<RedisPool>,
     jwt_keys: util::jwt::Keys,
-    //meili: Arc<MeiliClient>,
+    musicbrainz: Arc<MusicBrainzClient>,
 }
 
 fn run_migrations(
@@ -159,18 +159,16 @@ async fn init_state() -> anyhow::Result<AppState> {
         .await
         .context("Clients failed to connect to Redis!")?;
 
-    musicbrainz_rs::config::set_user_agent(WAVEBREAKER_USER_AGENT);
+    let mut client = MusicBrainzClient::default();
+    client
+        .set_user_agent(WAVEBREAKER_USER_AGENT)
+        .expect("Setting the MusicBrainz client's user agent should not fail.");
 
     let steam_openid = SteamOpenId::new(
         &wavebreaker_config.external.steam_realm,
         &wavebreaker_config.external.steam_return_path,
     )
     .map_err(|e| anyhow!("Failed to construct SteamOpenId: {e:?}"))?;
-
-    //let meilisearch_client = MeiliClient::new(
-    //    &wavebreaker_config.external.meilisearch_url,
-    //    Some(&wavebreaker_config.external.meilisearch_key),
-    //)?;
 
     Ok(AppState {
         steam_api: Arc::new(Steam::new(&wavebreaker_config.external.steam_key)),
@@ -179,7 +177,7 @@ async fn init_state() -> anyhow::Result<AppState> {
         redis: Arc::new(redis_pool),
         jwt_keys: util::jwt::Keys::new(wavebreaker_config.main.jwt_secret.as_bytes()),
         config: Arc::new(wavebreaker_config),
-        //meili: Arc::new(meilisearch_client),
+        musicbrainz: Arc::new(client),
     })
 }
 

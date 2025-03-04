@@ -1,5 +1,6 @@
 use diesel::{prelude::Insertable, query_builder::AsChangeset};
 use musicbrainz_rs::{
+    client::MusicBrainzClient,
     entity::{recording::Recording, release::Release, CoverartResponse},
     Fetch, FetchCoverart, Search,
 };
@@ -26,6 +27,7 @@ pub struct MusicBrainzInfo {
 pub async fn lookup_metadata(
     song: &Song,
     duration: i32,
+    client: &MusicBrainzClient,
 ) -> anyhow::Result<Option<MusicBrainzInfo>> {
     let query = format!(
         "query=(recording:\"{}\" OR alias:\"{0}\") AND artist:\"{}\" AND dur:\"[{} TO {}]\"",
@@ -37,7 +39,10 @@ pub async fn lookup_metadata(
 
     info!("Searching for recording with query: {:?}", query);
 
-    let query_result = Recording::search(query).execute().await?.entities;
+    let query_result = Recording::search(query)
+        .execute_with_client(&client)
+        .await?
+        .entities;
 
     if query_result.is_empty() {
         info!(
@@ -53,7 +58,13 @@ pub async fn lookup_metadata(
         None => return Err(anyhow::anyhow!("No release found for recording")),
     };
 
-    let cover_url = match release.get_coverart().front().res_500().execute().await {
+    let cover_url = match release
+        .get_coverart()
+        .front()
+        .res_500()
+        .execute_with_client(&client)
+        .await
+    {
         Ok(cover_resp) => match cover_resp {
             CoverartResponse::Json(cover) => Some(cover.images[0].image.clone()),
             CoverartResponse::Url(url) => Some(url),
@@ -64,7 +75,13 @@ pub async fn lookup_metadata(
         }
     };
 
-    let cover_url_small = match release.get_coverart().front().res_250().execute().await {
+    let cover_url_small = match release
+        .get_coverart()
+        .front()
+        .res_250()
+        .execute_with_client(&client)
+        .await
+    {
         Ok(cover_resp) => match cover_resp {
             CoverartResponse::Json(cover) => Some(cover.images[0].image.clone()),
             CoverartResponse::Url(url) => Some(url),
@@ -113,19 +130,24 @@ pub async fn lookup_metadata(
 pub async fn lookup_mbid(
     mbid: &str,
     release_mbid: Option<&str>,
+    client: &MusicBrainzClient,
 ) -> anyhow::Result<MusicBrainzInfo> {
     let recording = Recording::fetch()
         .id(mbid)
         .with_releases()
         .with_artists()
-        .execute()
+        .execute_with_client(&client)
         .await?;
 
     // get cover from user-supplied release, if present
     let release = match release_mbid {
         Some(release_mbid) => {
             info!("Fetching release from MBID: {:?}", release_mbid);
-            match Release::fetch().id(release_mbid).execute().await {
+            match Release::fetch()
+                .id(release_mbid)
+                .execute_with_client(&client)
+                .await
+            {
                 Ok(release_result) => release_result,
                 Err(_) => {
                     return Err(anyhow::anyhow!("Failed to fetch release from MBID"));
@@ -138,7 +160,13 @@ pub async fn lookup_mbid(
         },
     };
 
-    let cover_url = match release.get_coverart().front().res_500().execute().await {
+    let cover_url = match release
+        .get_coverart()
+        .front()
+        .res_500()
+        .execute_with_client(&client)
+        .await
+    {
         Ok(cover_resp) => match cover_resp {
             CoverartResponse::Json(cover) => Some(cover.images[0].image.clone()),
             CoverartResponse::Url(url) => Some(url),
@@ -149,7 +177,13 @@ pub async fn lookup_mbid(
         }
     };
 
-    let cover_url_small = match release.get_coverart().front().res_250().execute().await {
+    let cover_url_small = match release
+        .get_coverart()
+        .front()
+        .res_250()
+        .execute_with_client(&client)
+        .await
+    {
         Ok(cover_resp) => match cover_resp {
             CoverartResponse::Json(cover) => Some(cover.images[0].image.clone()),
             CoverartResponse::Url(url) => Some(url),
