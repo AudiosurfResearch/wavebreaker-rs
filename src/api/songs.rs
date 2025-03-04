@@ -650,7 +650,7 @@ async fn update_song_extra_info_mbid(
 
     if song.user_can_edit(claims.profile.id, &mut conn).await? {
         let mb_info =
-            musicbrainz::lookup_mbid(&payload.recording_mbid, payload.release_mbid.as_deref())
+            musicbrainz::lookup_mbid(&payload.recording_mbid, payload.release_mbid.as_deref(), &state.musicbrainz)
                 .await?;
 
         insert_into(extra_song_info::table)

@@ -120,6 +120,7 @@ pub async fn fetch_song_id(
                         &recording_mbid,
                         payload.wavebreaker.release_mbid.as_deref(),
                         &mut conn,
+                        &state.musicbrainz
                     )
                     .await;
             });
@@ -330,7 +331,7 @@ pub async fn send_ride(
     // Add MusicBrainz metadata, if no extra metadata exists already
     // we're doing this here because we need the song length to search for the recording
     if let Err(e) = song
-        .auto_add_metadata(payload.song_length * 10, &mut conn)
+        .auto_add_metadata(payload.song_length * 10, &mut conn, &state.musicbrainz)
         .await
     {
         error!("Failed to add metadata for song {}: {}", song.id, e);

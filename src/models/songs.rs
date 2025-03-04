@@ -1,6 +1,7 @@
 use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl, SaveChangesDsl};
 use fred::clients::Pool as RedisPool;
+use musicbrainz_rs::client::MusicBrainzClient;
 use serde::Serialize;
 use tracing::debug;
 use utoipa::ToSchema;
@@ -169,6 +170,7 @@ impl Song {
         &self,
         duration: i32,
         conn: &mut AsyncPgConnection,
+        musicbrainz: &MusicBrainzClient,
     ) -> anyhow::Result<()> {
         use crate::util::musicbrainz::lookup_metadata;
 
@@ -179,7 +181,7 @@ impl Song {
             .optional()?;
 
         if extra_info.is_none() {
-            let metadata = lookup_metadata(self, duration).await?;
+            let metadata = lookup_metadata(self, duration, musicbrainz).await?;
             if metadata.is_none() {
                 return Ok(());
             }
@@ -205,6 +207,7 @@ impl Song {
         mbid: &str,
         release_mbid: Option<&str>,
         conn: &mut AsyncPgConnection,
+        musicbrainz: &MusicBrainzClient
     ) -> anyhow::Result<()> {
         use crate::util::musicbrainz::lookup_mbid;
 
@@ -214,7 +217,7 @@ impl Song {
             .await
             .optional()?;
 
-        let mb_info = lookup_mbid(mbid, release_mbid).await?;
+        let mb_info = lookup_mbid(mbid, release_mbid, musicbrainz).await?;
 
         if let Some(existing_info) = existing_info {
             diesel::update(&existing_info)
