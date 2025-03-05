@@ -43,7 +43,7 @@ use serde::Deserialize;
 use steam_openid::SteamOpenId;
 use steam_rs::Steam;
 use tower_http::trace::TraceLayer;
-use tracing::{debug, info};
+use tracing::{debug, info, info_span};
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{
     fmt::writer::MakeWriterExt, layer::SubscriberExt, util::SubscriberInitExt,
@@ -194,17 +194,20 @@ fn make_router(state: AppState) -> Router {
             // TAKEN FROM: https://github.com/tokio-rs/axum/blob/d1fb14ead1063efe31ae3202e947ffd569875c0b/examples/error-handling/src/main.rs#L60-L77
             TraceLayer::new_for_http() // Create our own span for the request and include the matched path. The matched
                 // path is useful for figuring out which handler the request was routed to.
-                .make_span_with(|req: &Request| {
-                    let method = req.method();
-                    let uri = req.uri();
-
-                    // axum automatically adds this extension.
+                .make_span_with(|req: &Request<_>| {
+                    // from https://github.com/tokio-rs/axum/blob/main/examples/tracing-aka-logging/src/main.rs
+                    // Log the matched route's path (with placeholders not filled in).
+                    // Use request.uri() or OriginalUri if you want the real path.
                     let matched_path = req
                         .extensions()
                         .get::<MatchedPath>()
-                        .map(axum::extract::MatchedPath::as_str);
+                        .map(MatchedPath::as_str);
 
-                    tracing::debug_span!("request", %method, %uri, matched_path)
+                    info_span!(
+                        "http_request",
+                        method = ?req.method(),
+                        matched_path,
+                    )
                 })
                 // By default `TraceLayer` will log 5xx responses but we're doing our specific
                 // logging of errors so disable that
