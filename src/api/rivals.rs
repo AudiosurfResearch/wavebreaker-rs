@@ -55,7 +55,10 @@ async fn get_own_rivals(
     let rivalries: Vec<RivalryView> = player.get_rivalry_views(&mut conn).await?;
     let challengers: Vec<RivalryView> = player.get_challenger_rivalry_views(&mut conn).await?;
 
-    Ok(Json(RivalryResponse { rivalries, challengers }))
+    Ok(Json(RivalryResponse {
+        rivalries,
+        challengers,
+    }))
 }
 
 #[derive(Deserialize, ToSchema)]

@@ -207,7 +207,7 @@ impl Song {
         mbid: &str,
         release_mbid: Option<&str>,
         conn: &mut AsyncPgConnection,
-        musicbrainz: &MusicBrainzClient
+        musicbrainz: &MusicBrainzClient,
     ) -> anyhow::Result<()> {
         use crate::util::musicbrainz::lookup_mbid;
 

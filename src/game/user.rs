@@ -115,7 +115,6 @@ pub async fn steam_sync(
     //This way we have one less Steam API request on the daily limit
     let friend_nums: Vec<i32> =
         split_x_separated(&payload.snums).http_status_error(axum::http::StatusCode::BAD_REQUEST)?;
-    tracing::Span::current().record("steam_friend_count", friend_nums.len());
 
     let steam_player = ticket_auth(&payload.ticket, &state.steam_api, &state.redis)
         .await
@@ -125,14 +124,17 @@ pub async fn steam_sync(
     let player: Player = Player::find_by_steam_id(steam_player)
         .first::<Player>(&mut conn)
         .await?;
-    tracing::Span::current().record("player", player.id);
 
     //Get all friends
     let friends = players
         .filter(steam_account_num.eq_any(&friend_nums))
         .load::<Player>(&mut conn)
         .await?;
-    tracing::Span::current().record("found_friend_count", friends.len());
+
+    tracing::Span::current()
+        .record("player", player.id)
+        .record("steam_friend_count", friend_nums.len())
+        .record("found_friend_count", friends.len());
 
     info!("Syncing rivals with Steam friends");
 
