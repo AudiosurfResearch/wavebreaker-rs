@@ -45,7 +45,10 @@ pub struct LoginSteamResponse {
 /// - The response fails to serialize
 /// - Authenticating with Steam fails
 /// - Something goes wrong with the database
-#[instrument(skip_all)]
+#[instrument(skip_all, fields(
+    steam_id,
+    client_version = payload.client_version,
+))]
 pub async fn login_steam(
     State(state): State<AppState>,
     Form(payload): Form<LoginSteamRequest>,
@@ -53,11 +56,9 @@ pub async fn login_steam(
     let steam_player = ticket_auth(&payload.ticket, &state.steam_api, &state.redis)
         .await
         .http_internal_error("Failed to authenticate with Steam")?;
+    tracing::Span::current().record("steam_id", steam_player.0);
 
-    info!(
-        "Login request from {} (Steam), client is {}",
-        steam_player, &payload.client_version
-    );
+    info!("Login requested");
 
     let summary = &state
         .steam_api
@@ -104,7 +105,7 @@ pub struct SteamSyncResponse {
 /// - The response fails to serialize
 /// - Authenticating with Steam fails
 /// - Something goes wrong with the database
-#[instrument(skip_all)]
+#[instrument(skip_all, fields(player, steam_friend_count, found_friend_count))]
 pub async fn steam_sync(
     State(state): State<AppState>,
     Form(payload): Form<SteamSyncRequest>,
@@ -114,6 +115,7 @@ pub async fn steam_sync(
     //This way we have one less Steam API request on the daily limit
     let friend_nums: Vec<i32> =
         split_x_separated(&payload.snums).http_status_error(axum::http::StatusCode::BAD_REQUEST)?;
+    tracing::Span::current().record("steam_friend_count", friend_nums.len());
 
     let steam_player = ticket_auth(&payload.ticket, &state.steam_api, &state.redis)
         .await
@@ -123,12 +125,16 @@ pub async fn steam_sync(
     let player: Player = Player::find_by_steam_id(steam_player)
         .first::<Player>(&mut conn)
         .await?;
+    tracing::Span::current().record("player", player.id);
 
     //Get all friends
     let friends = players
         .filter(steam_account_num.eq_any(&friend_nums))
         .load::<Player>(&mut conn)
         .await?;
+    tracing::Span::current().record("found_friend_count", friends.len());
+
+    info!("Syncing rivals with Steam friends");
 
     //Add new rivalry for each friend
     for friend in &friends {
