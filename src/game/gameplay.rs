@@ -224,7 +224,14 @@ struct BeatScore {
 /// - The response fails to serialize
 /// - Authenticating with Steam fails
 /// - The score fails to be inserted
-#[instrument(skip_all)]
+#[instrument(skip_all, fields(
+    player,
+    song_id = payload.song_id,
+    score = payload.score,
+    vehicle = ?payload.vehicle,
+    league = ?payload.league,
+    mbid = payload.wavebreaker.mbid,
+    release_mbid = payload.wavebreaker.release_mbid))]
 pub async fn send_ride(
     State(state): State<AppState>,
     Form(payload): Form<SendRideRequest>,
@@ -233,15 +240,13 @@ pub async fn send_ride(
 
     let steam_player = ticket_auth(&payload.ticket, &state.steam_api, &state.redis).await?;
 
-    info!(
-        "Score received on {} from {} (Steam) with score {}, using {:?}. MBID {:?}, release MBID {:?}",
-        &payload.song_id, &steam_player, &payload.score, &payload.vehicle, &payload.wavebreaker.mbid, &payload.wavebreaker.release_mbid
-    );
-
     let mut conn = state.db.get().await?;
     let player: Player = Player::find_by_steam_id(steam_player)
         .first::<Player>(&mut conn)
         .await?;
+    tracing::Span::current().record("player", player.id);
+
+    info!("Score received");
 
     let song = songs
         .find(payload.song_id)
@@ -265,8 +270,8 @@ pub async fn send_ride(
         // Check if the player dethroned the current top score
         if current_top.0.score < payload.score {
             info!(
-                "Player {} (Steam) dethroned {} on {} with score {}",
-                steam_player, current_top.1.id, current_top.0.song_id, payload.score
+                "Dethroned player {} with score {}",
+                current_top.1.id, current_top.0.score
             );
         }
 
@@ -294,10 +299,7 @@ pub async fn send_ride(
             reign_seconds: reign_duration.whole_seconds(),
         }
     } else {
-        info!(
-            "Player {} (Steam) got a new top score of {}",
-            steam_player, payload.score
-        );
+        info!("Player achieved a new personal best");
         BeatScore {
             dethroned: false,
             friend: false,
@@ -336,7 +338,7 @@ pub async fn send_ride(
         .auto_add_metadata(payload.song_length * 10, &mut conn, &state.musicbrainz)
         .await
     {
-        error!("Failed to add metadata for song {}: {}", song.id, e);
+        error!("Failed to add metadata for song: {}", e);
     }
 
     // TODO: Implement dethrone notifications
@@ -427,7 +429,10 @@ fn create_league_rides(league: League, scores: Vec<ScoreWithPlayer>) -> LeagueRi
 /// This fails if:
 /// - The response fails to serialize
 /// - Authenticating with Steam fails
-#[instrument(skip_all)]
+#[instrument(skip_all, fields(
+    player,
+    song_id = payload.song_id
+))]
 pub async fn get_rides(
     State(state): State<AppState>,
     Form(payload): Form<GetRidesRequest>,
@@ -435,10 +440,7 @@ pub async fn get_rides(
     const ALL_LEAGUES: [League; 3] = [League::Casual, League::Pro, League::Elite];
 
     let steam_player = ticket_auth(&payload.ticket, &state.steam_api, &state.redis).await?;
-    info!(
-        "Player {} (Steam) requesting rides of song {}",
-        steam_player, payload.song_id
-    );
+    info!("Player requesting rides of song");
 
     let mut conn = state.db.get().await?;
 
