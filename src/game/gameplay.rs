@@ -4,7 +4,7 @@ use diesel::{associations::HasTable, prelude::*};
 use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
 use time::OffsetDateTime;
-use tracing::{error, info, instrument};
+use tracing::{error, info, instrument, Instrument};
 
 use super::helpers::ticket_auth;
 use crate::{
@@ -114,14 +114,19 @@ pub async fn fetch_song_id(
 
             let song_clone = song.clone();
             let recording_mbid = recording_mbid.clone();
+            // so we can include the below task in the span
+            let current_span = tracing::Span::current();
+            // rest of this function doesn't depend on MusicBrainz metadata
+            // spawned like this so it doesn't get dropped
             tokio::spawn(async move {
                 let _ = song_clone
                     .add_metadata_mbid(
                         &recording_mbid,
                         payload.wavebreaker.release_mbid.as_deref(),
                         &mut conn,
-                        &state.musicbrainz
+                        &state.musicbrainz,
                     )
+                    .instrument(current_span)
                     .await;
             });
 
