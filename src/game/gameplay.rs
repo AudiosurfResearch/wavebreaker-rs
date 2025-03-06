@@ -57,7 +57,13 @@ pub struct SongIdResponse {
 /// This fails if:
 /// - The response fails to serialize
 /// - The song fails to be created/retrieved
-#[instrument(skip_all)]
+#[instrument(skip_all, fields(
+    player,
+    song = payload.song,
+    artist = payload.artist,
+    league = ?payload.league,
+    mbid = payload.wavebreaker.mbid,
+    release_mbid = payload.wavebreaker.release_mbid))]
 pub async fn fetch_song_id(
     State(state): State<AppState>,
     Form(payload): Form<SongIdRequest>,
@@ -72,6 +78,11 @@ pub async fn fetch_song_id(
 
     let mut conn = state.db.get().await?;
     let parsed_modifiers = parse_from_title(&payload.song);
+
+    let player = Player::find_by_steam_id(steam_player)
+        .first::<Player>(&mut conn)
+        .await?;
+    tracing::Span::current().record("player", player.id);
 
     // if recording MBID is provided, look it up using that + modifiers from the title
     // else, look up the song by title and artist
@@ -89,20 +100,14 @@ pub async fn fetch_song_id(
         // if song with MBID and modifiers exists, return its ID
         // else create a new song, attach the MBID to it and get metadata from MusicBrainz
         if let Some((song, _)) = song {
-            info!(
-                "Song {} - {} looked up by {} (Steam), league {:?}, MBID {:?}, release MBID {:?} (successful existing MBID lookup)",
-                song.artist, song.title, steam_player, payload.league, payload.wavebreaker.mbid, payload.wavebreaker.release_mbid
-            );
+            info!("Successful existing MBID lookup");
 
             Ok(Xml(SongIdResponse {
                 status: "allgood".to_owned(),
                 song_id: song.id,
             }))
         } else {
-            info!(
-                "Song {} - {} looked up by {} (Steam), league {:?}, MBID {:?}, release MBID {:?} (new MBID lookup)",
-                payload.artist, payload.song, steam_player, payload.league, payload.wavebreaker.mbid, payload.wavebreaker.release_mbid
-            );
+            info!("New MBID lookup");
 
             let song = NewSong::new(
                 &remove_from_title(&payload.song),
@@ -144,15 +149,7 @@ pub async fn fetch_song_id(
         .find_or_create(&mut conn)
         .await?;
 
-        info!(
-            "Song {} - {} looked up by {} (Steam), league {:?}, MBID {:?}, release MBID {:?}",
-            song.artist,
-            song.title,
-            steam_player,
-            payload.league,
-            payload.wavebreaker.mbid,
-            payload.wavebreaker.release_mbid
-        );
+        info!("Song looked up without MBIDs");
 
         Ok(Xml(SongIdResponse {
             status: "allgood".to_owned(),
