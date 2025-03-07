@@ -160,7 +160,7 @@ pub struct SendShoutRequest {
 /// This fails if:
 /// - The response fails to serialize
 /// - Something is wrong with the database
-#[instrument(skip_all, fields(player, song_id = payload.song_id))]
+#[instrument(skip_all, err(Debug), fields(player, song_id = payload.song_id))]
 pub async fn send_shout(
     State(state): State<AppState>,
     Form(payload): Form<SendShoutRequest>,

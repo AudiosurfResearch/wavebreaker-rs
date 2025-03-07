@@ -39,6 +39,9 @@ use figment::{
 };
 use fred::{clients::Pool as RedisPool, prelude::*, types::config::Config as RedisConfig};
 use musicbrainz_rs::client::MusicBrainzClient;
+use opentelemetry::trace::{TraceError, TracerProvider as _};
+use opentelemetry_sdk::trace::SdkTracerProvider;
+use opentelemetry_sdk::Resource;
 use serde::Deserialize;
 use steam_openid::SteamOpenId;
 use steam_rs::Steam;
@@ -100,6 +103,21 @@ pub struct AppState {
     redis: Arc<RedisPool>,
     jwt_keys: util::jwt::Keys,
     musicbrainz: Arc<MusicBrainzClient>,
+}
+
+fn init_tracer_provider() -> Result<opentelemetry_sdk::trace::SdkTracerProvider, TraceError> {
+    let exporter = opentelemetry_otlp::SpanExporter::builder()
+        .with_tonic()
+        .build()?;
+
+    Ok(SdkTracerProvider::builder()
+        .with_batch_exporter(exporter)
+        .with_resource(
+            Resource::builder()
+                .with_service_name(env!("CARGO_PKG_NAME"))
+                .build(),
+        )
+        .build())
 }
 
 fn run_migrations(
@@ -190,6 +208,7 @@ fn make_router(state: AppState) -> Router {
         .nest("/as", routes_as(&state.config.radio.cgr_location))
         .nest("/api", api_router)
         .merge(Scalar::with_url("/api/docs", openapi))
+        /*
         .layer(
             // TAKEN FROM: https://github.com/tokio-rs/axum/blob/d1fb14ead1063efe31ae3202e947ffd569875c0b/examples/error-handling/src/main.rs#L60-L77
             TraceLayer::new_for_http() // Create our own span for the request and include the matched path. The matched
@@ -213,6 +232,7 @@ fn make_router(state: AppState) -> Router {
                 // logging of errors so disable that
                 .on_failure(()),
         )
+        */
         .with_state(state)
 }
 
@@ -225,6 +245,10 @@ async fn main() -> anyhow::Result<()> {
         .expect("Initializing logging failed");
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
 
+    let provider = init_tracer_provider().expect("Tracer provider should be able to initialize");
+    let tracer = provider.tracer(env!("CARGO_PKG_NAME"));
+    let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
+
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
@@ -233,6 +257,7 @@ async fn main() -> anyhow::Result<()> {
                 "wavebreaker=info,tower_http=error,axum::rejection=trace".into()
             }),
         )
+        .with(telemetry)
         .with(tracing_subscriber::fmt::layer().with_writer(stdout.and(non_blocking)))
         .init();
 

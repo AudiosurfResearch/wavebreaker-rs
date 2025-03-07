@@ -5,7 +5,7 @@ use crate::util::{errors::RouteError, radio::get_radio_songs};
 /// Returns a list of all Audiosurf Radio songs.
 /// Only works with clients using an old version of `RadioBrowser.cgr`
 /// That version is included with the Wavebreaker mod.
-#[instrument]
+#[instrument(err(Debug))]
 pub async fn get_radio_list() -> Result<String, RouteError> {
     let radio_songs = match get_radio_songs() {
         Ok(Some(songs)) => songs,

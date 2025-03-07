@@ -57,7 +57,7 @@ pub struct SongIdResponse {
 /// This fails if:
 /// - The response fails to serialize
 /// - The song fails to be created/retrieved
-#[instrument(skip_all, fields(
+#[instrument(skip_all, err(Debug), fields(
     player,
     song = payload.song,
     artist = payload.artist,
@@ -224,7 +224,7 @@ struct BeatScore {
 /// - The response fails to serialize
 /// - Authenticating with Steam fails
 /// - The score fails to be inserted
-#[instrument(skip_all, fields(
+#[instrument(skip_all, err(Debug), fields(
     player,
     song_id = payload.song_id,
     score = payload.score,
@@ -429,7 +429,7 @@ fn create_league_rides(league: League, scores: Vec<ScoreWithPlayer>) -> LeagueRi
 /// This fails if:
 /// - The response fails to serialize
 /// - Authenticating with Steam fails
-#[instrument(skip_all, fields(
+#[instrument(skip_all, err(Debug), fields(
     player,
     song_id = payload.song_id
 ))]
