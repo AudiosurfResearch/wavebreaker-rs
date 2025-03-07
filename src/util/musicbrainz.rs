@@ -4,7 +4,7 @@ use musicbrainz_rs::{
     entity::{recording::Recording, release::Release, CoverartResponse},
     Fetch, FetchCoverart, Search,
 };
-use tracing::{error, info, instrument};
+use tracing::{error, info, instrument, warn};
 
 use crate::models::songs::Song;
 
@@ -54,10 +54,12 @@ pub async fn lookup_metadata(
     }
 
     let recording = query_result[0].clone();
+    info!("Found recording with ID {}", recording.id);
     let release = match recording.releases.clone() {
         Some(releases) => releases[0].clone(),
         None => return Err(anyhow::anyhow!("No release found for recording")),
     };
+    info!("Found release with ID {}", release.id);
 
     let cover_url = match release
         .get_coverart()
@@ -71,10 +73,13 @@ pub async fn lookup_metadata(
             CoverartResponse::Url(url) => Some(url),
         },
         Err(e) => {
-            error!("Failed to fetch cover: {:?}", e);
+            warn!("Failed to fetch cover: {:?}", e);
             None
         }
     };
+    if cover_url.is_some() {
+        info!("Found cover {:?}", cover_url);
+    }
 
     let cover_url_small = match release
         .get_coverart()
@@ -88,10 +93,13 @@ pub async fn lookup_metadata(
             CoverartResponse::Url(url) => Some(url),
         },
         Err(e) => {
-            error!("Failed to fetch small cover: {:?}", e);
+            warn!("Failed to fetch small cover: {:?}", e);
             None
         }
     };
+    if cover_url_small.is_some() {
+        info!("Found small cover {:?}", cover_url_small);
+    }
 
     let mbid = recording.id;
     let musicbrainz_title = recording.title;
@@ -109,6 +117,7 @@ pub async fn lookup_metadata(
         }
         None => return Err(anyhow::anyhow!("No artist found for recording")),
     };
+    info!("Merged artist credits to: {}", musicbrainz_artist);
 
     //let's be real, we're not gonna see a song be so long it eclipses i32::MAX
     #[allow(clippy::cast_possible_wrap)]
@@ -178,6 +187,9 @@ pub async fn lookup_mbid(
             None
         }
     };
+    if cover_url.is_some() {
+        info!("Found cover {:?}", cover_url);
+    }
 
     let cover_url_small = match release
         .get_coverart()
@@ -195,6 +207,9 @@ pub async fn lookup_mbid(
             None
         }
     };
+    if cover_url_small.is_some() {
+        info!("Found small cover {:?}", cover_url_small);
+    }
 
     let mbid = recording.id;
     let musicbrainz_title = recording.title;
@@ -212,6 +227,7 @@ pub async fn lookup_mbid(
         }
         None => return Err(anyhow::anyhow!("No artist found for recording")),
     };
+    info!("Merged artist credits to: {}", musicbrainz_artist);
 
     //let's be real, we're not gonna see a song be so long it eclipses i32::MAX
     #[allow(clippy::cast_possible_wrap)]
