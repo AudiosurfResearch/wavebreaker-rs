@@ -7,7 +7,7 @@ use axum::{
 };
 use diesel_async::RunQueryDsl;
 use jsonwebtoken::{encode, Header};
-use tracing::info;
+use tracing::{info, instrument};
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -34,6 +34,7 @@ pub fn routes() -> OpenApiRouter<AppState> {
         (status = 308, description = "Redirect to Steam", body = ())
     )
 )]
+#[instrument(skip_all, err(Debug))]
 async fn auth_login(State(state): State<AppState>) -> Result<Redirect, RouteError> {
     Ok(Redirect::permanent(state.steam_openid.get_redirect_url()))
 }
@@ -57,6 +58,7 @@ pub struct AuthBodySchema {
         (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     )
 )]
+#[instrument(skip_all, err(Debug), fields(player))]
 async fn auth_return(
     State(state): State<AppState>,
     RawQuery(query): RawQuery,
@@ -81,7 +83,8 @@ async fn auth_return(
         .first(&mut conn)
         .await
         .http_error("Profile not found", StatusCode::NOT_FOUND)?;
-
+    tracing::Span::current().record("player", player.id);
+    
     info!("Player {} logged in via Steam OpenID", player.id);
 
     // expiry in 7 days

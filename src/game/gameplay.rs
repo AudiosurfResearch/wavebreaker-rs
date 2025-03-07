@@ -244,6 +244,7 @@ pub async fn send_ride(
     let player: Player = Player::find_by_steam_id(steam_player)
         .first::<Player>(&mut conn)
         .await?;
+
     tracing::Span::current().record("player", player.id);
 
     info!("Score received");
@@ -440,13 +441,15 @@ pub async fn get_rides(
     const ALL_LEAGUES: [League; 3] = [League::Casual, League::Pro, League::Elite];
 
     let steam_player = ticket_auth(&payload.ticket, &state.steam_api, &state.redis).await?;
-    info!("Player requesting rides of song");
 
     let mut conn = state.db.get().await?;
 
     let player: Player = Player::find_by_steam_id(steam_player)
         .first::<Player>(&mut conn)
         .await?;
+
+    tracing::Span::current().record("player", player.id);
+    info!("Player requesting rides of song");
 
     let mut rival_ids: Vec<i32> = player
         .get_rivals(&mut conn)

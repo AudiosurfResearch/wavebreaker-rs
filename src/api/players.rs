@@ -7,6 +7,7 @@ use diesel_async::RunQueryDsl;
 use fred::prelude::*;
 use serde::{Deserialize, Serialize};
 use serde_inline_default::serde_inline_default;
+use tracing::instrument;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
@@ -46,7 +47,7 @@ struct PlayerStats {
 }
 
 #[serde_inline_default]
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct GetPlayerParams {
     #[serde_inline_default(false)]
@@ -67,6 +68,7 @@ struct GetPlayerParams {
         (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     )
 )]
+#[instrument(skip(state), err(Debug))]
 async fn get_player(
     State(state): State<AppState>,
     Path(id): Path<i32>,
@@ -116,6 +118,7 @@ async fn get_player(
         ("token_jwt" = [])
     )
 )]
+#[instrument(skip(state, claims), err(Debug))]
 async fn get_self(
     State(state): State<AppState>,
     claims: Claims,
@@ -161,7 +164,7 @@ struct PlayerWithRanking {
 }
 
 #[serde_inline_default]
-#[derive(Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate)]
 #[serde(rename_all = "camelCase")]
 struct GetRankingsParams {
     #[validate(range(min = 1))]
@@ -185,6 +188,7 @@ struct GetRankingsParams {
         (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     )
 )]
+#[instrument(skip(state), err(Debug))]
 async fn get_player_rankings(
     State(state): State<AppState>,
     query: Query<GetRankingsParams>,

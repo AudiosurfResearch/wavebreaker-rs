@@ -2,6 +2,7 @@ use axum::{extract::State, Json};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
+use tracing::instrument;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
@@ -43,6 +44,7 @@ struct RivalryResponse {
         ("token_jwt" = [])
     ))
 ]
+#[instrument(skip(state, claims), err(Debug))]
 async fn get_own_rivals(
     State(state): State<AppState>,
     claims: Claims,
@@ -61,7 +63,7 @@ async fn get_own_rivals(
     }))
 }
 
-#[derive(Deserialize, ToSchema)]
+#[derive(Debug, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 struct ModifyRivalRequest {
     rival_id: i32,
@@ -83,6 +85,7 @@ struct ModifyRivalRequest {
         ("token_jwt" = [])
     ))
 ]
+#[instrument(skip(state, claims), err(Debug))]
 async fn add_rival(
     State(state): State<AppState>,
     claims: Claims,
@@ -138,6 +141,7 @@ async fn add_rival(
         ("token_jwt" = [])
     ))
 ]
+#[instrument(skip(state, claims), err(Debug))]
 async fn remove_rival(
     State(state): State<AppState>,
     claims: Claims,

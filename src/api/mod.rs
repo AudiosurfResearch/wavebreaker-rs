@@ -2,6 +2,7 @@ use axum::{extract::State, Json, Router};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use serde::Serialize;
+use tracing::instrument;
 use utoipa::{
     openapi::{
         security::{HttpAuthScheme, HttpBuilder, SecurityScheme},
@@ -83,6 +84,7 @@ struct ServerStats {
         (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     )
 )]
+#[instrument(skip_all, err(Debug))]
 async fn stats(State(state): State<AppState>) -> Result<Json<ServerStats>, RouteError> {
     use crate::schema::{players, scores, songs};
 
