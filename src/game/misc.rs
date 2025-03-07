@@ -33,7 +33,7 @@ pub struct CustomNewsResponse {
 ///
 /// # Errors
 /// This fails if the response fails to serialize
-#[instrument(skip_all)]
+#[instrument(skip_all, fields(player))]
 pub async fn get_custom_news(
     State(state): State<AppState>,
     Form(payload): Form<CustomNewsRequest>,
@@ -45,6 +45,8 @@ pub async fn get_custom_news(
     let player: Player = Player::find_by_steam_id(steam_player)
         .first::<Player>(&mut conn)
         .await?;
+
+    tracing::Span::current().record("player", player.id);
 
     Ok(Xml(CustomNewsResponse {
         text: format!(
@@ -66,7 +68,7 @@ pub struct GetShoutsRequest {
 /// This fails if:
 /// - The response fails to serialize
 /// - Something goes wrong with the database
-#[instrument(skip_all)]
+#[instrument(skip_all, fields(ride_id = payload.ridd))]
 pub async fn fetch_track_shape(
     State(state): State<AppState>,
     Form(payload): Form<GetShoutsRequest>,
@@ -125,6 +127,7 @@ async fn shouts_to_string(
 
 #[derive(Deserialize)]
 pub struct FetchShoutsRequest {
+    // Audiosurf sends two identical song_id parameters so this is needed
     #[serde(default, deserialize_with = "take_first", rename = "songid")]
     song_id: i32,
 }
@@ -133,7 +136,7 @@ pub struct FetchShoutsRequest {
 ///
 /// # Errors
 /// This fails if the response can't serialize or something is wrong with the database
-#[instrument(skip_all)]
+#[instrument(skip_all, fields(song_id = payload.song_id))]
 pub async fn fetch_shouts(
     State(state): State<AppState>,
     ExtraForm(payload): ExtraForm<FetchShoutsRequest>,
@@ -157,7 +160,7 @@ pub struct SendShoutRequest {
 /// This fails if:
 /// - The response fails to serialize
 /// - Something is wrong with the database
-#[instrument(skip_all)]
+#[instrument(skip_all, fields(player, song_id = payload.song_id))]
 pub async fn send_shout(
     State(state): State<AppState>,
     Form(payload): Form<SendShoutRequest>,
@@ -169,6 +172,8 @@ pub async fn send_shout(
     let player: Player = Player::find_by_steam_id(steam_player)
         .first::<Player>(&mut conn)
         .await?;
+
+    tracing::Span::current().record("player", player.id);
 
     let shout = NewShout::new(payload.song_id, player.id, &payload.shout);
     shout.insert(&mut conn).await?;
