@@ -4,7 +4,7 @@ use musicbrainz_rs::{
     entity::{recording::Recording, release::Release, CoverartResponse},
     Fetch, FetchCoverart, Search,
 };
-use tracing::{error, info};
+use tracing::{error, info, instrument};
 
 use crate::models::songs::Song;
 
@@ -24,6 +24,7 @@ pub struct MusicBrainzInfo {
 ///
 /// # Errors
 /// Fails if no song is found or lookup errors
+#[instrument(skip(song, client), err, fields(title = song.title, artist = song.artist))]
 pub async fn lookup_metadata(
     song: &Song,
     duration: i32,
@@ -70,7 +71,7 @@ pub async fn lookup_metadata(
             CoverartResponse::Url(url) => Some(url),
         },
         Err(e) => {
-            error!("Failed to fetch cover of {}: {:?}", release.id, e);
+            error!("Failed to fetch cover: {:?}", e);
             None
         }
     };
@@ -87,7 +88,7 @@ pub async fn lookup_metadata(
             CoverartResponse::Url(url) => Some(url),
         },
         Err(e) => {
-            error!("Failed to fetch small cover of {}: {:?}", release.id, e);
+            error!("Failed to fetch small cover: {:?}", e);
             None
         }
     };
@@ -127,6 +128,7 @@ pub async fn lookup_metadata(
 ///
 /// # Errors
 /// Fails if no song is found or lookup fails
+#[instrument(skip(client), err)]
 pub async fn lookup_mbid(
     mbid: &str,
     release_mbid: Option<&str>,
@@ -142,7 +144,7 @@ pub async fn lookup_mbid(
     // get cover from user-supplied release, if present
     let release = match release_mbid {
         Some(release_mbid) => {
-            info!("Fetching release from MBID: {:?}", release_mbid);
+            info!("Fetching release from MBID");
             match Release::fetch()
                 .id(release_mbid)
                 .execute_with_client(&client)
@@ -172,7 +174,7 @@ pub async fn lookup_mbid(
             CoverartResponse::Url(url) => Some(url),
         },
         Err(e) => {
-            error!("Failed to fetch cover of {}: {:?}", release.id, e);
+            error!("Failed to fetch cover: {:?}", e);
             None
         }
     };
@@ -189,7 +191,7 @@ pub async fn lookup_mbid(
             CoverartResponse::Url(url) => Some(url),
         },
         Err(e) => {
-            error!("Failed to fetch small cover of {}: {:?}", release.id, e);
+            error!("Failed to fetch small cover: {:?}", e);
             None
         }
     };

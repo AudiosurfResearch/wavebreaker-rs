@@ -105,7 +105,11 @@ pub struct SteamSyncResponse {
 /// - The response fails to serialize
 /// - Authenticating with Steam fails
 /// - Something goes wrong with the database
-#[instrument(skip_all, err(Debug), fields(player, steam_friend_count, found_friend_count))]
+#[instrument(
+    skip_all,
+    err(Debug),
+    fields(player, steam_friend_count, found_friend_count)
+)]
 pub async fn steam_sync(
     State(state): State<AppState>,
     Form(payload): Form<SteamSyncRequest>,

@@ -22,10 +22,7 @@ mod util;
 use std::{io::stdout, sync::Arc};
 
 use anyhow::{anyhow, Context};
-use axum::{
-    extract::{MatchedPath, Request},
-    Router,
-};
+use axum::Router;
 use clap::Parser;
 use diesel::pg::Pg;
 use diesel_async::{
@@ -45,8 +42,7 @@ use opentelemetry_sdk::Resource;
 use serde::Deserialize;
 use steam_openid::SteamOpenId;
 use steam_rs::Steam;
-use tower_http::trace::TraceLayer;
-use tracing::{debug, info, info_span};
+use tracing::{debug, info};
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{
     fmt::writer::MakeWriterExt, layer::SubscriberExt, util::SubscriberInitExt,
@@ -221,7 +217,6 @@ fn make_router(state: AppState) -> Router {
                         .extensions()
                         .get::<MatchedPath>()
                         .map(MatchedPath::as_str);
-
                     info_span!(
                         "http_request",
                         method = ?req.method(),
