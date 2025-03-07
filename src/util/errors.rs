@@ -236,10 +236,6 @@ where
 {
     fn into_response(self) -> Response {
         let status = self.status_code();
-        if status != StatusCode::NOT_FOUND {
-            tracing::error!("Error occurred in route: {:?}", self.error);
-        }
-
         let extra_data = self.extra_data;
         let error = self.public_error_message.map_or_else(
             || status_code_to_public_message(status).to_string(),
