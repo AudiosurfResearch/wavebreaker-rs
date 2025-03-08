@@ -1,6 +1,7 @@
 use axum::extract::{Path, State};
 use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
+use tracing::instrument;
 use utoipa_axum::{router::OpenApiRouter, routes};
 
 use crate::{
@@ -33,6 +34,7 @@ pub fn routes() -> OpenApiRouter<AppState> {
         ("token_jwt" = [])
     )
 )]
+#[instrument(skip(state, claims), err(Debug))]
 async fn delete_shout(
     State(state): State<AppState>,
     claims: Claims,

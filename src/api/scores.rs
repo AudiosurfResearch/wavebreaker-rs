@@ -6,6 +6,7 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use serde::Deserialize;
 use serde_inline_default::serde_inline_default;
+use tracing::instrument;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
@@ -34,7 +35,7 @@ pub fn routes() -> OpenApiRouter<AppState> {
 }
 
 #[serde_inline_default]
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct GetScoreParams {
     #[serde_inline_default(true)]
@@ -78,6 +79,7 @@ struct ScoreSearchResult {
         (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     )
 )]
+#[instrument(skip(state), err(Debug))]
 async fn get_score(
     State(state): State<AppState>,
     Path(id): Path<i32>,
@@ -143,6 +145,7 @@ async fn get_score(
         ("token_jwt" = [])
     )
 )]
+#[instrument(skip(state, claims), err(Debug))]
 async fn delete_score(
     State(state): State<AppState>,
     Path(id): Path<i32>,
@@ -170,7 +173,7 @@ async fn delete_score(
 }
 
 #[serde_inline_default]
-#[derive(Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate)]
 #[serde(rename_all = "camelCase")]
 struct GetScoresParams {
     #[serde_inline_default(false)]
@@ -211,6 +214,7 @@ struct GetScoresParams {
         (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     )
 )]
+#[instrument(skip(state), err(Debug))]
 async fn get_scores(
     State(state): State<AppState>,
     query: Query<GetScoresParams>,
@@ -342,7 +346,7 @@ async fn get_scores(
 }
 
 #[serde_inline_default]
-#[derive(Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate)]
 #[serde(rename_all = "camelCase")]
 struct GetRivalScoresParams {
     #[serde_inline_default(false)]
@@ -383,6 +387,7 @@ struct GetRivalScoresParams {
         (status = UNAUTHORIZED, description = "Unauthorized", body = SimpleRouteErrorOutput, content_type = "application/json")
     )
 )]
+#[instrument(skip(state, claims), err(Debug))]
 async fn get_rival_scores(
     State(state): State<AppState>,
     query: Query<GetRivalScoresParams>,

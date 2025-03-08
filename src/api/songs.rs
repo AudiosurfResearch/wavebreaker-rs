@@ -6,6 +6,7 @@ use diesel::prelude::*;
 use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
 use serde_inline_default::serde_inline_default;
+use tracing::instrument;
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
@@ -50,7 +51,7 @@ struct SongResponse {
     extra_info: Option<ExtraSongInfo>,
 }
 
-#[derive(Deserialize)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct GetSongParams {
     #[serde(default)] // default to false
@@ -71,6 +72,7 @@ struct GetSongParams {
         (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     )
 )]
+#[instrument(skip(state), err(Debug))]
 async fn get_song(
     State(state): State<AppState>,
     Path(id): Path<i32>,
@@ -117,6 +119,7 @@ async fn get_song(
         ("token_jwt" = [])
     )
 )]
+#[instrument(skip(state, claims), err(Debug))]
 async fn delete_song(
     State(state): State<AppState>,
     Path(id): Path<i32>,
@@ -143,7 +146,7 @@ async fn delete_song(
 }
 
 #[serde_inline_default]
-#[derive(Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate)]
 #[serde(rename_all = "camelCase")]
 struct GetTopSongParams {
     #[serde(default)] // default to false
@@ -197,6 +200,7 @@ allow_columns_to_appear_in_same_group_by_clause!(
         (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     )
 )]
+#[instrument(skip(state), err(Debug))]
 async fn get_top_songs(
     State(state): State<AppState>,
     ValidatedQuery(query): ValidatedQuery<GetTopSongParams>,
@@ -279,7 +283,7 @@ async fn get_top_songs(
 }
 
 #[serde_inline_default]
-#[derive(Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate)]
 #[serde(rename_all = "camelCase")]
 struct GetSongScoresParams {
     #[serde_inline_default(true)]
@@ -323,6 +327,7 @@ struct ScoreResponse {
         (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     )
 )]
+#[instrument(skip(state), err(Debug))]
 async fn get_song_scores(
     State(state): State<AppState>,
     Path(id): Path<i32>,
@@ -406,6 +411,7 @@ struct RadioSongResponse {
         (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     )
 )]
+#[instrument(skip(state), err(Debug))]
 async fn get_radio_songs(
     State(state): State<AppState>,
     query: Query<GetSongParams>,
@@ -501,6 +507,7 @@ struct SongShoutsResponse {
         (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     )
 )]
+#[instrument(skip(state), err(Debug))]
 async fn get_song_shouts(
     State(state): State<AppState>,
     Path(id): Path<i32>,
@@ -560,6 +567,7 @@ async fn get_song_shouts(
         ("token_jwt" = [])
     )
 )]
+#[instrument(skip(state, claims), err(Debug))]
 async fn update_song_extra_info(
     State(state): State<AppState>,
     Path(id): Path<i32>,
@@ -605,7 +613,7 @@ async fn update_song_extra_info(
     }
 }
 
-#[derive(Deserialize, ToSchema)]
+#[derive(Debug, Deserialize, ToSchema)]
 struct MbidRefreshBody {
     recording_mbid: String,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -629,6 +637,7 @@ struct MbidRefreshBody {
         ("token_jwt" = [])
     )
 )]
+#[instrument(skip(state, claims), err(Debug))]
 async fn update_song_extra_info_mbid(
     State(state): State<AppState>,
     Path(id): Path<i32>,
