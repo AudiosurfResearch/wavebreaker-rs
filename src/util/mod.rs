@@ -5,4 +5,6 @@ pub mod modifiers;
 pub mod musicbrainz;
 pub mod query;
 pub mod radio;
+pub mod session;
+pub mod steam;
 pub mod validator;

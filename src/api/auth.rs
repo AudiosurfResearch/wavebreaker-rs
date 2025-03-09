@@ -84,7 +84,7 @@ async fn auth_return(
         .await
         .http_error("Profile not found", StatusCode::NOT_FOUND)?;
     tracing::Span::current().record("player", player.id);
-    
+
     info!("Player {} logged in via Steam OpenID", player.id);
 
     // expiry in 7 days

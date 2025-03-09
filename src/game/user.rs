@@ -8,8 +8,8 @@ use tracing::{info, instrument};
 #[allow(clippy::wildcard_imports)]
 use crate::schema::players::dsl::*;
 use crate::{
-    game::helpers::ticket_auth,
     models::players::{NewPlayer, Player},
+    util::steam::ticket_auth,
     util::{
         errors::{IntoRouteError, RouteError},
         game_types::split_x_separated,

@@ -6,13 +6,13 @@ use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use serde::{Deserialize, Serialize};
 use tracing::instrument;
 
-use super::helpers::ticket_auth;
 use crate::{
     models::{
         players::Player,
         scores::Score,
         shouts::{NewShout, Shout},
     },
+    util::steam::ticket_auth,
     util::{errors::RouteError, game_types::join_x_separated},
     AppState,
 };
