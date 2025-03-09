@@ -14,10 +14,10 @@ use crate::{
         scores::{NewScore, Score, ScoreWithPlayer},
         songs::{NewSong, Song},
     },
-    util::steam::ticket_auth,
     util::{
         errors::{IntoRouteError, RouteError},
         game_types::{split_x_separated, Character, Leaderboard, League},
+        steam::ticket_auth,
     },
     AppState,
 };

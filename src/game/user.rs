@@ -9,10 +9,10 @@ use tracing::{info, instrument};
 use crate::schema::players::dsl::*;
 use crate::{
     models::players::{NewPlayer, Player},
-    util::steam::ticket_auth,
     util::{
         errors::{IntoRouteError, RouteError},
         game_types::split_x_separated,
+        steam::ticket_auth,
     },
     AppState,
 };

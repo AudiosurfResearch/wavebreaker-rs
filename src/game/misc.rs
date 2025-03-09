@@ -12,8 +12,7 @@ use crate::{
         scores::Score,
         shouts::{NewShout, Shout},
     },
-    util::steam::ticket_auth,
-    util::{errors::RouteError, game_types::join_x_separated},
+    util::{errors::RouteError, game_types::join_x_separated, steam::ticket_auth},
     AppState,
 };
 

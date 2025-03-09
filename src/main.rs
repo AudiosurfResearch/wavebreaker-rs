@@ -37,8 +37,7 @@ use figment::{
 use fred::{clients::Pool as RedisPool, prelude::*, types::config::Config as RedisConfig};
 use musicbrainz_rs::client::MusicBrainzClient;
 use opentelemetry::trace::{TraceError, TracerProvider as _};
-use opentelemetry_sdk::trace::SdkTracerProvider;
-use opentelemetry_sdk::Resource;
+use opentelemetry_sdk::{trace::SdkTracerProvider, Resource};
 use serde::Deserialize;
 use steam_openid::SteamOpenId;
 use steam_rs::Steam;
