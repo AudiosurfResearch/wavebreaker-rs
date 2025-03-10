@@ -41,7 +41,7 @@ pub async fn lookup_metadata(
     info!("Searching for recording with query: {:?}", query);
 
     let query_result = Recording::search(query)
-        .execute_with_client(&client)
+        .execute_with_client(client)
         .await?
         .entities;
 
@@ -65,7 +65,7 @@ pub async fn lookup_metadata(
         .get_coverart()
         .front()
         .res_500()
-        .execute_with_client(&client)
+        .execute_with_client(client)
         .await
     {
         Ok(cover_resp) => match cover_resp {
@@ -85,7 +85,7 @@ pub async fn lookup_metadata(
         .get_coverart()
         .front()
         .res_250()
-        .execute_with_client(&client)
+        .execute_with_client(client)
         .await
     {
         Ok(cover_resp) => match cover_resp {
@@ -147,7 +147,7 @@ pub async fn lookup_mbid(
         .id(mbid)
         .with_releases()
         .with_artists()
-        .execute_with_client(&client)
+        .execute_with_client(client)
         .await?;
 
     // get cover from user-supplied release, if present
@@ -156,7 +156,7 @@ pub async fn lookup_mbid(
             info!("Fetching release from MBID");
             match Release::fetch()
                 .id(release_mbid)
-                .execute_with_client(&client)
+                .execute_with_client(client)
                 .await
             {
                 Ok(release_result) => release_result,
@@ -175,7 +175,7 @@ pub async fn lookup_mbid(
         .get_coverart()
         .front()
         .res_500()
-        .execute_with_client(&client)
+        .execute_with_client(client)
         .await
     {
         Ok(cover_resp) => match cover_resp {
@@ -195,7 +195,7 @@ pub async fn lookup_mbid(
         .get_coverart()
         .front()
         .res_250()
-        .execute_with_client(&client)
+        .execute_with_client(client)
         .await
     {
         Ok(cover_resp) => match cover_resp {
