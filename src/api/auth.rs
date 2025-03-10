@@ -15,7 +15,7 @@ use crate::{
     models::players::Player,
     util::{
         errors::{IntoRouteError, RouteError, SimpleRouteErrorOutput},
-        jwt::{AuthBody, Claims},
+        jwt::AuthBody, session::create_session,
     },
     AppState,
 };
@@ -87,15 +87,8 @@ async fn auth_return(
 
     info!("Player {} logged in via Steam OpenID", player.id);
 
-    // expiry in 7 days
-    let exp = time::OffsetDateTime::now_utc().unix_timestamp() + 60 * 60 * 24 * 7;
-
-    let claims = Claims {
-        profile: player,
-        exp,
-    };
-    // Create the authorization token
-    let token = encode(&Header::default(), &claims, &state.jwt_keys.encoding)
+    // Create the session token
+    let token = create_session(&player, &state.redis).await
         .http_internal_error("Failed to create token")?;
 
     Ok(Json(AuthBody::new(token)))

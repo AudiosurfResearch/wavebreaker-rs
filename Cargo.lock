@@ -839,6 +839,7 @@ dependencies = [
  "rand 0.8.5",
  "redis-protocol",
  "semver",
+ "serde_json",
  "socket2",
  "tokio",
  "tokio-stream",
