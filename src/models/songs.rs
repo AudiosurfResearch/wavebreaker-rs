@@ -245,15 +245,10 @@ impl Song {
     /// If something is wrong with the database or a player with the ID doesn't exist, this fails.
     pub async fn user_can_edit(
         &self,
-        player_id: i32,
+        player: &Player,
         conn: &mut AsyncPgConnection,
     ) -> anyhow::Result<bool> {
-        use crate::schema::{
-            players::dsl::players,
-            scores::dsl::{scores, song_id, submitted_at},
-        };
-
-        let player = players.find(player_id).first::<Player>(conn).await?;
+        use crate::schema::scores::dsl::{scores, song_id, submitted_at};
 
         if player.account_type == AccountType::Moderator || player.account_type == AccountType::Team
         {
@@ -277,15 +272,10 @@ impl Song {
 
     pub async fn user_can_delete(
         &self,
-        player_id: i32,
+        player: &Player,
         conn: &mut AsyncPgConnection,
     ) -> anyhow::Result<bool> {
-        use crate::schema::{
-            players::dsl::players,
-            scores::dsl::{scores, song_id},
-        };
-
-        let player = players.find(player_id).first::<Player>(conn).await?;
+        use crate::schema::scores::dsl::{scores, song_id};
 
         if player.account_type == AccountType::Moderator || player.account_type == AccountType::Team
         {

@@ -136,7 +136,7 @@ async fn delete_song(
         .optional()?
         .ok_or_else(RouteError::new_not_found)?;
 
-    if song.user_can_delete(session.player.id, &mut conn).await? {
+    if song.user_can_delete(&session.player, &mut conn).await? {
         song.delete(&mut conn, &state.redis).await?;
 
         Ok(())
@@ -587,7 +587,7 @@ async fn update_song_extra_info(
         .optional()?
         .ok_or_else(RouteError::new_not_found)?;
 
-    if song.user_can_edit(session.player.id, &mut conn).await? {
+    if song.user_can_edit(&session.player, &mut conn).await? {
         let new_extra_song_info = NewExtraSongInfo::new(
             id,
             extra_info.cover_url,
@@ -657,7 +657,7 @@ async fn update_song_extra_info_mbid(
         .optional()?
         .ok_or_else(RouteError::new_not_found)?;
 
-    if song.user_can_edit(session.player.id, &mut conn).await? {
+    if song.user_can_edit(&session.player, &mut conn).await? {
         let mb_info = musicbrainz::lookup_mbid(
             &payload.recording_mbid,
             payload.release_mbid.as_deref(),

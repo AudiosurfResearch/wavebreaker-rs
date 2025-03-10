@@ -51,7 +51,7 @@ async fn delete_shout(
         .optional()?
         .ok_or_else(RouteError::new_not_found)?;
 
-    if shout.user_can_delete(session.player.id, &mut conn).await? {
+    if shout.user_can_delete(&session.player).await? {
         diesel::delete(shouts::table.filter(shouts::id.eq(id)))
             .execute(&mut conn)
             .await?;

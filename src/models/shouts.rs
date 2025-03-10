@@ -29,12 +29,8 @@ impl Shout {
 
     pub async fn user_can_delete(
         &self,
-        user_id: i32,
-        conn: &mut AsyncPgConnection,
+        player: &Player,
     ) -> anyhow::Result<bool> {
-        use crate::schema::players::dsl::*;
-        let player = players.find(user_id).first::<Player>(conn).await?;
-
         if player.id == self.author_id
             || player.account_type == AccountType::Moderator
             || player.account_type == AccountType::Team
