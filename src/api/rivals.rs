@@ -13,7 +13,7 @@ use crate::{
     },
     util::{
         errors::{RouteError, SimpleRouteErrorOutput},
-        jwt::Claims,
+        session::Session,
     },
     AppState,
 };
@@ -44,16 +44,16 @@ struct RivalryResponse {
         ("token_jwt" = [])
     ))
 ]
-#[instrument(skip(state, claims), err(Debug))]
+#[instrument(skip(state, session), err(Debug))]
 async fn get_own_rivals(
     State(state): State<AppState>,
-    claims: Claims,
+    session: Session,
 ) -> Result<Json<RivalryResponse>, RouteError> {
     use crate::schema::players::dsl::*;
 
     let mut conn = state.db.get().await?;
 
-    let player: Player = players.find(claims.profile.id).first(&mut conn).await?;
+    let player: Player = players.find(session.player.id).first(&mut conn).await?;
     let rivalries: Vec<RivalryView> = player.get_rivalry_views(&mut conn).await?;
     let challengers: Vec<RivalryView> = player.get_challenger_rivalry_views(&mut conn).await?;
 
@@ -85,17 +85,17 @@ struct ModifyRivalRequest {
         ("token_jwt" = [])
     ))
 ]
-#[instrument(skip(state, claims), err(Debug))]
+#[instrument(skip(state, session), err(Debug))]
 async fn add_rival(
     State(state): State<AppState>,
-    claims: Claims,
+    session: Session,
     Json(payload): Json<ModifyRivalRequest>,
 ) -> Result<Json<RivalryView>, RouteError> {
     use crate::schema::{players::dsl::*, rivalries::dsl::*};
 
     let mut conn = state.db.get().await?;
 
-    let player: Player = players.find(claims.profile.id).first(&mut conn).await?;
+    let player: Player = players.find(session.player.id).first(&mut conn).await?;
     let rival: Player = players
         .find(payload.rival_id)
         .first(&mut conn)
@@ -141,17 +141,17 @@ async fn add_rival(
         ("token_jwt" = [])
     ))
 ]
-#[instrument(skip(state, claims), err(Debug))]
+#[instrument(skip(state, session), err(Debug))]
 async fn remove_rival(
     State(state): State<AppState>,
-    claims: Claims,
+    session: Session,
     Json(payload): Json<ModifyRivalRequest>,
 ) -> Result<(), RouteError> {
     use crate::schema::{players::dsl::*, rivalries::dsl::*};
 
     let mut conn = state.db.get().await?;
 
-    let player: Player = players.find(claims.profile.id).first(&mut conn).await?;
+    let player: Player = players.find(session.player.id).first(&mut conn).await?;
     let rival: Player = players
         .find(payload.rival_id)
         .first(&mut conn)

@@ -6,7 +6,6 @@ use axum::{
     Json,
 };
 use diesel_async::RunQueryDsl;
-use jsonwebtoken::{encode, Header};
 use tracing::{info, instrument};
 use utoipa::ToSchema;
 use utoipa_axum::{router::OpenApiRouter, routes};
@@ -15,7 +14,7 @@ use crate::{
     models::players::Player,
     util::{
         errors::{IntoRouteError, RouteError, SimpleRouteErrorOutput},
-        jwt::AuthBody, session::create_session,
+        session::{create_session, AuthBody},
     },
     AppState,
 };
@@ -88,7 +87,8 @@ async fn auth_return(
     info!("Player {} logged in via Steam OpenID", player.id);
 
     // Create the session token
-    let token = create_session(&player, &state.redis).await
+    let token = create_session(&player, &state.redis)
+        .await
         .http_internal_error("Failed to create token")?;
 
     Ok(Json(AuthBody::new(token)))

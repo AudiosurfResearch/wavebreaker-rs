@@ -7,18 +7,32 @@ use axum_extra::{
     headers::{authorization::Bearer, Authorization},
     TypedHeader,
 };
-use diesel_async::AsyncPgConnection;
+use diesel::prelude::*;
+use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use fred::prelude::*;
 use rand::{distr::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use diesel::prelude::*;
-use diesel_async::RunQueryDsl;
 
 use super::errors::{IntoRouteError, RouteError};
 use crate::{models::players::Player, AppState};
 
 const EXPIRE_IN_SECS: i64 = 60 * 60 * 24 * 21;
+
+#[derive(Debug, Serialize)]
+pub struct AuthBody {
+    access_token: String,
+    token_type: String,
+}
+
+impl AuthBody {
+    pub fn new(access_token: String) -> Self {
+        Self {
+            access_token,
+            token_type: "Bearer".to_string(),
+        }
+    }
+}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Session {
@@ -56,18 +70,22 @@ where
     }
 }
 
-pub async fn verify_token(token: &str, conn: &mut AsyncPgConnection, redis: &Pool) -> anyhow::Result<Session> {
+pub async fn verify_token(
+    token: &str,
+    conn: &mut AsyncPgConnection,
+    redis: &Pool,
+) -> anyhow::Result<Session> {
     use crate::schema::players::dsl::*;
 
     let stored_session_json: Value = redis.get(format!("session:{}", token)).await?;
-    let _ = redis.expire(format!("session:{}", token), EXPIRE_IN_SECS, None).await?;
+    let _: () = redis
+        .expire(format!("session:{}", token), EXPIRE_IN_SECS, None)
+        .await?;
     let stored_session: StoredSession = serde_json::from_value(stored_session_json)?;
 
     let player = players.find(stored_session.player_id).first(conn).await?;
 
-    Ok(Session {
-        player
-    })
+    Ok(Session { player })
 }
 
 /// Create a session and return the token. This can fail if there's something wrong with Valkey.
@@ -79,7 +97,7 @@ pub async fn create_session(player: &Player, redis: &Pool) -> anyhow::Result<Str
         .collect();
 
     let session = StoredSession {
-        player_id: player.id
+        player_id: player.id,
     };
 
     let serialized = serde_json::to_string(&session)?;

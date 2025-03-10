@@ -23,9 +23,9 @@ use crate::{
     util::{
         errors::{RouteError, SimpleRouteErrorOutput},
         game_types::{Character, League},
-        jwt::Claims,
         musicbrainz,
         radio::get_radio_songs as get_radio_songs_util,
+        session::Session,
         validator::ValidatedQuery,
     },
     AppState,
@@ -119,11 +119,11 @@ async fn get_song(
         ("token_jwt" = [])
     )
 )]
-#[instrument(skip(state, claims), err(Debug))]
+#[instrument(skip(state, session), err(Debug))]
 async fn delete_song(
     State(state): State<AppState>,
     Path(id): Path<i32>,
-    claims: Claims,
+    session: Session,
 ) -> Result<(), RouteError> {
     use crate::schema::songs;
 
@@ -136,7 +136,7 @@ async fn delete_song(
         .optional()?
         .ok_or_else(RouteError::new_not_found)?;
 
-    if song.user_can_delete(claims.profile.id, &mut conn).await? {
+    if song.user_can_delete(session.player.id, &mut conn).await? {
         song.delete(&mut conn, &state.redis).await?;
 
         Ok(())
@@ -567,11 +567,11 @@ async fn get_song_shouts(
         ("token_jwt" = [])
     )
 )]
-#[instrument(skip(state, claims), err(Debug))]
+#[instrument(skip(state, session), err(Debug))]
 async fn update_song_extra_info(
     State(state): State<AppState>,
     Path(id): Path<i32>,
-    claims: Claims,
+    session: Session,
     Json(extra_info): Json<NewExtraSongInfo>,
 ) -> Result<(), RouteError> {
     use diesel::insert_into;
@@ -587,7 +587,7 @@ async fn update_song_extra_info(
         .optional()?
         .ok_or_else(RouteError::new_not_found)?;
 
-    if song.user_can_edit(claims.profile.id, &mut conn).await? {
+    if song.user_can_edit(session.player.id, &mut conn).await? {
         let new_extra_song_info = NewExtraSongInfo::new(
             id,
             extra_info.cover_url,
@@ -637,11 +637,11 @@ struct MbidRefreshBody {
         ("token_jwt" = [])
     )
 )]
-#[instrument(skip(state, claims), err(Debug))]
+#[instrument(skip(state, session), err(Debug))]
 async fn update_song_extra_info_mbid(
     State(state): State<AppState>,
     Path(id): Path<i32>,
-    claims: Claims,
+    session: Session,
     Json(payload): Json<MbidRefreshBody>,
 ) -> Result<(), RouteError> {
     use diesel::insert_into;
@@ -657,7 +657,7 @@ async fn update_song_extra_info_mbid(
         .optional()?
         .ok_or_else(RouteError::new_not_found)?;
 
-    if song.user_can_edit(claims.profile.id, &mut conn).await? {
+    if song.user_can_edit(session.player.id, &mut conn).await? {
         let mb_info = musicbrainz::lookup_mbid(
             &payload.recording_mbid,
             payload.release_mbid.as_deref(),

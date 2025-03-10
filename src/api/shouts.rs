@@ -8,7 +8,7 @@ use crate::{
     models::shouts::Shout,
     util::{
         errors::{RouteError, SimpleRouteErrorOutput},
-        jwt::Claims,
+        session::Session,
     },
     AppState,
 };
@@ -34,10 +34,10 @@ pub fn routes() -> OpenApiRouter<AppState> {
         ("token_jwt" = [])
     )
 )]
-#[instrument(skip(state, claims), err(Debug))]
+#[instrument(skip(state, session), err(Debug))]
 async fn delete_shout(
     State(state): State<AppState>,
-    claims: Claims,
+    session: Session,
     Path(id): Path<i32>,
 ) -> Result<(), RouteError> {
     use crate::schema::shouts;
@@ -51,7 +51,7 @@ async fn delete_shout(
         .optional()?
         .ok_or_else(RouteError::new_not_found)?;
 
-    if shout.user_can_delete(claims.profile.id, &mut conn).await? {
+    if shout.user_can_delete(session.player.id, &mut conn).await? {
         diesel::delete(shouts::table.filter(shouts::id.eq(id)))
             .execute(&mut conn)
             .await?;

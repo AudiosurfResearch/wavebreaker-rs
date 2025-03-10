@@ -16,7 +16,7 @@ use crate::{
     models::players::{FavoriteCharacter, Player, PlayerPublic},
     util::{
         errors::{RouteError, SimpleRouteErrorOutput},
-        jwt::Claims,
+        session::Session,
     },
     AppState,
 };
@@ -118,33 +118,26 @@ async fn get_player(
         ("token_jwt" = [])
     )
 )]
-#[instrument(skip(state, claims), err(Debug))]
+#[instrument(skip(state, session), err(Debug))]
 async fn get_self(
     State(state): State<AppState>,
-    claims: Claims,
+    session: Session,
     query: Query<GetPlayerParams>,
 ) -> Result<Json<PlayerResponse>, RouteError> {
-    use crate::schema::players;
-
     let mut conn = state.db.get().await?;
-
-    let player: Player = players::table
-        .find(claims.profile.id)
-        .first(&mut conn)
-        .await?;
 
     let stats = if query.with_stats {
         Some(PlayerStats {
-            rank: player.get_rank(&state.redis).await?,
-            skill_points: player.get_skill_points(&state.redis).await?,
-            total_plays: player.get_total_plays(&mut conn).await?,
-            favorite_character: player.get_favorite_character(&mut conn).await?,
+            rank: session.player.get_rank(&state.redis).await?,
+            skill_points: session.player.get_skill_points(&state.redis).await?,
+            total_plays: session.player.get_total_plays(&mut conn).await?,
+            favorite_character: session.player.get_favorite_character(&mut conn).await?,
         })
     } else {
         None
     };
     Ok(Json(PlayerResponse {
-        player: player.into(),
+        player: session.player.into(),
         stats,
     }))
 }

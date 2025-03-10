@@ -21,8 +21,8 @@ use crate::{
     util::{
         errors::{RouteError, SimpleRouteErrorOutput},
         game_types::{Character, League},
-        jwt::Claims,
         query::SortType,
+        session::Session,
     },
     AppState,
 };
@@ -145,16 +145,16 @@ async fn get_score(
         ("token_jwt" = [])
     )
 )]
-#[instrument(skip(state, claims), err(Debug))]
+#[instrument(skip(state, session), err(Debug))]
 async fn delete_score(
     State(state): State<AppState>,
     Path(id): Path<i32>,
-    claims: Claims,
+    session: Session,
 ) -> Result<(), RouteError> {
     use crate::schema::scores;
 
-    if claims.profile.account_type == AccountType::Moderator
-        || claims.profile.account_type == AccountType::Team
+    if session.player.account_type == AccountType::Moderator
+        || session.player.account_type == AccountType::Team
     {
         let mut conn = state.db.get().await?;
 
@@ -387,18 +387,18 @@ struct GetRivalScoresParams {
         (status = UNAUTHORIZED, description = "Unauthorized", body = SimpleRouteErrorOutput, content_type = "application/json")
     )
 )]
-#[instrument(skip(state, claims), err(Debug))]
+#[instrument(skip(state, session), err(Debug))]
 async fn get_rival_scores(
     State(state): State<AppState>,
     query: Query<GetRivalScoresParams>,
-    claims: Claims,
+    session: Session,
 ) -> Result<Json<ScoreSearchResponse>, RouteError> {
     use crate::schema::{players, scores, songs};
 
     let mut conn = state.db.get().await?;
 
     let player: Player = players::table
-        .find(claims.profile.id)
+        .find(session.player.id)
         .first::<Player>(&mut conn)
         .await?;
 

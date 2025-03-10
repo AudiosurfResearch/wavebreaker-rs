@@ -72,7 +72,6 @@ struct Main {
     address: String,
     database: String,
     redis: String,
-    jwt_secret: String,
 }
 
 #[derive(Deserialize, Clone)]
@@ -96,7 +95,6 @@ pub struct AppState {
     config: Arc<Config>,
     db: Pool<diesel_async::AsyncPgConnection>,
     redis: Arc<RedisPool>,
-    jwt_keys: util::jwt::Keys,
     musicbrainz: Arc<MusicBrainzClient>,
 }
 
@@ -188,7 +186,6 @@ async fn init_state() -> anyhow::Result<AppState> {
         steam_openid: Arc::new(steam_openid),
         db: pool,
         redis: Arc::new(redis_pool),
-        jwt_keys: util::jwt::Keys::new(wavebreaker_config.main.jwt_secret.as_bytes()),
         config: Arc::new(wavebreaker_config),
         musicbrainz: Arc::new(client),
     })
