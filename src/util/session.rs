@@ -17,8 +17,10 @@ use serde_json::Value;
 use super::errors::{IntoRouteError, RouteError};
 use crate::{models::players::Player, AppState};
 
+// that's 21 days
 const EXPIRE_IN_SECS: i64 = 60 * 60 * 24 * 21;
 
+/// To return the created session after successfully authenticating with Steam OpenID
 #[derive(Debug, Serialize)]
 pub struct AuthBody {
     access_token: String,
@@ -39,6 +41,7 @@ pub struct Session {
     pub player: Player,
 }
 
+/// Representation of a player's session as it's stored in Valkey
 #[derive(Debug, Serialize, Deserialize)]
 struct StoredSession {
     player_id: i32,
@@ -55,7 +58,7 @@ where
         let state = AppState::from_ref(state);
         let mut conn = state.db.get().await?;
 
-        // Extract the token from the authorization header, if it's not there, try the cookie
+        // Extract the token from the authorization header
         let bearer = parts
             .extract::<TypedHeader<Authorization<Bearer>>>()
             .await
@@ -70,6 +73,7 @@ where
     }
 }
 
+/// Verify a session token, returning the `Session` and resetting its expiry. This can fail if something goes wrong with the database or Valkey.
 pub async fn verify_token(
     token: &str,
     conn: &mut AsyncPgConnection,
@@ -78,11 +82,13 @@ pub async fn verify_token(
     use crate::schema::players::dsl::*;
 
     let stored_session_json: Value = redis.get(format!("session:{}", token)).await?;
+    // refresh expiry
     let _: () = redis
         .expire(format!("session:{}", token), EXPIRE_IN_SECS, None)
         .await?;
     let stored_session: StoredSession = serde_json::from_value(stored_session_json)?;
 
+    // Get info needed to translate the session info at rest to a regular Session
     let player = players.find(stored_session.player_id).first(conn).await?;
 
     Ok(Session { player })
