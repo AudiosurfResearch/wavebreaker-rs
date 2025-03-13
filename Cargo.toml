@@ -12,7 +12,6 @@ edition = "2021"
 [dependencies]
 anyhow = { version = "1.0.97", features = ["backtrace"] }
 axum = { version = "0.8.1", features = ["macros", "tracing"] }
-# TEMPORARY, until this is merged https://github.com/gengteng/axum-serde/pull/3
 axum-serde = { version = "0.8.1", features = ["xml", "xml_encoding"] }
 figment = { version = "0.10.19", features = ["toml", "env"] }
 num_enum = "0.7.3"
@@ -20,7 +19,7 @@ quick-xml = { version = "0.37.2", features = ["serialize"] }
 serde = { version = "1.0.219", features = ["derive"] }
 serde_json = "1.0.140"
 serde_repr = "0.1.20"
-tokio = "1.44.0"
+tokio = "1.44.1"
 tracing = "0.1.41"
 tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
 diesel = { version = "2.2.8", features = ["time"] }
@@ -33,13 +32,12 @@ toml = "0.8.20"
 validator = { version = "0.20.0", features = ["derive"] }
 axum-extra = { version = "0.10.0", features = ["form", "typed-header"] }
 regex = "1.11.1"
-musicbrainz_rs = "0.9.0"
-clap = { version = "4.5.31", features = ["derive"] }
+musicbrainz_rs = { version = "0.9.0", features = ["rustls", "async", "rate_limit"], default-features = false }
+clap = { version = "4.5.32", features = ["derive"] }
 diesel_migrations = { version = "2.2.0", features = ["postgres"] }
 tracing-appender = "0.2.3"
 url = "2.5.4"
 serde_urlencoded = "0.7.1"
-reqwest = "0.12.12"
 fred = { version = "10.1.0", features = ["i-sorted-sets", "serde-json"] }
 rmp-serde = "1.3.0"
 thiserror = "2.0.12"
