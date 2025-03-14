@@ -37,6 +37,7 @@ use figment::{
 use fred::{clients::Pool as RedisPool, prelude::*, types::config::Config as RedisConfig};
 use musicbrainz_rs::client::MusicBrainzClient;
 use opentelemetry::trace::{TraceError, TracerProvider as _};
+use opentelemetry_otlp::WithExportConfig;
 use opentelemetry_sdk::{trace::SdkTracerProvider, Resource};
 use serde::Deserialize;
 use steam_openid::SteamOpenId;
@@ -84,6 +85,7 @@ struct External {
     steam_key: String,
     steam_realm: String,
     steam_return_path: String,
+    otlp_endpoint: String,
     //meilisearch_url: String,
     //meilisearch_key: String,
 }
@@ -98,9 +100,10 @@ pub struct AppState {
     musicbrainz: Arc<MusicBrainzClient>,
 }
 
-fn init_tracer_provider() -> Result<opentelemetry_sdk::trace::SdkTracerProvider, TraceError> {
+fn init_tracer_provider(otlp_endpoint: &str) -> Result<opentelemetry_sdk::trace::SdkTracerProvider, TraceError> {
     let exporter = opentelemetry_otlp::SpanExporter::builder()
         .with_tonic()
+        .with_endpoint(otlp_endpoint)
         .build()?;
 
     Ok(SdkTracerProvider::builder()
@@ -132,13 +135,7 @@ fn run_migrations(
 ///
 /// # Errors
 /// This function can fail if the config file is missing or invalid, the connection to Postgres or Redis fails, or the Steam API key is invalid
-async fn init_state() -> anyhow::Result<AppState> {
-    let wavebreaker_config: Config = Figment::new()
-        .merge(Toml::file("Wavebreaker.toml"))
-        .merge(Env::prefixed("WAVEBREAKER_"))
-        .extract()
-        .context("Config should be valid!")?;
-
+async fn init_state(wavebreaker_config: Config) -> anyhow::Result<AppState> {
     let diesel_manager = AsyncDieselConnectionManager::<diesel_async::AsyncPgConnection>::new(
         &wavebreaker_config.main.database,
     );
@@ -229,6 +226,12 @@ fn make_router(state: AppState) -> Router {
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    let wavebreaker_config: Config = Figment::new()
+        .merge(Toml::file("Wavebreaker.toml"))
+        .merge(Env::prefixed("WAVEBREAKER_"))
+        .extract()
+        .context("Config should be valid!")?;
+
     let file_appender = RollingFileAppender::builder()
         .filename_suffix("wavebreaker.log")
         .rotation(Rotation::DAILY)
@@ -236,7 +239,7 @@ async fn main() -> anyhow::Result<()> {
         .expect("Initializing logging failed");
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
 
-    let provider = init_tracer_provider().expect("Tracer provider should be able to initialize");
+    let provider = init_tracer_provider(&wavebreaker_config.external.otlp_endpoint).expect("Tracer provider should be able to initialize");
     let tracer = provider.tracer(env!("CARGO_PKG_NAME"));
     let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
 
@@ -254,7 +257,7 @@ async fn main() -> anyhow::Result<()> {
 
     debug!("Start init");
 
-    let state = init_state().await?;
+    let state = init_state(wavebreaker_config).await?;
 
     // Parse CLI arguments
     // and if we have a management command, don't spin up a server
