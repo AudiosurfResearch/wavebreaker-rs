@@ -125,9 +125,9 @@ jobs:
         docker manifest create ghcr.io/${{ env.REPO_OWNER }}/wavebreaker-rs:master \
           --amend ghcr.io/${{ env.REPO_OWNER }}/wavebreaker-rs:${{ github.sha }}-amd64 \
           --amend ghcr.io/${{ env.REPO_OWNER }}/wavebreaker-rs:${{ github.sha }}-aarch64
-        docker manifest annotate --arch amd64 --os linux ghcr.io/${{ env.REPO_OWNER }}/wavebreaker-rs:${{ github.sha }} ghcr.io/${{ env.REPO_OWNER }}/wavebreaker-rs:${{ github.sha }}-amd64
-        docker manifest annotate --arch arm64 --os linux ghcr.io/${{ env.REPO_OWNER }}/wavebreaker-rs:${{ github.sha }} ghcr.io/${{ env.REPO_OWNER }}/wavebreaker-rs:${{ github.sha }}-aarch64
-        docker manifest inspect ghcr.io/${{ env.REPO_OWNER }}/wavebreaker-rs:${{ github.sha }}
+        docker manifest annotate --arch amd64 --os linux ghcr.io/${{ env.REPO_OWNER }}/wavebreaker-rs:master ghcr.io/${{ env.REPO_OWNER }}/wavebreaker-rs:${{ github.sha }}-amd64
+        docker manifest annotate --arch arm64 --os linux ghcr.io/${{ env.REPO_OWNER }}/wavebreaker-rs:master ghcr.io/${{ env.REPO_OWNER }}/wavebreaker-rs:${{ github.sha }}-aarch64
+        docker manifest inspect ghcr.io/${{ env.REPO_OWNER }}/wavebreaker-rs:master
 
         docker manifest push ghcr.io/${{ env.REPO_OWNER }}/wavebreaker-rs:master
 
