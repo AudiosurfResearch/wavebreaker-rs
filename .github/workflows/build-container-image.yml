@@ -51,7 +51,7 @@ jobs:
           id: push
           uses: docker/build-push-action@v6
           with:
-            platform: ${{ matrix.arch }}
+            platforms: ${{ matrix.arch }}
             context: .
             provenance: false
             push: true
