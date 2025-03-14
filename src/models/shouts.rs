@@ -27,10 +27,7 @@ impl Shout {
         shouts.filter(song_id.eq(target_id)).into_boxed()
     }
 
-    pub async fn user_can_delete(
-        &self,
-        player: &Player,
-    ) -> anyhow::Result<bool> {
+    pub async fn user_can_delete(&self, player: &Player) -> anyhow::Result<bool> {
         if player.id == self.author_id
             || player.account_type == AccountType::Moderator
             || player.account_type == AccountType::Team

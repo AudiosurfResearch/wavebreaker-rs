@@ -1,5 +1,4 @@
 #![warn(
-    clippy::nursery,
     clippy::correctness,
     clippy::style,
     clippy::perf,
@@ -85,7 +84,7 @@ struct External {
     steam_key: String,
     steam_realm: String,
     steam_return_path: String,
-    otlp_endpoint: String,
+    otlp_endpoint: Option<String>,
     //meilisearch_url: String,
     //meilisearch_key: String,
 }
@@ -100,14 +99,17 @@ pub struct AppState {
     musicbrainz: Arc<MusicBrainzClient>,
 }
 
-fn init_tracer_provider(otlp_endpoint: &str) -> Result<opentelemetry_sdk::trace::SdkTracerProvider, TraceError> {
-    let exporter = opentelemetry_otlp::SpanExporter::builder()
-        .with_tonic()
-        .with_endpoint(otlp_endpoint)
-        .build()?;
+fn init_tracer_provider(
+    otlp_endpoint: &Option<String>,
+) -> Result<opentelemetry_sdk::trace::SdkTracerProvider, TraceError> {
+    let mut exporter = opentelemetry_otlp::SpanExporter::builder().with_tonic();
+    if otlp_endpoint.is_some() {
+        exporter = exporter.with_endpoint(otlp_endpoint.as_ref().unwrap());
+    }
+    let built_exporter = exporter.build()?;
 
     Ok(SdkTracerProvider::builder()
-        .with_batch_exporter(exporter)
+        .with_batch_exporter(built_exporter)
         .with_resource(
             Resource::builder()
                 .with_service_name(env!("CARGO_PKG_NAME"))
@@ -239,7 +241,8 @@ async fn main() -> anyhow::Result<()> {
         .expect("Initializing logging failed");
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
 
-    let provider = init_tracer_provider(&wavebreaker_config.external.otlp_endpoint).expect("Tracer provider should be able to initialize");
+    let provider = init_tracer_provider(&wavebreaker_config.external.otlp_endpoint)
+        .expect("Tracer provider should be able to initialize");
     let tracer = provider.tracer(env!("CARGO_PKG_NAME"));
     let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
 
