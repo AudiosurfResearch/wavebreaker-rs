@@ -11,7 +11,6 @@ Config example (``Wavebreaker.toml``):
 address = "localhost:1337"
 database = "postgres://user:owaranai_future_sound_o@localhost/wavebreaker"
 redis = "redis://localhost:6379"
-jwt_secret = "kono oto o kiku subete ga 「　　　」"
 
 [radio]
 cgr_location = "./radio"
@@ -20,8 +19,6 @@ cgr_location = "./radio"
 steam_key = "music_bokura_zutto_so_hype"
 steam_realm = "http://localhost:1337"
 steam_return_path = "/api/auth/return"
-meilisearch_url = "http://localhost:7700"
-meilisearch_key = "your-key"
 ```
 
 Radio song list example (``WavebreakerRadio.toml``):
@@ -52,7 +49,7 @@ To connect, use the latest Wavebreaker client with ``forceInsecure`` set to ``tr
 - Miscellaneous stuff (e.g. custom news)
 
 ## What still needs to be done?
-- Song and user search API (will most likely use [Meilisearch](https://www.meilisearch.com/))
+- Song and user search API
 
 ## Contributing
 
