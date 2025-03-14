@@ -121,11 +121,15 @@ jobs:
         registry: ghcr.io
 
     - name: Create manifest
-      uses: self-actuated/compile-manifest@master
-      with:
-        image: ghcr.io/${{ env.REPO_OWNER }}/wavebreaker-rs
-        sha: ${{ github.sha }}
-        platforms: amd64,arm64
+      run: |
+        docker manifest create ghcr.io/${{ env.REPO_OWNER }}/wavebreaker-rs:${{ github.sha }} \
+          --amend ghcr.io/${{ env.REPO_OWNER }}/wavebreaker-rs:${{ github.sha }}-amd64 \
+          --amend ghcr.io/${{ env.REPO_OWNER }}/wavebreaker-rs:${{ github.sha }}-aarch64
+        docker manifest annotate --arch amd64 --os linux ghcr.io/${{ env.REPO_OWNER }}/wavebreaker-rs:${{ github.sha }} ghcr.io/${{ env.REPO_OWNER }}/wavebreaker-rs:${{ github.sha }}-amd64
+        docker manifest annotate --arch arm64 --os linux ghcr.io/${{ env.REPO_OWNER }}/wavebreaker-rs:${{ github.sha }} ghcr.io/${{ env.REPO_OWNER }}/wavebreaker-rs:${{ github.sha }}-aarch64
+        docker manifest inspect ghcr.io/${{ env.REPO_OWNER }}/wavebreaker-rs:${{ github.sha }}
+
+        docker manifest push ghcr.io/${{ env.REPO_OWNER }}/wavebreaker-rs:master
 
     - shell: bash
       env:
