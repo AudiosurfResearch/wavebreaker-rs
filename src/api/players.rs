@@ -107,7 +107,7 @@ async fn get_player(
     method(get),
     path = "/self",
     params(
-        ("includeStats" = Option<bool>, Query, description = "Include player's stats")
+        ("withStats" = Option<bool>, Query, description = "Include player's stats")
     ),
     responses(
         (status = OK, description = "Success", body = PlayerPublic, content_type = "application/json"),

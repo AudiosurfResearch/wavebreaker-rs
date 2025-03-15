@@ -40,6 +40,7 @@ pub fn routes() -> OpenApiRouter<AppState> {
         .routes(routes!(get_song_shouts))
         .routes(routes!(update_song_extra_info))
         .routes(routes!(update_song_extra_info_mbid))
+        .routes(routes!(get_song_permissions))
 }
 
 #[derive(Serialize, ToSchema)]
@@ -49,6 +50,13 @@ struct SongResponse {
     song: Song,
     #[serde(skip_serializing_if = "Option::is_none")]
     extra_info: Option<ExtraSongInfo>,
+}
+
+#[derive(Serialize, ToSchema)]
+#[serde(rename_all = "camelCase")]
+struct SongPermissions {
+    can_delete: bool,
+    can_edit: bool,
 }
 
 #[derive(Debug, Deserialize)]
@@ -677,4 +685,40 @@ async fn update_song_extra_info_mbid(
     } else {
         Err(RouteError::new_unauthorized())
     }
+}
+
+/// Get own permissions on song
+#[utoipa::path(
+    method(get),
+    path = "/{id}/permissions",
+    params(
+        ("id" = i32, Path, description = "ID of song"),
+    ),
+    responses(
+        (status = OK, description = "Success", body = SongResponse, content_type = "application/json"),
+        (status = NOT_FOUND, description = "Song not found", body = SimpleRouteErrorOutput, content_type = "application/json"),
+        (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
+    )
+)]
+#[instrument(skip(state), err(Debug))]
+async fn get_song_permissions(
+    State(state): State<AppState>,
+    Path(id): Path<i32>,
+    session: Session,
+) -> Result<Json<SongPermissions>, RouteError> {
+    use crate::schema::songs;
+
+    let mut conn = state.db.get().await?;
+
+    let song: Song = songs::table
+        .find(id)
+        .first(&mut conn)
+        .await
+        .optional()?
+        .ok_or_else(RouteError::new_not_found)?;
+
+    Ok(Json(SongPermissions {
+        can_delete: song.user_can_delete(&session.player, &mut conn).await?,
+        can_edit: song.user_can_edit(&session.player, &mut conn).await?
+    }))
 }
