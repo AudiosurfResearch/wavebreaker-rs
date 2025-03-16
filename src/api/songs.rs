@@ -719,6 +719,6 @@ async fn get_song_permissions(
 
     Ok(Json(SongPermissions {
         can_delete: song.user_can_delete(&session.player, &mut conn).await?,
-        can_edit: song.user_can_edit(&session.player, &mut conn).await?
+        can_edit: song.user_can_edit(&session.player, &mut conn).await?,
     }))
 }

@@ -4,7 +4,7 @@ use diesel_async::RunQueryDsl;
 use fred::prelude::*;
 use tracing::instrument;
 
-use crate::AppState;
+use crate::{models::players::AccountType, AppState};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -31,6 +31,10 @@ pub enum Command {
         player_to_refresh: i32,
     },
     RefreshAllSkillPoints,
+    ChangeAccountType {
+        player_id: i32,
+        new_type: AccountType,
+    },
 }
 
 //skip state because it has members that don't implement Debug
@@ -116,6 +120,21 @@ pub async fn parse_command(command: &Command, state: AppState) -> anyhow::Result
                     )
                     .await?;
             }
+
+            Ok(())
+        }
+        Command::ChangeAccountType {
+            player_id,
+            new_type,
+        } => {
+            use crate::schema::players::dsl::*;
+
+            let mut conn = state.db.get().await?;
+
+            diesel::update(players.find(player_id))
+                .set(account_type.eq(new_type))
+                .execute(&mut conn)
+                .await?;
 
             Ok(())
         }

@@ -1,3 +1,4 @@
+use clap::ValueEnum;
 use diesel::{
     backend::Backend,
     deserialize::{self, FromSql, FromSqlRow},
@@ -72,6 +73,7 @@ where
     TryFromPrimitive,
     IntoPrimitive,
     ToSchema,
+    ValueEnum,
 )]
 #[diesel(sql_type = diesel::sql_types::SmallInt)]
 #[repr(i16)]
