@@ -35,8 +35,8 @@ use figment::{
 };
 use fred::{clients::Pool as RedisPool, prelude::*, types::config::Config as RedisConfig};
 use musicbrainz_rs::client::MusicBrainzClient;
-use opentelemetry::trace::{TraceError, TracerProvider as _};
-use opentelemetry_otlp::WithExportConfig;
+use opentelemetry::trace::TracerProvider as _;
+use opentelemetry_otlp::{ExporterBuildError, WithExportConfig};
 use opentelemetry_sdk::{trace::SdkTracerProvider, Resource};
 use serde::Deserialize;
 use steam_openid::SteamOpenId;
@@ -101,7 +101,7 @@ pub struct AppState {
 
 fn init_tracer_provider(
     otlp_endpoint: &Option<String>,
-) -> Result<opentelemetry_sdk::trace::SdkTracerProvider, TraceError> {
+) -> Result<opentelemetry_sdk::trace::SdkTracerProvider, ExporterBuildError> {
     let mut exporter = opentelemetry_otlp::SpanExporter::builder().with_tonic();
     if otlp_endpoint.is_some() {
         exporter = exporter.with_endpoint(otlp_endpoint.as_ref().unwrap());
