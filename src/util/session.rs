@@ -92,7 +92,10 @@ pub async fn verify_token(
     // Get info needed to translate the session info at rest to a regular Session
     let player = players.find(stored_session.player_id).first(conn).await?;
 
-    Ok(Session { player, token: token.to_owned() })
+    Ok(Session {
+        player,
+        token: token.to_owned(),
+    })
 }
 
 /// Create a session and return the token. This can fail if there's something wrong with Valkey.
@@ -123,8 +126,7 @@ pub async fn create_session(player: &Player, redis: &Pool) -> anyhow::Result<Str
 
 /// Delete a session from the token. This can fail if there's something wrong with Valkey.
 pub async fn delete_session(token: &str, redis: &Pool) -> anyhow::Result<()> {
-    let _: () = redis
-        .del(format!("session:{}", token)).await?;
+    let _: () = redis.del(format!("session:{}", token)).await?;
 
     Ok(())
 }
