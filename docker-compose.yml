@@ -1,0 +1,37 @@
+services:
+  backend:
+    image: wavebreaker-rs
+    build:
+      context: .
+    volumes:
+      - ./Wavebreaker.toml:/app/Wavebreaker.toml
+    ports:
+      - 1337:1337
+    depends_on:
+      db:
+        condition: service_healthy
+        restart: true
+      valkey:
+        condition: service_started
+
+  # Valkey is used for user leaderboards and as session storage
+  valkey:
+    image: docker.io/valkey/valkey:latest
+
+  # Postgres is used as the database for Wavebreaker
+  db:
+    image: docker.io/postgres
+    restart: always
+    # set shared memory limit when using docker compose
+    shm_size: 512mb
+    environment:
+      POSTGRES_PASSWORD: wvbr_testpw
+      #POSTGRES_USER: postgres
+      # for pg_isready
+      PGUSER: postgres
+    healthcheck:
+      test: pg_isready
+      interval: 5s
+      retries: 5
+      start_period: 15s
+      timeout: 10s

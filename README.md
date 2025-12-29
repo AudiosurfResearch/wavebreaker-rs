@@ -5,12 +5,12 @@ This is a custom server for Dylan Fitterer's game [Audiosurf](https://store.stea
 
 *The goal of this endeavour is to have at least feature parity with the [TypeScript version](https://github.com/AudiosurfResearch/Wavebreaker), which is currently running in production at https://wavebreaker.arcadian.garden. Once this goal is reached and everything is working after a public test, the TypeScript version will be replaced with this.*
 
-Config example (``Wavebreaker.toml``):
+Config example (``Wavebreaker.toml``), usable with the example `docker-compose.yml`:
 ```toml
 [main]
-address = "localhost:1337"
-database = "postgres://user:owaranai_future_sound_o@localhost/wavebreaker"
-redis = "redis://localhost:6379"
+address = "0.0.0.0:1337"
+database = "postgres://postgres:wvbr_testpw@db"
+redis = "redis://valkey"
 
 [radio]
 cgr_location = "./radio"
