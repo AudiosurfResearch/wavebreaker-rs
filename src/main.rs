@@ -18,10 +18,10 @@ pub mod models;
 pub mod schema;
 mod util;
 
-use std::{io::stdout, sync::Arc};
+use std::{io::stdout, str::FromStr, sync::Arc};
 
 use anyhow::{anyhow, Context};
-use axum::Router;
+use axum::{body::Body, http::Request, Router};
 use clap::Parser;
 use diesel::pg::Pg;
 use diesel_async::{
@@ -35,12 +35,11 @@ use figment::{
 };
 use fred::{clients::Pool as RedisPool, prelude::*, types::config::Config as RedisConfig};
 use musicbrainz_rs::client::MusicBrainzClient;
-use opentelemetry::trace::TracerProvider as _;
-use opentelemetry_otlp::{ExporterBuildError, WithExportConfig};
-use opentelemetry_sdk::{trace::SdkTracerProvider, Resource};
+use sentry::{integrations::tower::NewSentryLayer, types::Dsn};
 use serde::Deserialize;
 use steam_openid::SteamOpenId;
 use steam_rs::Steam;
+use tower::ServiceBuilder;
 use tracing::{debug, info};
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{
@@ -84,7 +83,7 @@ struct External {
     steam_key: String,
     steam_realm: String,
     steam_return_path: String,
-    otlp_endpoint: Option<String>,
+    sentry_dsn: Option<String>,
     //meilisearch_url: String,
     //meilisearch_key: String,
 }
@@ -97,25 +96,6 @@ pub struct AppState {
     db: Pool<diesel_async::AsyncPgConnection>,
     redis: Arc<RedisPool>,
     musicbrainz: Arc<MusicBrainzClient>,
-}
-
-fn init_tracer_provider(
-    otlp_endpoint: &Option<String>,
-) -> Result<opentelemetry_sdk::trace::SdkTracerProvider, ExporterBuildError> {
-    let mut exporter = opentelemetry_otlp::SpanExporter::builder().with_tonic();
-    if otlp_endpoint.is_some() {
-        exporter = exporter.with_endpoint(otlp_endpoint.as_ref().unwrap());
-    }
-    let built_exporter = exporter.build()?;
-
-    Ok(SdkTracerProvider::builder()
-        .with_batch_exporter(built_exporter)
-        .with_resource(
-            Resource::builder()
-                .with_service_name(env!("CARGO_PKG_NAME"))
-                .build(),
-        )
-        .build())
 }
 
 fn run_migrations(
@@ -193,46 +173,38 @@ async fn init_state(wavebreaker_config: Config) -> anyhow::Result<AppState> {
 fn make_router(state: AppState) -> Router {
     let (api_router, openapi) = api::routes();
 
+    let sentry_layer = if state.config.external.sentry_dsn.is_some() {
+        Some(NewSentryLayer::<Request<Body>>::new_from_top())
+    } else {
+        None
+    };
+
     Router::new()
         .nest("/as_steamlogin", routes_steam())
         .nest("//as_steamlogin", routes_steam_doubleslash()) // for that one edge case
         .nest("/as", routes_as(&state.config.radio.cgr_location))
         .nest("/api", api_router)
         .merge(Scalar::with_url("/api/docs", openapi))
-        /*
-        .layer(
-            // TAKEN FROM: https://github.com/tokio-rs/axum/blob/d1fb14ead1063efe31ae3202e947ffd569875c0b/examples/error-handling/src/main.rs#L60-L77
-            TraceLayer::new_for_http() // Create our own span for the request and include the matched path. The matched
-                // path is useful for figuring out which handler the request was routed to.
-                .make_span_with(|req: &Request<_>| {
-                    // from https://github.com/tokio-rs/axum/blob/main/examples/tracing-aka-logging/src/main.rs
-                    // Log the matched route's path (with placeholders not filled in).
-                    // Use request.uri() or OriginalUri if you want the real path.
-                    let matched_path = req
-                        .extensions()
-                        .get::<MatchedPath>()
-                        .map(MatchedPath::as_str);
-                    info_span!(
-                        "http_request",
-                        method = ?req.method(),
-                        matched_path,
-                    )
-                })
-                // By default `TraceLayer` will log 5xx responses but we're doing our specific
-                // logging of errors so disable that
-                .on_failure(()),
-        )
-        */
+        .layer(ServiceBuilder::new().option_layer(sentry_layer))
         .with_state(state)
 }
 
-#[tokio::main]
-async fn main() -> anyhow::Result<()> {
+fn main() -> anyhow::Result<()> {
     let wavebreaker_config: Config = Figment::new()
         .merge(Toml::file("Wavebreaker.toml"))
         .merge(Env::prefixed("WAVEBREAKER_"))
         .extract()
         .context("Config should be valid!")?;
+
+    let dsn: Option<Dsn> = match &wavebreaker_config.external.sentry_dsn {
+        Some(dsn) => Some(Dsn::from_str(dsn).expect("Sentry DSN should be parseable!")),
+        None => None,
+    };
+    let sentry = sentry::init(sentry::ClientOptions {
+        dsn,
+        release: sentry::release_name!(),
+        ..sentry::ClientOptions::default()
+    });
 
     let file_appender = RollingFileAppender::builder()
         .filename_suffix("wavebreaker.log")
@@ -241,11 +213,11 @@ async fn main() -> anyhow::Result<()> {
         .expect("Initializing logging failed");
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
 
-    let provider = init_tracer_provider(&wavebreaker_config.external.otlp_endpoint)
-        .expect("Tracer provider should be able to initialize");
-    let tracer = provider.tracer(env!("CARGO_PKG_NAME"));
-    let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
-
+    let sentry_layer = if sentry.is_enabled() {
+        Some(sentry::integrations::tracing::layer())
+    } else {
+        None
+    };
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
@@ -254,31 +226,36 @@ async fn main() -> anyhow::Result<()> {
                 "wavebreaker=info,tower_http=error,axum::rejection=trace".into()
             }),
         )
-        .with(telemetry)
         .with(tracing_subscriber::fmt::layer().with_writer(stdout.and(non_blocking)))
+        .with(sentry_layer)
         .init();
 
     debug!("Start init");
 
-    let state = init_state(wavebreaker_config).await?;
+    tokio::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()?
+        .block_on(async {
+            let state = init_state(wavebreaker_config.clone()).await?;
 
-    // Parse CLI arguments
-    // and if we have a management command, don't spin up a server
-    let args = manager::Args::parse();
-    if args.command.is_some() {
-        return manager::parse_command(&args.command.unwrap(), state).await;
-    }
+            // Parse CLI arguments
+            // and if we have a management command, don't spin up a server
+            let args = manager::Args::parse();
+            if args.command.is_some() {
+                return manager::parse_command(&args.command.unwrap(), state).await;
+            }
 
-    info!("Wavebreaker starting...");
+            info!("Wavebreaker starting...");
 
-    let listener = tokio::net::TcpListener::bind(&state.config.main.address)
-        .await
-        .context("Listener should always be able to listen!")?;
-    info!("Listening on {}", &state.config.main.address);
+            let listener = tokio::net::TcpListener::bind(&state.config.main.address)
+                .await
+                .context("Listener should always be able to listen!")?;
+            info!("Listening on {}", &state.config.main.address);
 
-    let app = make_router(state);
+            let app = make_router(state);
 
-    axum::serve(listener, app)
-        .await
-        .context("Server should be able to... well, serve!")
+            axum::serve(listener, app.into_make_service())
+                .await
+                .context("Server should be able to... well, serve!")
+        })
 }
