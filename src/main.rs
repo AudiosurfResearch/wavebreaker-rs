@@ -43,7 +43,7 @@ use tower::ServiceBuilder;
 use tracing::{debug, info};
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{
-    fmt::writer::MakeWriterExt, layer::SubscriberExt, util::SubscriberInitExt,
+    fmt::writer::MakeWriterExt, layer::SubscriberExt, util::SubscriberInitExt, Layer,
 };
 use utoipa_scalar::{Scalar, Servable};
 
@@ -202,6 +202,7 @@ fn main() -> anyhow::Result<()> {
     };
     let sentry = sentry::init(sentry::ClientOptions {
         dsn,
+        enable_logs: true,
         release: sentry::release_name!(),
         ..sentry::ClientOptions::default()
     });
@@ -220,13 +221,16 @@ fn main() -> anyhow::Result<()> {
     };
     tracing_subscriber::registry()
         .with(
-            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
-                // axum logs rejections from built-in extractors with the `axum::rejection`
-                // target, at `TRACE` level. `axum::rejection=trace` enables showing those events
-                "wavebreaker=info,tower_http=error,axum::rejection=trace".into()
-            }),
+            tracing_subscriber::fmt::layer()
+                .with_writer(stdout.and(non_blocking))
+                .with_filter(
+                    tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+                        // axum logs rejections from built-in extractors with the `axum::rejection`
+                        // target, at `TRACE` level. `axum::rejection=trace` enables showing those events
+                        "wavebreaker=info,tower_http=error,axum::rejection=trace".into()
+                    }),
+                ),
         )
-        .with(tracing_subscriber::fmt::layer().with_writer(stdout.and(non_blocking)))
         .with(sentry_layer)
         .init();
 
