@@ -19,7 +19,12 @@ cgr_location = "./radio"
 steam_key = "music_bokura_zutto_so_hype"
 steam_realm = "http://localhost:1337"
 steam_return_path = "/api/auth/return"
-#otlp_endpoint = "http://localhost:4317"
+# all Sentry stuff is optional, refer to their docs to find out what these do
+# if you plan on using Sentry, the DSN is required
+# anything else not specified is set to the default
+sentry_dsn = "https://somethingsomething@your.sentry.or.glitchtip/whatever"
+sentry_traces_sample_rate: 1.0,
+sentry_send_pii: true,
 ```
 
 Radio song list example (``WavebreakerRadio.toml``):
