@@ -84,6 +84,9 @@ struct External {
     steam_realm: String,
     steam_return_path: String,
     sentry_dsn: Option<String>,
+    sentry_logs: Option<bool>,
+    sentry_traces_sample_rate: Option<f32>,
+    sentry_send_pii: Option<bool>,
     //meilisearch_url: String,
     //meilisearch_key: String,
 }
@@ -202,7 +205,15 @@ fn main() -> anyhow::Result<()> {
     };
     let sentry = sentry::init(sentry::ClientOptions {
         dsn,
-        enable_logs: true,
+        enable_logs: wavebreaker_config.external.sentry_logs.unwrap_or_default(),
+        traces_sample_rate: wavebreaker_config
+            .external
+            .sentry_traces_sample_rate
+            .unwrap_or_default(),
+        send_default_pii: wavebreaker_config
+            .external
+            .sentry_send_pii
+            .unwrap_or_default(),
         release: sentry::release_name!(),
         ..sentry::ClientOptions::default()
     });
