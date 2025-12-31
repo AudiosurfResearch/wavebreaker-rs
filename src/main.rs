@@ -176,19 +176,13 @@ async fn init_state(wavebreaker_config: Config) -> anyhow::Result<AppState> {
 fn make_router(state: AppState) -> Router {
     let (api_router, openapi) = api::routes();
 
-    let sentry_layer = if state.config.external.sentry_dsn.is_some() {
-        Some(NewSentryLayer::<Request<Body>>::new_from_top())
-    } else {
-        None
-    };
-
     Router::new()
         .nest("/as_steamlogin", routes_steam())
         .nest("//as_steamlogin", routes_steam_doubleslash()) // for that one edge case
         .nest("/as", routes_as(&state.config.radio.cgr_location))
         .nest("/api", api_router)
         .merge(Scalar::with_url("/api/docs", openapi))
-        .layer(ServiceBuilder::new().option_layer(sentry_layer))
+        .layer(ServiceBuilder::new().layer(NewSentryLayer::<Request<Body>>::new_from_top()))
         .with_state(state)
 }
 
@@ -203,9 +197,9 @@ fn main() -> anyhow::Result<()> {
         Some(dsn) => Some(Dsn::from_str(dsn).expect("Sentry DSN should be parseable!")),
         None => None,
     };
-    let sentry = sentry::init(sentry::ClientOptions {
+    let _guard = sentry::init(sentry::ClientOptions {
         dsn,
-        enable_logs: wavebreaker_config.external.sentry_logs.unwrap_or_default(),
+        enable_logs: wavebreaker_config.external.sentry_logs.unwrap_or(true),
         traces_sample_rate: wavebreaker_config
             .external
             .sentry_traces_sample_rate
@@ -214,6 +208,7 @@ fn main() -> anyhow::Result<()> {
             .external
             .sentry_send_pii
             .unwrap_or_default(),
+        attach_stacktrace: true,
         release: sentry::release_name!(),
         ..sentry::ClientOptions::default()
     });
@@ -225,11 +220,6 @@ fn main() -> anyhow::Result<()> {
         .expect("Initializing logging failed");
     let (non_blocking, _guard) = tracing_appender::non_blocking(file_appender);
 
-    let sentry_layer = if sentry.is_enabled() {
-        Some(sentry::integrations::tracing::layer())
-    } else {
-        None
-    };
     tracing_subscriber::registry()
         .with(
             tracing_subscriber::fmt::layer()
@@ -242,7 +232,7 @@ fn main() -> anyhow::Result<()> {
                     }),
                 ),
         )
-        .with(sentry_layer)
+        .with(sentry::integrations::tracing::layer().enable_span_attributes())
         .init();
 
     debug!("Start init");
