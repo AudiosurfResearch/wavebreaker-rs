@@ -14,7 +14,7 @@ use crate::{
     models::players::Player,
     util::{
         errors::{IntoRouteError, RouteError, SimpleRouteErrorOutput},
-        session::{create_session, delete_session, AuthBody, Session},
+        session::{create_session, delete_player_sessions, delete_session, AuthBody, Session},
     },
     AppState,
 };
@@ -24,6 +24,7 @@ pub fn routes() -> OpenApiRouter<AppState> {
         .routes(routes!(auth_login))
         .routes(routes!(auth_return))
         .routes(routes!(auth_logout))
+        .routes(routes!(auth_logout_all))
 }
 
 /// Start login
@@ -111,5 +112,27 @@ async fn auth_return(
 #[instrument(skip_all, err(Debug))]
 async fn auth_logout(State(state): State<AppState>, session: Session) -> Result<(), RouteError> {
     delete_session(&session.token, &state.redis).await?;
+    Ok(())
+}
+
+/// Log out of all own sessions
+#[utoipa::path(
+    method(get),
+    path = "/logout/all",
+    responses(
+        (status = OK, description = "Successful", body = ()),
+        (status = UNAUTHORIZED, description = "Unauthorized", body = SimpleRouteErrorOutput),
+        (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
+    ),
+    security(
+        ("token_jwt" = [])
+    )
+)]
+#[instrument(skip_all, err(Debug))]
+async fn auth_logout_all(
+    State(state): State<AppState>,
+    session: Session,
+) -> Result<(), RouteError> {
+    delete_player_sessions(session.player.id, &state.redis).await?;
     Ok(())
 }

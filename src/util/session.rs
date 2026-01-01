@@ -141,6 +141,9 @@ pub async fn delete_player_sessions(player_id: i32, redis: &Pool) -> anyhow::Res
             let value: serde_json::Value = client
                 .json_get::<_, _, &str, &str, &str, _>(&key, None, None, None, "$.player_id")
                 .await?;
+            // needed because the thing that JSON.get returns from Redis looks quite silly.
+            // it turns it into a string like this: "[1]" which we have to turn back into an integer
+            // Unwrapping should be safe here since the input should always be in this format
             let converted_id = value.as_array().unwrap()[0].as_i64().unwrap();
 
             if player_id == converted_id as i32 {
