@@ -82,7 +82,9 @@ pub async fn verify_token(
 ) -> anyhow::Result<Session> {
     use crate::schema::players::dsl::*;
 
-    let stored_session_json: Value = redis.get(format!("session:{}", token)).await?;
+    let stored_session_json: Value = redis
+        .json_get::<_, _, &str, &str, &str, _>(format!("session:{}", token), None, None, None, None)
+        .await?;
     // refresh expiry
     let _: () = redis
         .expire(format!("session:{}", token), EXPIRE_IN_SECS, None)
@@ -112,13 +114,10 @@ pub async fn create_session(player: &Player, redis: &Pool) -> anyhow::Result<Str
 
     let serialized = serde_json::to_string(&session)?;
     let _: () = redis
-        .set(
-            format!("session:{}", token),
-            serialized,
-            Some(Expiration::EX(EXPIRE_IN_SECS)),
-            None,
-            false,
-        )
+        .json_set(format!("session:{}", token), "$", serialized, None)
+        .await?;
+    let _: () = redis
+        .expire(format!("session:{}", token), EXPIRE_IN_SECS, None)
         .await?;
 
     Ok(token)
