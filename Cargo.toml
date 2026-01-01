@@ -10,42 +10,40 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = { version = "1.0.99", features = ["backtrace"] }
+anyhow = { version = "1.0.100", features = ["backtrace"] }
 axum = { version = "0.8.8", features = ["macros", "tracing"] }
 axum-serde = { version = "0.9.0", features = ["xml", "xml_encoding"] }
 figment = { version = "0.10.19", features = ["toml", "env"] }
-num_enum = "0.7.4"
-quick-xml = { version = "0.38.3", features = ["serialize"] }
-serde = { version = "1.0.219", features = ["derive"] }
-serde_json = "1.0.143"
+num_enum = "0.7.5"
+quick-xml = { version = "0.38.4", features = ["serialize"] }
+serde = { version = "1.0.228", features = ["derive"] }
+serde_json = "1.0.148"
 serde_repr = "0.1.20"
-tokio = "1.47.1"
-tracing = "0.1.41"
-tracing-subscriber = { version = "0.3.19", features = ["env-filter"] }
-diesel = { version = "2.2.12", features = ["time"] }
-diesel-async = { version = "0.6.1", features = ["postgres", "deadpool", "async-connection-wrapper"] }
+tokio = "1.48.0"
+tracing = "0.1.44"
+tracing-subscriber = { version = "0.3.22", features = ["env-filter"] }
+diesel = { version = "2.3.5", features = ["time"] }
+diesel-async = { version = "0.7.4", features = ["postgres", "deadpool", "async-connection-wrapper"] }
 steam-rs = "0.5.1"
 steam-openid = "0.2.0"
-time = { version = "0.3.41", features = ["formatting", "serde"] }
-tower-http = { version = "0.6.6", features = ["fs", "trace"] }
-toml = "0.9.5"
+time = { version = "0.3.44", features = ["formatting", "serde"] }
+tower-http = { version = "0.6.8", features = ["fs", "trace"] }
+toml = "0.9.10"
 validator = { version = "0.20.0", features = ["derive"] }
 axum-extra = { version = "0.12.5", features = ["form", "typed-header"] }
-regex = "1.11.2"
+regex = "1.12.2"
 musicbrainz_rs = { version = "0.12.0", features = ["rustls", "async", "rate_limit"], default-features = false }
-clap = { version = "4.5.46", features = ["derive"] }
-diesel_migrations = { version = "2.2.0", features = ["postgres"] }
-tracing-appender = "0.2.3"
+clap = { version = "4.5.53", features = ["derive"] }
+diesel_migrations = { version = "2.3.1", features = ["postgres"] }
+tracing-appender = "0.2.4"
 url = "2.5.7"
 serde_urlencoded = "0.7.1"
 fred = { version = "10.1.0", features = ["i-redis-json", "i-sorted-sets", "serde-json"] }
-rmp-serde = "1.3.0"
-thiserror = "2.0.16"
 utoipa = { version = "5.4.0", features = ["axum_extras", "non_strict_integers", "repr", "time"] }
 utoipa-axum = "0.2.0"
 utoipa-scalar = { version = "0.3.0", features = ["axum"] }
-serde-inline-default = "0.2.3"
-serde_with = "3.14.0"
+serde-inline-default = "1.0.0"
+serde_with = "3.16.1"
 rand = "0.9.2"
 sentry = { version = "0.46.0", features = ["tracing", "anyhow", "tower", "logs"] }
 tower = "0.5.2"
