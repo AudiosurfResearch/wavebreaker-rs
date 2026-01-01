@@ -35,6 +35,9 @@ pub enum Command {
         player_id: i32,
         new_type: AccountType,
     },
+    DeletePlayerSessions {
+        player_id: i32,
+    },
 }
 
 //skip state because it has members that don't implement Debug
@@ -135,6 +138,13 @@ pub async fn parse_command(command: &Command, state: AppState) -> anyhow::Result
                 .set(account_type.eq(new_type))
                 .execute(&mut conn)
                 .await?;
+
+            Ok(())
+        }
+        Command::DeletePlayerSessions { player_id } => {
+            use crate::util::session::delete_player_sessions;
+
+            delete_player_sessions(player_id.to_owned(), &state.redis).await?;
 
             Ok(())
         }

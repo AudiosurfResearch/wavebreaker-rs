@@ -15,8 +15,9 @@ services:
         condition: service_started
 
   # Valkey is used for user leaderboards and as session storage
+  # valkey-bundle includes the JSON module, which we use
   valkey:
-    image: docker.io/valkey/valkey:latest
+    image: docker.io/valkey/valkey-bundle:latest
 
   # Postgres is used as the database for Wavebreaker
   db:

@@ -10,9 +10,11 @@ use axum_extra::{
 use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use fred::prelude::*;
+use futures::stream::TryStreamExt;
 use rand::{distr::Alphanumeric, Rng};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
+use tracing::debug;
 
 use super::errors::{IntoRouteError, RouteError};
 use crate::{models::players::Player, AppState};
@@ -126,6 +128,28 @@ pub async fn create_session(player: &Player, redis: &Pool) -> anyhow::Result<Str
 /// Delete a session from the token. This can fail if there's something wrong with Valkey.
 pub async fn delete_session(token: &str, redis: &Pool) -> anyhow::Result<()> {
     let _: () = redis.del(format!("session:{}", token)).await?;
+
+    Ok(())
+}
+
+/// Delete all sessions of　the specified player. This can fail if there's something wrong with Valkey.
+pub async fn delete_player_sessions(player_id: i32, redis: &Pool) -> anyhow::Result<()> {
+    let client = redis.next();
+    client
+        .scan_buffered("session:*", Some(10), None)
+        .try_for_each_concurrent(10, |key| async move {
+            let value: serde_json::Value = client
+                .json_get::<_, _, &str, &str, &str, _>(&key, None, None, None, "$.player_id")
+                .await?;
+            let converted_id = value.as_array().unwrap()[0].as_i64().unwrap();
+
+            if player_id == converted_id as i32 {
+                debug!("Deleting session {}", key.as_str_lossy());
+                let _: () = client.del(key).await?;
+            }
+            Ok(())
+        })
+        .await?;
 
     Ok(())
 }

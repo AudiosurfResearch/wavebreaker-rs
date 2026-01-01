@@ -4447,6 +4447,7 @@ dependencies = [
  "diesel_migrations",
  "figment",
  "fred",
+ "futures",
  "musicbrainz_rs",
  "num_enum",
  "quick-xml 0.38.3",
