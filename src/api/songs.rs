@@ -476,14 +476,14 @@ async fn get_radio_songs(
 }
 
 #[serde_inline_default]
-#[derive(Deserialize, Validate)]
+#[derive(Debug, Deserialize, Validate)]
 struct GetSongShoutsParams {
     #[validate(range(min = 1))]
     #[serde_inline_default(1)]
-    page: i32,
+    page: i64,
     #[validate(range(min = 1, max = 50))]
     #[serde_inline_default(10)]
-    page_size: i32,
+    page_size: i64,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -519,7 +519,7 @@ struct SongShoutsResponse {
 async fn get_song_shouts(
     State(state): State<AppState>,
     Path(id): Path<i32>,
-    ValidatedQuery(query): ValidatedQuery<GetSongScoresParams>,
+    ValidatedQuery(query): ValidatedQuery<GetSongShoutsParams>,
 ) -> Result<Json<SongShoutsResponse>, RouteError> {
     use crate::schema::{players, shouts, songs};
 
