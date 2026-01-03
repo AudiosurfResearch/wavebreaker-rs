@@ -1,5 +1,6 @@
 pub mod errors;
 pub mod game_types;
+pub mod meilisearch;
 pub mod modifiers;
 pub mod musicbrainz;
 pub mod query;

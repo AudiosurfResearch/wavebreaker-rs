@@ -34,6 +34,7 @@ use figment::{
     Figment,
 };
 use fred::{clients::Pool as RedisPool, prelude::*, types::config::Config as RedisConfig};
+use meilisearch_sdk::client::Client as MeiliClient;
 use musicbrainz_rs::client::MusicBrainzClient;
 use sentry::{integrations::tower::NewSentryLayer, types::Dsn};
 use serde::Deserialize;
@@ -71,6 +72,8 @@ struct Main {
     address: String,
     database: String,
     redis: String,
+    meilisearch_url: String,
+    meilisearch_key: String,
 }
 
 #[derive(Deserialize, Clone)]
@@ -87,8 +90,6 @@ struct External {
     sentry_logs: Option<bool>,
     sentry_traces_sample_rate: Option<f32>,
     sentry_send_pii: Option<bool>,
-    //meilisearch_url: String,
-    //meilisearch_key: String,
 }
 
 #[derive(Clone)]
@@ -99,6 +100,7 @@ pub struct AppState {
     db: Pool<diesel_async::AsyncPgConnection>,
     redis: Arc<RedisPool>,
     musicbrainz: Arc<MusicBrainzClient>,
+    meilisearch: Arc<MeiliClient>,
 }
 
 fn run_migrations(
@@ -152,8 +154,8 @@ async fn init_state(wavebreaker_config: Config) -> anyhow::Result<AppState> {
         .await
         .context("Clients failed to connect to Redis!")?;
 
-    let mut client = MusicBrainzClient::default();
-    client
+    let mut mb_client = MusicBrainzClient::default();
+    mb_client
         .set_user_agent(WAVEBREAKER_USER_AGENT)
         .expect("Setting the MusicBrainz client's user agent should not fail.");
 
@@ -163,13 +165,20 @@ async fn init_state(wavebreaker_config: Config) -> anyhow::Result<AppState> {
     )
     .map_err(|e| anyhow!("Failed to construct SteamOpenId: {e:?}"))?;
 
+    let meili_client = MeiliClient::new(
+        &wavebreaker_config.main.meilisearch_url,
+        Some(&wavebreaker_config.main.meilisearch_key),
+    )
+    .context("Failed to build Meilisearch client!")?;
+
     Ok(AppState {
         steam_api: Arc::new(Steam::new(&wavebreaker_config.external.steam_key)),
         steam_openid: Arc::new(steam_openid),
         db: pool,
         redis: Arc::new(redis_pool),
         config: Arc::new(wavebreaker_config),
-        musicbrainz: Arc::new(client),
+        musicbrainz: Arc::new(mb_client),
+        meilisearch: Arc::new(meili_client),
     })
 }
 
