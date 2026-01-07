@@ -29,6 +29,9 @@ pub struct Song {
     #[serde(serialize_with = "time::serde::iso8601::serialize")]
     pub created_at: time::OffsetDateTime,
     pub modifiers: Option<Vec<Option<String>>>,
+    #[serde(serialize_with = "time::serde::iso8601::serialize")]
+    #[serde(deserialize_with = "time::serde::iso8601::deserialize")]
+    pub updated_at: time::OffsetDateTime,
 }
 
 impl Song {

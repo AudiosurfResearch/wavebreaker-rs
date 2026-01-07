@@ -13,6 +13,7 @@ diesel::table! {
         mistag_lock -> Bool,
         aliases_artist -> Nullable<Array<Nullable<Text>>>,
         aliases_title -> Nullable<Array<Nullable<Text>>>,
+        updated_at -> Timestamptz,
     }
 }
 
@@ -77,6 +78,7 @@ diesel::table! {
         artist -> Text,
         created_at -> Timestamptz,
         modifiers -> Nullable<Array<Nullable<Text>>>,
+        updated_at -> Timestamptz,
     }
 }
 

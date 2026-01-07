@@ -180,6 +180,7 @@ allow_columns_to_appear_in_same_group_by_clause!(
     schema::songs::artist,
     schema::songs::created_at,
     schema::songs::modifiers,
+    schema::songs::updated_at,
     schema::extra_song_info::id,
     schema::extra_song_info::song_id,
     schema::extra_song_info::cover_url,
@@ -191,6 +192,7 @@ allow_columns_to_appear_in_same_group_by_clause!(
     schema::extra_song_info::mistag_lock,
     schema::extra_song_info::aliases_artist,
     schema::extra_song_info::aliases_title,
+    schema::extra_song_info::updated_at,
 );
 
 /// Get global most played songs

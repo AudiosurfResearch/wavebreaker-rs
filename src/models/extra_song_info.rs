@@ -17,7 +17,6 @@ use crate::schema::extra_song_info;
     Eq,
     Debug,
     Serialize,
-    Default,
     AsChangeset,
     ToSchema,
 )]
@@ -41,6 +40,30 @@ pub struct ExtraSongInfo {
     pub aliases_artist: Option<Vec<Option<String>>>,
     /// Alternative title tags that can be matched to this song
     pub aliases_title: Option<Vec<Option<String>>>,
+    #[serde(serialize_with = "time::serde::iso8601::serialize")]
+    #[serde(deserialize_with = "time::serde::iso8601::deserialize")]
+    pub updated_at: time::OffsetDateTime,
+}
+
+impl Default for ExtraSongInfo {
+    fn default() -> Self {
+        // i'm going to be real with you chief
+        // i am not pulling in a crate with a macro just to make this look better
+        Self {
+            id: Default::default(),
+            song_id: Default::default(),
+            cover_url: Default::default(),
+            cover_url_small: Default::default(),
+            mbid: Default::default(),
+            musicbrainz_title: Default::default(),
+            musicbrainz_artist: Default::default(),
+            musicbrainz_length: Default::default(),
+            mistag_lock: Default::default(),
+            aliases_artist: Default::default(),
+            aliases_title: Default::default(),
+            updated_at: time::OffsetDateTime::now_utc(),
+        }
+    }
 }
 
 /// Used for inserting additional metadata from [MusicBrainz](https://musicbrainz.org).
