@@ -72,8 +72,8 @@ struct Main {
     address: String,
     database: String,
     redis: String,
-    meilisearch_url: String,
-    meilisearch_key: String,
+    meilisearch_url: Option<String>,
+    meilisearch_key: Option<String>,
 }
 
 #[derive(Deserialize, Clone)]
@@ -100,7 +100,7 @@ pub struct AppState {
     db: Pool<diesel_async::AsyncPgConnection>,
     redis: Arc<RedisPool>,
     musicbrainz: Arc<MusicBrainzClient>,
-    meilisearch: Arc<MeiliClient>,
+    meilisearch: Arc<Option<MeiliClient>>,
 }
 
 fn run_migrations(
@@ -165,11 +165,13 @@ async fn init_state(wavebreaker_config: Config) -> anyhow::Result<AppState> {
     )
     .map_err(|e| anyhow!("Failed to construct SteamOpenId: {e:?}"))?;
 
-    let meili_client = MeiliClient::new(
-        &wavebreaker_config.main.meilisearch_url,
-        Some(&wavebreaker_config.main.meilisearch_key),
-    )
-    .context("Failed to build Meilisearch client!")?;
+    let meili_client = match &wavebreaker_config.main.meilisearch_url {
+        Some(url) => Some(
+            MeiliClient::new(url.clone(), wavebreaker_config.main.meilisearch_key.clone())
+                .context("Failed to build Meilisearch client!")?,
+        ),
+        None => None,
+    };
 
     Ok(AppState {
         steam_api: Arc::new(Steam::new(&wavebreaker_config.external.steam_key)),
