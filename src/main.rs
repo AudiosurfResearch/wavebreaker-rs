@@ -40,8 +40,9 @@ use sentry::{integrations::tower::NewSentryLayer, types::Dsn};
 use serde::Deserialize;
 use steam_openid::SteamOpenId;
 use steam_rs::Steam;
+use tokio_cron_scheduler::{Job, JobScheduler};
 use tower::ServiceBuilder;
-use tracing::{debug, info};
+use tracing::{debug, info, warn};
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{
     fmt::writer::MakeWriterExt, layer::SubscriberExt, util::SubscriberInitExt, Layer,
@@ -252,6 +253,8 @@ fn main() -> anyhow::Result<()> {
         .enable_all()
         .build()?
         .block_on(async {
+            let mut sched = JobScheduler::new().await?;
+
             let state = init_state(wavebreaker_config.clone()).await?;
 
             // Parse CLI arguments
@@ -268,7 +271,23 @@ fn main() -> anyhow::Result<()> {
                 .context("Listener should always be able to listen!")?;
             info!("Listening on {}", &state.config.main.address);
 
+            if state.meilisearch.is_some() {
+                let client = state.meilisearch.clone();
+                sched
+                    .add(Job::new_async("0 */10 * * * *", move |_uuid, mut _l| {
+                        let client = client.clone();
+                        Box::pin(async move {
+                            crate::util::meilisearch::sync_songs(&client);
+                        })
+                    })?)
+                    .await?;
+            } else {
+                warn!("Meilisearch client not initialized! Meilisearch is needed for song/user search.");
+            }
+
             let app = make_router(state);
+
+            sched.start().await?;
 
             axum::serve(listener, app.into_make_service())
                 .await
