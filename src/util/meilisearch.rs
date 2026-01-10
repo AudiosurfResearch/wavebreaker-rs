@@ -15,16 +15,16 @@ use crate::schema::songs;
 
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
-struct MeiliSong {
+pub struct MeiliSong {
     #[serde(flatten)]
-    song: Song,
+    pub song: Song,
     #[serde(skip_serializing_if = "Option::is_none")]
-    extra_song_info: Option<ExtraSongInfo>,
+    pub extra_song_info: Option<ExtraSongInfo>,
 }
 
 #[tracing::instrument(skip_all)]
 pub async fn sync_songs(
-    meili: &Option<MeiliClient>,
+    meili: &MeiliClient,
     redis: &RedisPool,
     db: &PostgresPool<diesel_async::AsyncPgConnection>,
 ) -> anyhow::Result<()> {
@@ -69,8 +69,6 @@ pub async fn sync_songs(
         .collect();
 
     meili
-        .as_ref()
-        .unwrap()
         .index("songs")
         .add_documents(&songs_to_sync, Some("id"))
         .await?;

@@ -38,6 +38,9 @@ pub enum Command {
     DeletePlayerSessions {
         player_id: i32,
     },
+    SyncSongs {
+        sync_all: bool,
+    },
 }
 
 //skip state because it has members that don't implement Debug
@@ -145,6 +148,43 @@ pub async fn parse_command(command: &Command, state: AppState) -> anyhow::Result
             use crate::util::session::delete_player_sessions;
 
             delete_player_sessions(player_id.to_owned(), &state.redis).await?;
+
+            Ok(())
+        }
+        Command::SyncSongs { sync_all } => {
+            use crate::models::extra_song_info::ExtraSongInfo;
+            use crate::models::songs::Song;
+            use crate::schema::extra_song_info;
+            use crate::schema::songs;
+            use crate::util::meilisearch::{sync_songs, MeiliSong};
+
+            if *sync_all {
+                let mut conn = state.db.get().await?;
+
+                let songs_to_sync: Vec<MeiliSong> = songs::table
+                    .left_join(extra_song_info::table)
+                    .select((Song::as_select(), extra_song_info::all_columns.nullable()))
+                    .load::<(Song, Option<ExtraSongInfo>)>(&mut conn)
+                    .await?
+                    .iter_mut()
+                    .map(|x| {
+                        let x = x.clone();
+                        MeiliSong {
+                            song: x.0,
+                            extra_song_info: x.1,
+                        }
+                    })
+                    .collect();
+
+                state
+                    .meilisearch
+                    .unwrap()
+                    .index("songs")
+                    .add_documents(&songs_to_sync, Some("id"))
+                    .await?;
+            } else {
+                sync_songs(&state.meilisearch.unwrap(), &state.redis, &state.db).await?;
+            }
 
             Ok(())
         }

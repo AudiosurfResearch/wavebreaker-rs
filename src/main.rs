@@ -101,7 +101,7 @@ pub struct AppState {
     db: Pool<diesel_async::AsyncPgConnection>,
     redis: Arc<RedisPool>,
     musicbrainz: Arc<MusicBrainzClient>,
-    meilisearch: Arc<Option<MeiliClient>>,
+    meilisearch: Option<Arc<MeiliClient>>,
 }
 
 fn run_migrations(
@@ -167,10 +167,10 @@ async fn init_state(wavebreaker_config: Config) -> anyhow::Result<AppState> {
     .map_err(|e| anyhow!("Failed to construct SteamOpenId: {e:?}"))?;
 
     let meili_client = match &wavebreaker_config.main.meilisearch_url {
-        Some(url) => Some(
+        Some(url) => Some(Arc::new(
             MeiliClient::new(url.clone(), wavebreaker_config.main.meilisearch_key.clone())
                 .context("Failed to build Meilisearch client!")?,
-        ),
+        )),
         None => None,
     };
 
@@ -181,7 +181,7 @@ async fn init_state(wavebreaker_config: Config) -> anyhow::Result<AppState> {
         redis: Arc::new(redis_pool),
         config: Arc::new(wavebreaker_config),
         musicbrainz: Arc::new(mb_client),
-        meilisearch: Arc::new(meili_client),
+        meilisearch: meili_client,
     })
 }
 
@@ -282,7 +282,7 @@ fn main() -> anyhow::Result<()> {
                         let redis = redis.clone();
                         let db = db.clone();
                         Box::pin(async move {
-                            match crate::util::meilisearch::sync_songs(&client, &redis, &db).await {
+                            match crate::util::meilisearch::sync_songs(&client.expect("Meilisearch client should have been verified to be Some"), &redis, &db).await {
                                 Ok(_) => { info!("Successfully synced songs"); },
                                 Err(e) => {
                                     error!("Failed to sync songs to Meilisearch: {:?}", e);
