@@ -42,7 +42,7 @@ use steam_openid::SteamOpenId;
 use steam_rs::Steam;
 use tokio_cron_scheduler::{Job, JobScheduler};
 use tower::ServiceBuilder;
-use tracing::{debug, info, warn};
+use tracing::{debug, error, info, warn};
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{
     fmt::writer::MakeWriterExt, layer::SubscriberExt, util::SubscriberInitExt, Layer,
@@ -253,7 +253,7 @@ fn main() -> anyhow::Result<()> {
         .enable_all()
         .build()?
         .block_on(async {
-            let mut sched = JobScheduler::new().await?;
+            let sched = JobScheduler::new().await?;
 
             let state = init_state(wavebreaker_config.clone()).await?;
 
@@ -273,11 +273,21 @@ fn main() -> anyhow::Result<()> {
 
             if state.meilisearch.is_some() {
                 let client = state.meilisearch.clone();
+                let redis = state.redis.clone();
+                let db = state.db.clone();
+                // run every 10 minutes
                 sched
                     .add(Job::new_async("0 */10 * * * *", move |_uuid, mut _l| {
                         let client = client.clone();
+                        let redis = redis.clone();
+                        let db = db.clone();
                         Box::pin(async move {
-                            crate::util::meilisearch::sync_songs(&client);
+                            match crate::util::meilisearch::sync_songs(&client, &redis, &db).await {
+                                Ok(_) => { info!("Successfully synced songs"); },
+                                Err(e) => {
+                                    error!("Failed to sync songs to Meilisearch: {:?}", e);
+                                }
+                            };
                         })
                     })?)
                     .await?;

@@ -9,6 +9,7 @@ use crate::schema::extra_song_info;
 /// Used for storing additional metadata from [MusicBrainz](https://musicbrainz.org).
 /// This lets us display fancy stuff™ on the song page.
 #[derive(
+    Clone,
     Queryable,
     Selectable,
     Identifiable,
@@ -17,6 +18,7 @@ use crate::schema::extra_song_info;
     Eq,
     Debug,
     Serialize,
+    Deserialize,
     AsChangeset,
     ToSchema,
 )]

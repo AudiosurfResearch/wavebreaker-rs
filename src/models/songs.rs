@@ -2,7 +2,7 @@ use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl, SaveChangesDsl};
 use fred::clients::Pool as RedisPool;
 use musicbrainz_rs::client::MusicBrainzClient;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::ToSchema;
 
@@ -16,7 +16,15 @@ use crate::{
 };
 
 #[derive(
-    Clone, Identifiable, Selectable, Queryable, Debug, Serialize, ToSchema, QueryableByName,
+    Clone,
+    Identifiable,
+    Selectable,
+    Queryable,
+    Debug,
+    Deserialize,
+    Serialize,
+    ToSchema,
+    QueryableByName,
 )]
 #[diesel(table_name = songs, check_for_backend(diesel::pg::Pg))]
 #[diesel(primary_key(id))]
@@ -27,6 +35,7 @@ pub struct Song {
     pub title: String,
     pub artist: String,
     #[serde(serialize_with = "time::serde::iso8601::serialize")]
+    #[serde(deserialize_with = "time::serde::iso8601::deserialize")]
     pub created_at: time::OffsetDateTime,
     pub modifiers: Option<Vec<Option<String>>>,
     #[serde(serialize_with = "time::serde::iso8601::serialize")]
