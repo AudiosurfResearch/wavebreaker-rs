@@ -11,6 +11,9 @@ Config example (``Wavebreaker.toml``), usable with the example `docker-compose.y
 address = "0.0.0.0:1337"
 database = "postgres://postgres:wvbr_testpw@db"
 redis = "redis://valkey"
+# Meilisearch is optional, Wavebreaker works without it but it's needed for search
+meilisearch_url = "http://localhost:7700"
+meilisearch_key = "DANCE_DELIGHTFUL_IT_FEELS_SO_RIGHT"
 
 [radio]
 cgr_location = "./radio"
