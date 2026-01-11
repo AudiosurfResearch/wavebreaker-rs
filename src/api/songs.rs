@@ -145,7 +145,8 @@ async fn delete_song(
         .ok_or_else(RouteError::new_not_found)?;
 
     if song.user_can_delete(&session.player, &mut conn).await? {
-        song.delete(&mut conn, &state.redis).await?;
+        song.delete(&mut conn, &state.redis, state.meilisearch.as_deref())
+            .await?;
 
         Ok(())
     } else {

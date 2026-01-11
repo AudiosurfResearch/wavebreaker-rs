@@ -39,6 +39,7 @@ pub enum Command {
         player_id: i32,
     },
     SyncSongs {
+        #[clap(action=ArgAction::Set)]
         sync_all: bool,
     },
 }
@@ -58,7 +59,13 @@ pub async fn parse_command(command: &Command, state: AppState) -> anyhow::Result
 
             let to_merge = songs.find(*id_to_merge).first::<Song>(&mut conn).await?;
             to_merge
-                .merge_into(*target, *new_alias, &mut conn, &state.redis)
+                .merge_into(
+                    *target,
+                    *new_alias,
+                    &mut conn,
+                    &state.redis,
+                    state.meilisearch.as_deref(),
+                )
                 .await
         }
         Command::DeleteSong { id_to_delete } => {
@@ -70,7 +77,8 @@ pub async fn parse_command(command: &Command, state: AppState) -> anyhow::Result
                 .find(*id_to_delete)
                 .first::<crate::models::songs::Song>(&mut conn)
                 .await?;
-            song.delete(&mut conn, &state.redis).await
+            song.delete(&mut conn, &state.redis, state.meilisearch.as_deref())
+                .await
         }
         Command::DeleteScore { id_to_delete } => {
             use crate::schema::scores::dsl::*;

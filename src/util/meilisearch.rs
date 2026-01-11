@@ -18,7 +18,6 @@ use crate::schema::songs;
 pub struct MeiliSong {
     #[serde(flatten)]
     pub song: Song,
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub extra_song_info: Option<ExtraSongInfo>,
 }
 
