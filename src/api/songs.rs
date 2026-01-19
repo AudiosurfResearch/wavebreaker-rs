@@ -759,7 +759,7 @@ struct SongSearchParams {
     responses(
         // ...maybe somehow specify meilisearch response type?
         (status = OK, description = "Success", content_type = "application/json"),
-        (status = SERVICE_UNAVAILABLE, description = "Search is unavailable", body = SimpleRouteErrorOutput),
+        (status = SERVICE_UNAVAILABLE, description = "Meilisearch is unavailable", body = SimpleRouteErrorOutput),
         (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
     )
 )]
