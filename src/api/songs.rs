@@ -49,7 +49,7 @@ struct SongResponse {
     #[serde(flatten)]
     song: Song,
     #[serde(skip_serializing_if = "Option::is_none")]
-    extra_info: Option<ExtraSongInfo>,
+    extra_song_info: Option<ExtraSongInfo>,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -99,16 +99,19 @@ async fn get_song(
         .optional()?
         .ok_or_else(RouteError::new_not_found)?;
     if query.with_extra_info {
-        let extra_info: Option<ExtraSongInfo> = ExtraSongInfo::belonging_to(&song)
+        let extra_song_info: Option<ExtraSongInfo> = ExtraSongInfo::belonging_to(&song)
             .first(&mut conn)
             .await
             .optional()?;
-        return Ok(Json(SongResponse { song, extra_info }));
+        return Ok(Json(SongResponse {
+            song,
+            extra_song_info,
+        }));
     }
 
     Ok(Json(SongResponse {
         song,
-        extra_info: None,
+        extra_song_info: None,
     }))
 }
 
@@ -263,8 +266,11 @@ async fn get_top_songs(
 
         let songs: Vec<TopSongResponse> = songs_with_extra
             .into_iter()
-            .map(|(song, times_played, extra_info)| TopSongResponse {
-                song_data: SongResponse { song, extra_info },
+            .map(|(song, times_played, extra_song_info)| TopSongResponse {
+                song_data: SongResponse {
+                    song,
+                    extra_song_info,
+                },
                 times_played,
             })
             .collect();
@@ -289,7 +295,7 @@ async fn get_top_songs(
             .map(|(song, times_played)| TopSongResponse {
                 song_data: SongResponse {
                     song,
-                    extra_info: None,
+                    extra_song_info: None,
                 },
                 times_played,
             })
