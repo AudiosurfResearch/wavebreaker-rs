@@ -119,6 +119,9 @@ pub struct Player {
     #[serde(deserialize_with = "time::serde::iso8601::deserialize")]
     pub joined_at: time::OffsetDateTime,
     pub avatar_url: String,
+    #[serde(serialize_with = "time::serde::iso8601::serialize")]
+    #[serde(deserialize_with = "time::serde::iso8601::deserialize")]
+    pub updated_at: time::OffsetDateTime,
 }
 
 // Types for use with functions that return reusable query fragments
