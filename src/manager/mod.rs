@@ -42,6 +42,10 @@ pub enum Command {
         #[clap(action=ArgAction::Set)]
         sync_all: bool,
     },
+    SyncPlayers {
+        #[clap(action=ArgAction::Set)]
+        sync_all: bool,
+    },
 }
 
 //skip state because it has members that don't implement Debug
@@ -192,6 +196,31 @@ pub async fn parse_command(command: &Command, state: AppState) -> anyhow::Result
                     .await?;
             } else {
                 sync_songs(&state.meilisearch.unwrap(), &state.redis, &state.db).await?;
+            }
+
+            Ok(())
+        }
+        Command::SyncPlayers { sync_all } => {
+            use crate::models::players::PlayerPublic;
+            use crate::schema::players;
+            use crate::util::meilisearch::sync_players;
+
+            if *sync_all {
+                let mut conn = state.db.get().await?;
+
+                let songs_to_sync: Vec<PlayerPublic> = players::table
+                    .select(PlayerPublic::as_select())
+                    .load(&mut conn)
+                    .await?;
+
+                state
+                    .meilisearch
+                    .unwrap()
+                    .index("players")
+                    .add_documents(&songs_to_sync, Some("id"))
+                    .await?;
+            } else {
+                sync_players(&state.meilisearch.unwrap(), &state.redis, &state.db).await?;
             }
 
             Ok(())
