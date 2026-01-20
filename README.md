@@ -26,9 +26,9 @@ steam_return_path = "/api/auth/return"
 # if you plan on using Sentry, the DSN is required
 # anything else not specified is set to the default
 sentry_dsn = "https://somethingsomething@your.sentry.or.glitchtip/whatever"
-sentry_logs = true,
-sentry_traces_sample_rate = 1.0,
-sentry_send_pii = true,
+sentry_logs = true
+sentry_traces_sample_rate = 1.0
+sentry_send_pii = true
 ```
 
 Radio song list example (``WavebreakerRadio.toml``):
