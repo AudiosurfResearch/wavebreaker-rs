@@ -9,8 +9,10 @@ use time::OffsetDateTime;
 use tracing::info;
 
 use crate::models::extra_song_info::ExtraSongInfo;
+use crate::models::players::PlayerPublic;
 use crate::models::songs::Song;
 use crate::schema::extra_song_info;
+use crate::schema::players;
 use crate::schema::songs;
 
 #[derive(Deserialize, Serialize)]
@@ -75,6 +77,57 @@ pub async fn sync_songs(
     let _: () = redis
         .set(
             "last_meilisearch_sync",
+            OffsetDateTime::now_utc().unix_timestamp(),
+            None,
+            None,
+            false,
+        )
+        .await?;
+
+    Ok(())
+}
+
+#[tracing::instrument(skip_all)]
+pub async fn sync_players(
+    meili: &MeiliClient,
+    redis: &RedisPool,
+    db: &PostgresPool<diesel_async::AsyncPgConnection>,
+) -> anyhow::Result<()> {
+    info!("Syncing players to Meilisearch");
+
+    let mut conn = db.get().await?;
+
+    let _: () = redis
+        .set(
+            "last_meilisearch_player_sync",
+            OffsetDateTime::now_utc().unix_timestamp(),
+            None,
+            Some(SetOptions::NX),
+            false,
+        )
+        .await?;
+
+    let last_sync: OffsetDateTime = redis.get("last_meilisearch_player_sync").await.map(|i| {
+        OffsetDateTime::from_unix_timestamp(i).expect(
+            "UNIX timestamp should always be valid since it's controlled by the player sync",
+        )
+    })?;
+    info!("Last player sync done at: {:?}", last_sync);
+
+    let players_to_sync: Vec<PlayerPublic> = players::table
+        .filter(players::updated_at.le(last_sync))
+        .select(PlayerPublic::as_select())
+        .load::<PlayerPublic>(&mut conn)
+        .await?;
+
+    meili
+        .index("players")
+        .add_documents(&players_to_sync, Some("id"))
+        .await?;
+
+    let _: () = redis
+        .set(
+            "last_meilisearch_player_sync",
             OffsetDateTime::now_utc().unix_timestamp(),
             None,
             None,

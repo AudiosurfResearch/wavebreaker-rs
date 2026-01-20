@@ -275,7 +275,7 @@ fn main() -> anyhow::Result<()> {
                 let client = state.meilisearch.clone();
                 let redis = state.redis.clone();
                 let db = state.db.clone();
-                // run every 10 minutes
+                // run song sync every 10 minutes
                 sched
                     .add(Job::new_async("0 */10 * * * *", move |_uuid, mut _l| {
                         let client = client.clone();
@@ -286,6 +286,25 @@ fn main() -> anyhow::Result<()> {
                                 Ok(_) => { info!("Successfully synced songs"); },
                                 Err(e) => {
                                     error!("Failed to sync songs to Meilisearch: {:?}", e);
+                                }
+                            };
+                        })
+                    })?)
+                    .await?;
+                let client2 = state.meilisearch.clone();
+                let redis2 = state.redis.clone();
+                let db2 = state.db.clone();
+                // run player sync every 10 minutes
+                sched
+                    .add(Job::new_async("0 */10 * * * *", move |_uuid, mut _l| {
+                        let client = client2.clone();
+                        let redis = redis2.clone();
+                        let db = db2.clone();
+                        Box::pin(async move {
+                            match crate::util::meilisearch::sync_players(&client.expect("Meilisearch client should have been verified to be Some"), &redis, &db).await {
+                                Ok(_) => { info!("Successfully synced players"); },
+                                Err(e) => {
+                                    error!("Failed to sync players to Meilisearch: {:?}", e);
                                 }
                             };
                         })
