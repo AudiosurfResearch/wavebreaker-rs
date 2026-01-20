@@ -28,6 +28,7 @@ diesel::table! {
         account_type -> Int2,
         joined_at -> Timestamptz,
         avatar_url -> Text,
+        updated_at -> Timestamptz,
     }
 }
 
