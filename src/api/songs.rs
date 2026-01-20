@@ -1,8 +1,9 @@
 use axum::{
     extract::{Path, Query, State},
-    http::StatusCode,
     Json,
 };
+use diesel::prelude::*;
+use diesel_async::RunQueryDsl;
 use serde::{Deserialize, Serialize};
 use serde_inline_default::serde_inline_default;
 use tracing::instrument;
@@ -40,16 +41,15 @@ pub fn routes() -> OpenApiRouter<AppState> {
         .routes(routes!(update_song_extra_info))
         .routes(routes!(update_song_extra_info_mbid))
         .routes(routes!(get_song_permissions))
-        .routes(routes!(search_songs))
 }
 
-#[derive(Deserialize, Serialize, ToSchema)]
+#[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 struct SongResponse {
     #[serde(flatten)]
     song: Song,
     #[serde(skip_serializing_if = "Option::is_none")]
-    extra_song_info: Option<ExtraSongInfo>,
+    extra_info: Option<ExtraSongInfo>,
 }
 
 #[derive(Serialize, ToSchema)]
@@ -87,8 +87,6 @@ async fn get_song(
     query: Query<GetSongParams>,
 ) -> Result<Json<SongResponse>, RouteError> {
     use crate::schema::songs;
-    use diesel::prelude::*;
-    use diesel_async::RunQueryDsl;
 
     let mut conn = state.db.get().await?;
 
@@ -99,19 +97,16 @@ async fn get_song(
         .optional()?
         .ok_or_else(RouteError::new_not_found)?;
     if query.with_extra_info {
-        let extra_song_info: Option<ExtraSongInfo> = ExtraSongInfo::belonging_to(&song)
+        let extra_info: Option<ExtraSongInfo> = ExtraSongInfo::belonging_to(&song)
             .first(&mut conn)
             .await
             .optional()?;
-        return Ok(Json(SongResponse {
-            song,
-            extra_song_info,
-        }));
+        return Ok(Json(SongResponse { song, extra_info }));
     }
 
     Ok(Json(SongResponse {
         song,
-        extra_song_info: None,
+        extra_info: None,
     }))
 }
 
@@ -139,8 +134,6 @@ async fn delete_song(
     session: Session,
 ) -> Result<(), RouteError> {
     use crate::schema::songs;
-    use diesel::prelude::*;
-    use diesel_async::RunQueryDsl;
 
     let mut conn = state.db.get().await?;
 
@@ -182,7 +175,7 @@ struct TopSongResponse {
     times_played: i64,
 }
 
-diesel::allow_columns_to_appear_in_same_group_by_clause!(
+allow_columns_to_appear_in_same_group_by_clause!(
     schema::songs::id,
     schema::songs::title,
     schema::songs::artist,
@@ -223,9 +216,7 @@ async fn get_top_songs(
     State(state): State<AppState>,
     ValidatedQuery(query): ValidatedQuery<GetTopSongParams>,
 ) -> Result<Json<Vec<TopSongResponse>>, RouteError> {
-    use diesel::prelude::*;
     use diesel::{dsl::sql, sql_types::BigInt};
-    use diesel_async::RunQueryDsl;
 
     use crate::schema::{extra_song_info, scores, songs};
 
@@ -266,11 +257,8 @@ async fn get_top_songs(
 
         let songs: Vec<TopSongResponse> = songs_with_extra
             .into_iter()
-            .map(|(song, times_played, extra_song_info)| TopSongResponse {
-                song_data: SongResponse {
-                    song,
-                    extra_song_info,
-                },
+            .map(|(song, times_played, extra_info)| TopSongResponse {
+                song_data: SongResponse { song, extra_info },
                 times_played,
             })
             .collect();
@@ -295,7 +283,7 @@ async fn get_top_songs(
             .map(|(song, times_played)| TopSongResponse {
                 song_data: SongResponse {
                     song,
-                    extra_song_info: None,
+                    extra_info: None,
                 },
                 times_played,
             })
@@ -357,8 +345,6 @@ async fn get_song_scores(
     ValidatedQuery(query): ValidatedQuery<GetSongScoresParams>,
 ) -> Result<Json<Vec<ScoreResponse>>, RouteError> {
     use crate::schema::{players, scores, songs};
-    use diesel::prelude::*;
-    use diesel_async::RunQueryDsl;
 
     let mut conn = state.db.get().await?;
 
@@ -442,8 +428,6 @@ async fn get_radio_songs(
     query: Query<GetSongParams>,
 ) -> Result<Json<Vec<RadioSongResponse>>, RouteError> {
     use crate::schema::{extra_song_info, songs};
-    use diesel::prelude::*;
-    use diesel_async::RunQueryDsl;
 
     let mut conn = state.db.get().await?;
 
@@ -541,8 +525,6 @@ async fn get_song_shouts(
     ValidatedQuery(query): ValidatedQuery<GetSongShoutsParams>,
 ) -> Result<Json<SongShoutsResponse>, RouteError> {
     use crate::schema::{players, shouts, songs};
-    use diesel::prelude::*;
-    use diesel_async::RunQueryDsl;
 
     let mut conn = state.db.get().await?;
 
@@ -604,8 +586,6 @@ async fn update_song_extra_info(
     Json(extra_info): Json<NewExtraSongInfo>,
 ) -> Result<(), RouteError> {
     use diesel::insert_into;
-    use diesel::prelude::*;
-    use diesel_async::RunQueryDsl;
 
     use crate::schema::{extra_song_info, songs};
 
@@ -675,8 +655,7 @@ async fn update_song_extra_info_mbid(
     session: Session,
     Json(payload): Json<MbidRefreshBody>,
 ) -> Result<(), RouteError> {
-    use diesel::prelude::*;
-    use diesel_async::RunQueryDsl;
+    use diesel::insert_into;
 
     use crate::schema::{extra_song_info, songs};
 
@@ -697,7 +676,7 @@ async fn update_song_extra_info_mbid(
         )
         .await?;
 
-        diesel::insert_into(extra_song_info::table)
+        insert_into(extra_song_info::table)
             .values(&mb_info)
             .on_conflict(extra_song_info::song_id)
             .do_update()
@@ -731,8 +710,6 @@ async fn get_song_permissions(
     session: Session,
 ) -> Result<Json<SongPermissions>, RouteError> {
     use crate::schema::songs;
-    use diesel::prelude::*;
-    use diesel_async::RunQueryDsl;
 
     let mut conn = state.db.get().await?;
 
@@ -747,43 +724,4 @@ async fn get_song_permissions(
         can_delete: song.user_can_delete(&session.player, &mut conn).await?,
         can_edit: song.user_can_edit(&session.player, &mut conn).await?,
     }))
-}
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct SongSearchParams {
-    q: String,
-}
-
-/// Search for songs
-#[utoipa::path(
-    method(get),
-    path = "/search",
-    params(
-        ("q" = String, Query, description = "Search query")
-    ),
-    responses(
-        // ...maybe somehow specify meilisearch response type?
-        (status = OK, description = "Success", content_type = "application/json"),
-        (status = SERVICE_UNAVAILABLE, description = "Meilisearch is unavailable", body = SimpleRouteErrorOutput),
-        (status = INTERNAL_SERVER_ERROR, description = "Miscellaneous error", body = SimpleRouteErrorOutput)
-    )
-)]
-#[instrument(skip(state), err(Debug))]
-async fn search_songs(
-    State(state): State<AppState>,
-    query: Query<SongSearchParams>,
-) -> Result<Json<meilisearch_sdk::search::SearchResults<SongResponse>>, RouteError> {
-    if let Some(meilisearch) = state.meilisearch {
-        let results = meilisearch
-            .index("songs")
-            .search()
-            .with_query(&query.q)
-            .execute::<SongResponse>()
-            .await?;
-
-        Ok(Json(results))
-    } else {
-        Err(RouteError::from_status(StatusCode::SERVICE_UNAVAILABLE))
-    }
 }
