@@ -11,6 +11,7 @@ use diesel::{
 };
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use fred::{clients::Pool as RedisPool, prelude::*};
+use meilisearch_sdk::client::Client as MeiliClient;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
@@ -240,6 +241,24 @@ impl Player {
             .filter(id.eq_any(rival_ids))
             .load::<Self>(conn)
             .await
+    }
+
+    /// Retrieves the rivals of a player.
+    pub async fn delete(
+        &self,
+        conn: &mut AsyncPgConnection,
+        redis_conn: &RedisPool,
+        meili: &Option<MeiliClient>,
+    ) -> anyhow::Result<()> {
+        use crate::schema::players::dsl::*;
+
+        diesel::delete(players.find(self.id)).execute(conn).await?;
+        let _: () = redis_conn.zrem("leaderboard", self.id).await?;
+        if let Some(meili) = meili {
+            meili.index("players").delete_document(self.id).await?;
+        }
+
+        Ok(())
     }
 
     /// Retrieves the challengers of a player.
