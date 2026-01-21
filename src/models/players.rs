@@ -264,24 +264,6 @@ impl Player {
             .await
     }
 
-    /// Retrieves the rivals of a player.
-    pub async fn delete(
-        &self,
-        conn: &mut AsyncPgConnection,
-        redis_conn: &RedisPool,
-        meili: &Option<MeiliClient>,
-    ) -> anyhow::Result<()> {
-        use crate::schema::players::dsl::*;
-
-        diesel::delete(players.find(self.id)).execute(conn).await?;
-        let _: () = redis_conn.zrem("leaderboard", self.id).await?;
-        if let Some(meili) = meili {
-            meili.index("players").delete_document(self.id).await?;
-        }
-
-        Ok(())
-    }
-
     /// Retrieves the challengers of a player.
     pub async fn get_challengers(&self, conn: &mut AsyncPgConnection) -> QueryResult<Vec<Self>> {
         use crate::schema::{players::dsl::*, rivalries::dsl::*};
