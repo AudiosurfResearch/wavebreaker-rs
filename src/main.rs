@@ -75,6 +75,8 @@ struct Main {
     redis: String,
     meilisearch_url: Option<String>,
     meilisearch_key: Option<String>,
+    song_sync_schedule: Option<String>,
+    player_sync_schedule: Option<String>,
 }
 
 #[derive(Deserialize, Clone)]
@@ -277,7 +279,7 @@ fn main() -> anyhow::Result<()> {
                 let db = state.db.clone();
                 // run song sync every 10 minutes
                 sched
-                    .add(Job::new_async("0 */10 * * * *", move |_uuid, mut _l| {
+                    .add(Job::new_async(wavebreaker_config.main.song_sync_schedule.unwrap_or("0 */10 * * * *".to_owned()), move |_uuid, mut _l| {
                         let client = client.clone();
                         let redis = redis.clone();
                         let db = db.clone();
@@ -296,7 +298,7 @@ fn main() -> anyhow::Result<()> {
                 let db2 = state.db.clone();
                 // run player sync every 10 minutes
                 sched
-                    .add(Job::new_async("0 */10 * * * *", move |_uuid, mut _l| {
+                    .add(Job::new_async(wavebreaker_config.main.player_sync_schedule.unwrap_or("0 */10 * * * *".to_owned()), move |_uuid, mut _l| {
                         let client = client2.clone();
                         let redis = redis2.clone();
                         let db = db2.clone();
