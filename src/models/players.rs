@@ -11,10 +11,12 @@ use diesel::{
 };
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use fred::{clients::Pool as RedisPool, prelude::*};
+use meilisearch_sdk::client::Client as MeiliClient;
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use steam_rs::steam_id::SteamId;
+use tracing::info;
 use utoipa::ToSchema;
 
 use super::rivalries::RivalryView;
@@ -130,6 +132,26 @@ type WithSteamId = diesel::dsl::Eq<players::steam_id, SteamIdWrapper>;
 type BySteamId = diesel::dsl::Filter<All, WithSteamId>;
 
 impl Player {
+    /// Deletes a player
+    pub async fn delete(
+        &self,
+        conn: &mut AsyncPgConnection,
+        redis_conn: &RedisPool,
+        meili: &Option<MeiliClient>,
+    ) -> anyhow::Result<()> {
+        use crate::schema::players::dsl::*;
+
+        info!("Deleting player {}", self.id);
+
+        diesel::delete(players.find(self.id)).execute(conn).await?;
+        let _: () = redis_conn.zrem("leaderboard", self.id).await?;
+        if let Some(meili) = meili {
+            meili.index("players").delete_document(self.id).await?;
+        }
+
+        Ok(())
+    }
+
     /// Get skill points from Redis.
     pub async fn get_skill_points(&self, redis_conn: &RedisPool) -> anyhow::Result<i32> {
         let skill_points: Option<i32> = redis_conn.zscore("leaderboard", self.id).await?;
