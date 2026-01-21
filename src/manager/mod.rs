@@ -27,6 +27,9 @@ pub enum Command {
     DeleteScore {
         id_to_delete: i32,
     },
+    DeletePlayer {
+        id_to_delete: i32,
+    },
     RefreshSkillPoints {
         player_to_refresh: i32,
     },
@@ -94,6 +97,19 @@ pub async fn parse_command(command: &Command, state: AppState) -> anyhow::Result
                 .first::<crate::models::scores::Score>(&mut conn)
                 .await?;
             score_to_delete.delete(&mut conn, &state.redis).await
+        }
+        Command::DeletePlayer { id_to_delete } => {
+            use crate::schema::players::dsl::*;
+
+            let mut conn = state.db.get().await?;
+
+            let player_to_delete = players
+                .find(*id_to_delete)
+                .first::<crate::models::players::Player>(&mut conn)
+                .await?;
+            player_to_delete
+                .delete(&mut conn, &state.redis, state.meilisearch.as_deref())
+                .await
         }
         Command::RefreshSkillPoints { player_to_refresh } => {
             use crate::{models::players::Player, schema::players::dsl::*};

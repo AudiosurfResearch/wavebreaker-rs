@@ -137,7 +137,7 @@ impl Player {
         &self,
         conn: &mut AsyncPgConnection,
         redis_conn: &RedisPool,
-        meili: &Option<MeiliClient>,
+        meili: Option<&MeiliClient>,
     ) -> anyhow::Result<()> {
         use crate::schema::players::dsl::*;
 
