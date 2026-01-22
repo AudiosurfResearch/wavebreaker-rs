@@ -11,6 +11,15 @@ Config example (``Wavebreaker.toml``), usable with the example `docker-compose.y
 address = "0.0.0.0:1337"
 database = "postgres://postgres:wvbr_testpw@db"
 redis = "redis://valkey"
+# Meilisearch is optional, Wavebreaker works without it but it's needed for search
+meilisearch_url = "http://localhost:7700"
+meilisearch_key = "DANCE_DELIGHTFUL_IT_FEELS_SO_RIGHT"
+# How often to sync songs with Meilisearch.
+# written in cron's schedule format
+song_sync_schedule = "0 */10 * * * *"
+# Same but with user sync
+# It also supports plain english, using https://crates.io/crates/english-to-cron
+player_sync_schedule = "every 10 minutes"
 
 [radio]
 cgr_location = "./radio"
@@ -23,9 +32,9 @@ steam_return_path = "/api/auth/return"
 # if you plan on using Sentry, the DSN is required
 # anything else not specified is set to the default
 sentry_dsn = "https://somethingsomething@your.sentry.or.glitchtip/whatever"
-sentry_logs = true,
-sentry_traces_sample_rate = 1.0,
-sentry_send_pii = true,
+sentry_logs = true
+sentry_traces_sample_rate = 1.0
+sentry_send_pii = true
 ```
 
 Radio song list example (``WavebreakerRadio.toml``):

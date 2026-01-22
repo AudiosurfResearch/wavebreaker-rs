@@ -27,6 +27,9 @@ pub enum Command {
     DeleteScore {
         id_to_delete: i32,
     },
+    DeletePlayer {
+        id_to_delete: i32,
+    },
     RefreshSkillPoints {
         player_to_refresh: i32,
     },
@@ -37,6 +40,14 @@ pub enum Command {
     },
     DeletePlayerSessions {
         player_id: i32,
+    },
+    SyncSongs {
+        #[clap(action=ArgAction::Set)]
+        sync_all: bool,
+    },
+    SyncPlayers {
+        #[clap(action=ArgAction::Set)]
+        sync_all: bool,
     },
 }
 
@@ -55,7 +66,13 @@ pub async fn parse_command(command: &Command, state: AppState) -> anyhow::Result
 
             let to_merge = songs.find(*id_to_merge).first::<Song>(&mut conn).await?;
             to_merge
-                .merge_into(*target, *new_alias, &mut conn, &state.redis)
+                .merge_into(
+                    *target,
+                    *new_alias,
+                    &mut conn,
+                    &state.redis,
+                    state.meilisearch.as_deref(),
+                )
                 .await
         }
         Command::DeleteSong { id_to_delete } => {
@@ -67,7 +84,8 @@ pub async fn parse_command(command: &Command, state: AppState) -> anyhow::Result
                 .find(*id_to_delete)
                 .first::<crate::models::songs::Song>(&mut conn)
                 .await?;
-            song.delete(&mut conn, &state.redis).await
+            song.delete(&mut conn, &state.redis, state.meilisearch.as_deref())
+                .await
         }
         Command::DeleteScore { id_to_delete } => {
             use crate::schema::scores::dsl::*;
@@ -79,6 +97,19 @@ pub async fn parse_command(command: &Command, state: AppState) -> anyhow::Result
                 .first::<crate::models::scores::Score>(&mut conn)
                 .await?;
             score_to_delete.delete(&mut conn, &state.redis).await
+        }
+        Command::DeletePlayer { id_to_delete } => {
+            use crate::schema::players::dsl::*;
+
+            let mut conn = state.db.get().await?;
+
+            let player_to_delete = players
+                .find(*id_to_delete)
+                .first::<crate::models::players::Player>(&mut conn)
+                .await?;
+            player_to_delete
+                .delete(&mut conn, &state.redis, state.meilisearch.as_deref())
+                .await
         }
         Command::RefreshSkillPoints { player_to_refresh } => {
             use crate::{models::players::Player, schema::players::dsl::*};
@@ -145,6 +176,68 @@ pub async fn parse_command(command: &Command, state: AppState) -> anyhow::Result
             use crate::util::session::delete_player_sessions;
 
             delete_player_sessions(player_id.to_owned(), &state.redis).await?;
+
+            Ok(())
+        }
+        Command::SyncSongs { sync_all } => {
+            use crate::models::extra_song_info::ExtraSongInfo;
+            use crate::models::songs::Song;
+            use crate::schema::extra_song_info;
+            use crate::schema::songs;
+            use crate::util::meilisearch::{sync_songs, MeiliSong};
+
+            if *sync_all {
+                let mut conn = state.db.get().await?;
+
+                let songs_to_sync: Vec<MeiliSong> = songs::table
+                    .left_join(extra_song_info::table)
+                    .select((Song::as_select(), extra_song_info::all_columns.nullable()))
+                    .load::<(Song, Option<ExtraSongInfo>)>(&mut conn)
+                    .await?
+                    .iter_mut()
+                    .map(|x| {
+                        let x = x.clone();
+                        MeiliSong {
+                            song: x.0,
+                            extra_song_info: x.1,
+                        }
+                    })
+                    .collect();
+
+                state
+                    .meilisearch
+                    .unwrap()
+                    .index("songs")
+                    .add_documents(&songs_to_sync, Some("id"))
+                    .await?;
+            } else {
+                sync_songs(&state.meilisearch.unwrap(), &state.redis, &state.db).await?;
+            }
+
+            Ok(())
+        }
+        Command::SyncPlayers { sync_all } => {
+            use crate::models::players::PlayerPublic;
+            use crate::schema::players;
+            use crate::util::meilisearch::sync_players;
+
+            if *sync_all {
+                let mut conn = state.db.get().await?;
+
+                let songs_to_sync: Vec<PlayerPublic> = players::table
+                    .select(PlayerPublic::as_select())
+                    .load(&mut conn)
+                    .await?;
+
+                state
+                    .meilisearch
+                    .unwrap()
+                    .index("players")
+                    .add_documents(&songs_to_sync, Some("id"))
+                    .await?;
+            } else {
+                sync_players(&state.meilisearch.unwrap(), &state.redis, &state.db).await?;
+            }
 
             Ok(())
         }

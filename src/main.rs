@@ -34,13 +34,15 @@ use figment::{
     Figment,
 };
 use fred::{clients::Pool as RedisPool, prelude::*, types::config::Config as RedisConfig};
+use meilisearch_sdk::client::Client as MeiliClient;
 use musicbrainz_rs::client::MusicBrainzClient;
 use sentry::{integrations::tower::NewSentryLayer, types::Dsn};
 use serde::Deserialize;
 use steam_openid::SteamOpenId;
 use steam_rs::Steam;
+use tokio_cron_scheduler::{Job, JobScheduler};
 use tower::ServiceBuilder;
-use tracing::{debug, info};
+use tracing::{debug, error, info, warn};
 use tracing_appender::rolling::{RollingFileAppender, Rotation};
 use tracing_subscriber::{
     fmt::writer::MakeWriterExt, layer::SubscriberExt, util::SubscriberInitExt, Layer,
@@ -71,6 +73,10 @@ struct Main {
     address: String,
     database: String,
     redis: String,
+    meilisearch_url: Option<String>,
+    meilisearch_key: Option<String>,
+    song_sync_schedule: Option<String>,
+    player_sync_schedule: Option<String>,
 }
 
 #[derive(Deserialize, Clone)]
@@ -87,8 +93,6 @@ struct External {
     sentry_logs: Option<bool>,
     sentry_traces_sample_rate: Option<f32>,
     sentry_send_pii: Option<bool>,
-    //meilisearch_url: String,
-    //meilisearch_key: String,
 }
 
 #[derive(Clone)]
@@ -99,6 +103,7 @@ pub struct AppState {
     db: Pool<diesel_async::AsyncPgConnection>,
     redis: Arc<RedisPool>,
     musicbrainz: Arc<MusicBrainzClient>,
+    meilisearch: Option<Arc<MeiliClient>>,
 }
 
 fn run_migrations(
@@ -152,8 +157,8 @@ async fn init_state(wavebreaker_config: Config) -> anyhow::Result<AppState> {
         .await
         .context("Clients failed to connect to Redis!")?;
 
-    let mut client = MusicBrainzClient::default();
-    client
+    let mut mb_client = MusicBrainzClient::default();
+    mb_client
         .set_user_agent(WAVEBREAKER_USER_AGENT)
         .expect("Setting the MusicBrainz client's user agent should not fail.");
 
@@ -163,13 +168,22 @@ async fn init_state(wavebreaker_config: Config) -> anyhow::Result<AppState> {
     )
     .map_err(|e| anyhow!("Failed to construct SteamOpenId: {e:?}"))?;
 
+    let meili_client = match &wavebreaker_config.main.meilisearch_url {
+        Some(url) => Some(Arc::new(
+            MeiliClient::new(url.clone(), wavebreaker_config.main.meilisearch_key.clone())
+                .context("Failed to build Meilisearch client!")?,
+        )),
+        None => None,
+    };
+
     Ok(AppState {
         steam_api: Arc::new(Steam::new(&wavebreaker_config.external.steam_key)),
         steam_openid: Arc::new(steam_openid),
         db: pool,
         redis: Arc::new(redis_pool),
         config: Arc::new(wavebreaker_config),
-        musicbrainz: Arc::new(client),
+        musicbrainz: Arc::new(mb_client),
+        meilisearch: meili_client,
     })
 }
 
@@ -241,6 +255,8 @@ fn main() -> anyhow::Result<()> {
         .enable_all()
         .build()?
         .block_on(async {
+            let sched = JobScheduler::new().await?;
+
             let state = init_state(wavebreaker_config.clone()).await?;
 
             // Parse CLI arguments
@@ -257,7 +273,52 @@ fn main() -> anyhow::Result<()> {
                 .context("Listener should always be able to listen!")?;
             info!("Listening on {}", &state.config.main.address);
 
+            if state.meilisearch.is_some() {
+                let client = state.meilisearch.clone();
+                let redis = state.redis.clone();
+                let db = state.db.clone();
+                // run song sync every 10 minutes
+                sched
+                    .add(Job::new_async(wavebreaker_config.main.song_sync_schedule.unwrap_or("0 */10 * * * *".to_owned()), move |_uuid, mut _l| {
+                        let client = client.clone();
+                        let redis = redis.clone();
+                        let db = db.clone();
+                        Box::pin(async move {
+                            match crate::util::meilisearch::sync_songs(&client.expect("Meilisearch client should have been verified to be Some"), &redis, &db).await {
+                                Ok(_) => { info!("Successfully synced songs"); },
+                                Err(e) => {
+                                    error!("Failed to sync songs to Meilisearch: {:?}", e);
+                                }
+                            };
+                        })
+                    })?)
+                    .await?;
+                let client2 = state.meilisearch.clone();
+                let redis2 = state.redis.clone();
+                let db2 = state.db.clone();
+                // run player sync every 10 minutes
+                sched
+                    .add(Job::new_async(wavebreaker_config.main.player_sync_schedule.unwrap_or("0 */10 * * * *".to_owned()), move |_uuid, mut _l| {
+                        let client = client2.clone();
+                        let redis = redis2.clone();
+                        let db = db2.clone();
+                        Box::pin(async move {
+                            match crate::util::meilisearch::sync_players(&client.expect("Meilisearch client should have been verified to be Some"), &redis, &db).await {
+                                Ok(_) => { info!("Successfully synced players"); },
+                                Err(e) => {
+                                    error!("Failed to sync players to Meilisearch: {:?}", e);
+                                }
+                            };
+                        })
+                    })?)
+                    .await?;
+            } else {
+                warn!("Meilisearch client not initialized! Meilisearch is needed for song/user search.");
+            }
+
             let app = make_router(state);
+
+            sched.start().await?;
 
             axum::serve(listener, app.into_make_service())
                 .await

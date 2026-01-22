@@ -73,6 +73,7 @@ struct ServerStats {
     user_count: i64,
     song_count: i64,
     score_count: i64,
+    search_supported: bool,
 }
 
 /// Get server stats
@@ -98,5 +99,6 @@ async fn stats(State(state): State<AppState>) -> Result<Json<ServerStats>, Route
         user_count,
         song_count,
         score_count,
+        search_supported: state.meilisearch.is_some(),
     }))
 }

@@ -1,8 +1,9 @@
 use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl, SaveChangesDsl};
 use fred::clients::Pool as RedisPool;
+use meilisearch_sdk::client::Client as MeiliClient;
 use musicbrainz_rs::client::MusicBrainzClient;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use tracing::debug;
 use utoipa::ToSchema;
 
@@ -16,7 +17,15 @@ use crate::{
 };
 
 #[derive(
-    Clone, Identifiable, Selectable, Queryable, Debug, Serialize, ToSchema, QueryableByName,
+    Clone,
+    Identifiable,
+    Selectable,
+    Queryable,
+    Debug,
+    Deserialize,
+    Serialize,
+    ToSchema,
+    QueryableByName,
 )]
 #[diesel(table_name = songs, check_for_backend(diesel::pg::Pg))]
 #[diesel(primary_key(id))]
@@ -27,8 +36,12 @@ pub struct Song {
     pub title: String,
     pub artist: String,
     #[serde(serialize_with = "time::serde::iso8601::serialize")]
+    #[serde(deserialize_with = "time::serde::iso8601::deserialize")]
     pub created_at: time::OffsetDateTime,
     pub modifiers: Option<Vec<Option<String>>>,
+    #[serde(serialize_with = "time::serde::iso8601::serialize")]
+    #[serde(deserialize_with = "time::serde::iso8601::deserialize")]
+    pub updated_at: time::OffsetDateTime,
 }
 
 impl Song {
@@ -40,6 +53,7 @@ impl Song {
         &self,
         conn: &mut AsyncPgConnection,
         redis_conn: &RedisPool,
+        meilisearch: Option<&MeiliClient>,
     ) -> anyhow::Result<()> {
         use crate::schema::{
             scores::dsl::{scores, song_id},
@@ -55,6 +69,10 @@ impl Song {
             .await?;
         for score in ass_scores {
             score.delete(conn, redis_conn).await?;
+        }
+
+        if let Some(meilisearch) = meilisearch {
+            meilisearch.index("songs").delete_document(self.id).await?;
         }
 
         diesel::delete(songs.filter(id.eq(self.id)))
@@ -73,6 +91,7 @@ impl Song {
         should_alias: bool,
         conn: &mut AsyncPgConnection,
         redis_pool: &RedisPool,
+        meilisearch: Option<&MeiliClient>,
     ) -> anyhow::Result<()> {
         use crate::schema::{scores::dsl::*, songs::dsl::*};
 
@@ -153,7 +172,7 @@ impl Song {
         }
 
         //Delete this song!
-        self.delete(conn, redis_pool).await?;
+        self.delete(conn, redis_pool, meilisearch).await?;
 
         Ok(())
     }
