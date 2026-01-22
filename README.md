@@ -1,5 +1,5 @@
 # wavebreaker-rs
-**EXTREMELY WIP!!** (Yes, so much so that it's worth two exclamation marks!!)
+**EXTREMELY WIP!** (Yes, so much so that it's worth an exclamation marks!)
 
 This is a custom server for Dylan Fitterer's game [Audiosurf](https://store.steampowered.com/app/12900/AudioSurf/).
 
@@ -57,6 +57,7 @@ To connect, use the latest Wavebreaker client with ``forceInsecure`` set to ``tr
 - Submitting scores
 - Shouts (Song comments)
 - Player rankings (using Skill Points)
+- Song and user search API (optional, requires Meilisearch)
 - **Audiosurf Radio!** (using [Rainbow Dream](https://github.com/AudiosurfResearch/rainbowdream) to create the needed files)
 - **MusicBrainz integration!** (fetches cover art and title)
 - **Proper dethrones and the Brutus achievement!** *(not present in TypeScript version)*
@@ -65,7 +66,7 @@ To connect, use the latest Wavebreaker client with ``forceInsecure`` set to ``tr
 - Miscellaneous stuff (e.g. custom news)
 
 ## What still needs to be done?
-- Song and user search API
+Honestly, not really much of anything, but if you find anything that could be improved, make an [issue](https://github.com/AudiosurfResearch/wavebreaker-rs/issues) or maybe a PR!
 
 ## Contributing
 
