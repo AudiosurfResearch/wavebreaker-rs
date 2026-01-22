@@ -1,5 +1,5 @@
 # wavebreaker-rs
-**EXTREMELY WIP!** (Yes, so much so that it's worth an exclamation marks!)
+**WIP?** (Functionality should be done, but hasn't been properly battle-tested!)
 
 This is a custom server for Dylan Fitterer's game [Audiosurf](https://store.steampowered.com/app/12900/AudioSurf/).
 
