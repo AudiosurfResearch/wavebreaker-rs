@@ -49,6 +49,9 @@ pub enum Command {
         #[clap(action=ArgAction::Set)]
         sync_all: bool,
     },
+    DumpOpenApi {
+        file_path: String,
+    },
 }
 
 //skip state because it has members that don't implement Debug
@@ -238,6 +241,13 @@ pub async fn parse_command(command: &Command, state: AppState) -> anyhow::Result
             } else {
                 sync_players(&state.meilisearch.unwrap(), &state.redis, &state.db).await?;
             }
+
+            Ok(())
+        }
+        Command::DumpOpenApi { file_path } => {
+            let (_, openapi) = crate::api::routes();
+            let openapi_json = openapi.to_pretty_json()?;
+            std::fs::write(file_path, openapi_json)?;
 
             Ok(())
         }
