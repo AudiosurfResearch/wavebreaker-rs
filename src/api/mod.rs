@@ -69,6 +69,7 @@ pub fn routes() -> (Router<AppState>, OpenApi) {
 
 #[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
+#[schema(examples(json!(ServerStats{user_count: 150, song_count: 15122, score_count: 13649, search_supported: true})))]
 struct ServerStats {
     user_count: i64,
     song_count: i64,
