@@ -4,7 +4,10 @@ use serde::{Deserialize, Serialize};
 use utoipa::ToSchema;
 
 use super::players::PlayerPublic;
-use crate::{models::players::Player, schema::rivalries};
+use crate::{
+    models::players::{AccountType, Player},
+    schema::rivalries,
+};
 
 #[derive(Identifiable, Selectable, Queryable, Associations, Debug)]
 #[diesel(belongs_to(Player, foreign_key = challenger_id))]
@@ -73,6 +76,16 @@ impl NewRivalry {
 #[derive(Queryable, Deserialize, Serialize, ToSchema)]
 #[diesel(table_name = rivalries, check_for_backend(diesel::pg::Pg))]
 #[serde(rename_all = "camelCase")]
+#[schema(examples(json!(RivalryView {
+    established_at: time::OffsetDateTime::from_unix_timestamp(1684868184).unwrap(),
+    rival: PlayerPublic {
+        id: 1,
+        username: "m1nt_".to_owned(),
+        account_type: AccountType::Team,
+        joined_at: time::OffsetDateTime::from_unix_timestamp(1684868184).unwrap(),
+        avatar_url: "https://avatars.akamai.steamstatic.com/fadb7d90654a38c196422ed308fc931f96440dde_full.jpg".to_owned()
+    }
+})))]
 pub struct RivalryView {
     #[serde(deserialize_with = "time::serde::iso8601::deserialize")]
     #[serde(serialize_with = "time::serde::iso8601::serialize")]

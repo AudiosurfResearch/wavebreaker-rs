@@ -26,6 +26,20 @@ use crate::schema::extra_song_info;
 #[diesel(table_name = extra_song_info, check_for_backend(diesel::pg::Pg))]
 #[diesel(primary_key(id))]
 #[serde(rename_all = "camelCase")]
+#[schema(examples(json!(ExtraSongInfo {
+    id: 1,
+    song_id: 2,
+    cover_url: Some("https://i.scdn.co/image/ab67616d0000b27356021e26fd463e7c1d062a9d".to_owned()),
+    cover_url_small: Some("https://i.scdn.co/image/ab67616d0000485156021e26fd463e7c1d062a9d".to_owned()),
+    mbid: Some("6c7e91a6-9cba-4ddf-b262-b5bf7be72d44".to_owned()),
+    musicbrainz_title: Some("Dyad".to_owned()),
+    musicbrainz_artist: Some("Jamie Paige".to_owned()),
+    musicbrainz_length: Some(282315),
+    mistag_lock: false,
+    aliases_artist: Some(vec![Some("JamieP".to_owned())]),
+    aliases_title: None,
+    updated_at: time::OffsetDateTime::now_utc(),
+})))]
 pub struct ExtraSongInfo {
     pub id: i32,
     pub song_id: i32,

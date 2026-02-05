@@ -4,7 +4,7 @@ use fred::clients::Pool as RedisPool;
 use meilisearch_sdk::client::Client as MeiliClient;
 use musicbrainz_rs::client::MusicBrainzClient;
 use serde::{Deserialize, Serialize};
-use time::{Date, OffsetDateTime};
+use time::OffsetDateTime;
 use tracing::debug;
 use utoipa::ToSchema;
 

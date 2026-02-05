@@ -395,6 +395,13 @@ impl<'a> NewPlayer<'a> {
 #[derive(Selectable, Queryable, Debug, Serialize, Deserialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 #[diesel(table_name = players, check_for_backend(diesel::pg::Pg))]
+#[schema(examples(json!(PlayerPublic {
+    id: 1,
+    username: "m1nt_".to_owned(),
+    account_type: AccountType::Team,
+    joined_at: time::OffsetDateTime::from_unix_timestamp(1684868184).unwrap(),
+    avatar_url: "https://avatars.akamai.steamstatic.com/fadb7d90654a38c196422ed308fc931f96440dde_full.jpg".to_owned()
+})))]
 pub struct PlayerPublic {
     pub id: i32,
     pub username: String,
