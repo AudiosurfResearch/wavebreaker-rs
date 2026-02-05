@@ -13,9 +13,10 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
 use crate::{
-    models::players::{FavoriteCharacter, Player, PlayerPublic},
+    models::players::{AccountType, FavoriteCharacter, Player, PlayerPublic},
     util::{
         errors::{RouteError, SimpleRouteErrorOutput},
+        game_types::Character,
         session::Session,
     },
     AppState,
@@ -30,6 +31,23 @@ pub fn routes() -> OpenApiRouter<AppState> {
 
 #[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
+#[schema(examples(json!(PlayerResponse {
+    player: PlayerPublic {
+        id: 1,
+        username: "m1nt_".to_owned(),
+        account_type: AccountType::Team,
+        joined_at: time::OffsetDateTime::from_unix_timestamp(1684868184).unwrap(),
+        avatar_url: "https://avatars.akamai.steamstatic.com/fadb7d90654a38c196422ed308fc931f96440dde_full.jpg".to_owned()
+    },
+    stats: Some(PlayerStats {
+        rank: 1,
+        skill_points: 4321,
+        total_plays:  2008,
+        favorite_character: Some(
+            FavoriteCharacter { character: Character::NinjaMono, times_used: 187
+        })
+    })
+})))]
 struct PlayerResponse {
     #[serde(flatten)]
     player: PlayerPublic,
@@ -39,6 +57,14 @@ struct PlayerResponse {
 
 #[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
+#[schema(examples(json!(PlayerStats {
+    rank: 1,
+    skill_points: 4321,
+    total_plays:  2008,
+    favorite_character: Some(
+        FavoriteCharacter { character: Character::NinjaMono, times_used: 187
+    })
+})))]
 struct PlayerStats {
     rank: i32,
     skill_points: i32,
