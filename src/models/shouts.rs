@@ -11,6 +11,19 @@ use crate::{models::players::AccountType, schema::shouts};
 #[diesel(belongs_to(Song))]
 #[diesel(table_name = shouts, check_for_backend(diesel::pg::Pg))]
 #[diesel(primary_key(id))]
+#[schema(examples(json!(Shout {
+    id: 1,
+    song_id: 3,
+    author_id: 1,
+    content: "i love Reol's No title!!!!! 緩やかに崩れ壊れてく〜".to_owned(),
+    posted_at: time::OffsetDateTime::from_unix_timestamp(1458333462).unwrap(),
+}), json!(Shout {
+    id: 2,
+    song_id: 2,
+    author_id: 1,
+    content: "baby, do you know what you wanna hear?!".to_owned(),
+    posted_at: time::OffsetDateTime::now_utc(),
+})))]
 pub struct Shout {
     pub id: i32,
     pub song_id: i32,

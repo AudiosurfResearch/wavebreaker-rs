@@ -4,6 +4,7 @@ use fred::clients::Pool as RedisPool;
 use meilisearch_sdk::client::Client as MeiliClient;
 use musicbrainz_rs::client::MusicBrainzClient;
 use serde::{Deserialize, Serialize};
+use time::{Date, OffsetDateTime};
 use tracing::debug;
 use utoipa::ToSchema;
 
@@ -30,6 +31,28 @@ use crate::{
 #[diesel(table_name = songs, check_for_backend(diesel::pg::Pg))]
 #[diesel(primary_key(id))]
 #[serde(rename_all = "camelCase")]
+#[schema(examples(json!(Song {
+    id: 1,
+    title: "sendoff".to_owned(),
+    artist: "inverted silence".to_owned(),
+    created_at: OffsetDateTime::now_utc(),
+    modifiers: Some(vec![Some("steep".to_owned())]),
+    updated_at: OffsetDateTime::now_utc(),
+}), json!(Song {
+    id: 2,
+    title: "dyad".to_owned(),
+    artist: "jamie paige".to_owned(),
+    created_at: OffsetDateTime::now_utc(),
+    modifiers: Some(vec![]),
+    updated_at: OffsetDateTime::now_utc(),
+}), json!(Song {
+    id: 3,
+    title: "no title".to_owned(),
+    artist: "reol".to_owned(),
+    created_at: OffsetDateTime::from_unix_timestamp(1458333462).unwrap(),
+    modifiers: Some(vec![]),
+    updated_at: OffsetDateTime::now_utc(),
+})))]
 pub struct Song {
     // Main info
     pub id: i32,

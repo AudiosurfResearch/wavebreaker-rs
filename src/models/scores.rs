@@ -79,6 +79,25 @@ where
 #[diesel(table_name = scores, check_for_backend(diesel::pg::Pg))]
 #[diesel(primary_key(id))]
 #[serde(rename_all = "camelCase")]
+#[schema(examples(json!(Score {
+    id: 1,
+    song_id: 2,
+    player_id: 1,
+    league: League::Elite,
+    submitted_at: OffsetDateTime::now_utc(),
+    play_count: 12,
+    score: 508143,
+    // this gets ugly quick because of the sheer amount of values in a track shape
+    track_shape: vec![Some(68), Some(65), Some(62), Some(58), Some(54), Some(51), Some(51), Some(49), Some(48), Some(46), Some(44), Some(42), Some(41), Some(40), Some(39), Some(37), Some(37), Some(36), Some(34), Some(32), Some(31), Some(30), Some(29), Some(28), Some(28), Some(27), Some(27), Some(25), Some(26), Some(26), Some(25), Some(22), Some(19), Some(17), Some(16), Some(14), Some(11), Some(8), Some(5), Some(2), Some(0), Some(0), Some(0), Some(1), Some(2), Some(3), Some(3), Some(4), Some(5), Some(6), Some(6), Some(6), Some(6), Some(8), Some(9), Some(9), Some(10), Some(10), Some(11), Some(11), Some(12), Some(13), Some(15), Some(16), Some(18), Some(19), Some(20), Some(22), Some(23), Some(24), Some(26), Some(27), Some(28), Some(30), Some(31), Some(32), Some(33), Some(34), Some(36), Some(37), Some(39), Some(40), Some(41), Some(41), Some(40), Some(39), Some(38), Some(38), Some(37), Some(37), Some(36), Some(36), Some(37), Some(37), Some(37), Some(36), Some(36), Some(35), Some(34), Some(34), Some(34), Some(34), Some(34), Some(34), Some(34), Some(33), Some(33), Some(33), Some(33), Some(33), Some(33), Some(34), Some(35), Some(37), Some(39), Some(40), Some(41), Some(42), Some(44), Some(45), Some(44), Some(41), Some(39), Some(37), Some(36), Some(35), Some(33), Some(30), Some(28), Some(26), Some(23), Some(22), Some(22), Some(23), Some(24), Some(26), Some(26), Some(28), Some(29), Some(30), Some(31), Some(31), Some(32), Some(33), Some(34), Some(36), Some(37), Some(38), Some(39), Some(39), Some(40), Some(41), Some(43), Some(44), Some(46), Some(47), Some(50), Some(51), Some(52), Some(54), Some(55), Some(57), Some(59), Some(60), Some(61), Some(63), Some(64), Some(65), Some(67), Some(68), Some(70), Some(72), Some(74), Some(75), Some(77), Some(78), Some(79), Some(81), Some(82), Some(83), Some(81), Some(78), Some(74), Some(71), Some(67), Some(65), Some(66), Some(66), Some(67), Some(67), Some(66), Some(67), Some(68), Some(70), Some(73), Some(74), Some(73), Some(70), Some(67), Some(65), Some(64), Some(63), Some(60), Some(58), Some(56), Some(53), Some(51), Some(49), Some(49), Some(49), Some(50), Some(50), Some(50), Some(51), Some(52), Some(52), Some(52), Some(52), Some(53), Some(54), Some(54), Some(55), Some(56), Some(56), Some(56), Some(57), Some(57), Some(58), Some(60), Some(62), Some(64), Some(66), Some(67), Some(68), Some(70), Some(72), Some(73), Some(75), Some(76), Some(78), Some(80), Some(81), Some(83), Some(85), Some(87), Some(89), Some(91), Some(92), Some(94), Some(96), Some(98), Some(99), Some(100), Some(102), Some(103), Some(103)],
+    xstats: vec![Some(478), Some(4), Some(0), Some(274), Some(2), Some(24612), Some(136), Some(21), Some(9), Some(21), Some(1804), Some(28), Some(1), Some(9), Some(100), Some(7), Some(41), Some(135), Some(16), Some(67), Some(144), Some(34), Some(97), Some(76), Some(27), Some(97), Some(26), Some(16), Some(87), Some(0), Some(4), Some(0), Some(0)],
+    density: 994,
+    vehicle: Character::PointmanElite,
+    feats: vec![Some("Ironmode".to_owned()), Some("Clean Finish".to_owned()), Some("Match21".to_owned()), Some("Butter Ninja".to_owned()), Some("Seeing Red".to_owned())],
+    song_length: 28224,
+    gold_threshold: 84490,
+    iss: 0,
+    isj: 0,
+})))]
 pub struct Score {
     pub id: i32,
     pub song_id: i32,
