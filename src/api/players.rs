@@ -170,6 +170,19 @@ async fn get_self(
 
 #[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
+#[schema(examples(json!(PlayerRankingResponse {
+    results: vec![PlayerWithRanking {
+        player: PlayerPublic {
+            id: 1,
+            username: "m1nt_".to_owned(),
+            account_type: AccountType::Team,
+            joined_at: time::OffsetDateTime::from_unix_timestamp(1684868184).unwrap(),
+            avatar_url: "https://avatars.akamai.steamstatic.com/fadb7d90654a38c196422ed308fc931f96440dde_full.jpg".to_owned()
+        },
+        skill_points: 4649
+    }],
+    total: 1
+})))]
 struct PlayerRankingResponse {
     results: Vec<PlayerWithRanking>,
     total: i64,
@@ -177,6 +190,16 @@ struct PlayerRankingResponse {
 
 #[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
+#[schema(examples(json!(PlayerWithRanking {
+    player: PlayerPublic {
+        id: 1,
+        username: "m1nt_".to_owned(),
+        account_type: AccountType::Team,
+        joined_at: time::OffsetDateTime::from_unix_timestamp(1684868184).unwrap(),
+        avatar_url: "https://avatars.akamai.steamstatic.com/fadb7d90654a38c196422ed308fc931f96440dde_full.jpg".to_owned()
+    },
+    skill_points: 4649
+})))]
 struct PlayerWithRanking {
     player: PlayerPublic,
     skill_points: i32,
