@@ -13,7 +13,7 @@ use utoipa_axum::{router::OpenApiRouter, routes};
 use validator::Validate;
 
 use crate::{
-    models::players::{AccountType, FavoriteCharacter, Player, PlayerPublic},
+    models::players::{FavoriteCharacter, Player, PlayerPublic, PLAYERPUBLIC_EXAMPLE_1},
     util::{
         errors::{RouteError, SimpleRouteErrorOutput},
         game_types::Character,
@@ -32,13 +32,7 @@ pub fn routes() -> OpenApiRouter<AppState> {
 #[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 #[schema(examples(json!(PlayerResponse {
-    player: PlayerPublic {
-        id: 1,
-        username: "m1nt_".to_owned(),
-        account_type: AccountType::Team,
-        joined_at: time::OffsetDateTime::from_unix_timestamp(1684868184).unwrap(),
-        avatar_url: "https://avatars.akamai.steamstatic.com/fadb7d90654a38c196422ed308fc931f96440dde_full.jpg".to_owned()
-    },
+    player: PLAYERPUBLIC_EXAMPLE_1.clone(),
     stats: Some(PlayerStats {
         rank: 1,
         skill_points: 4321,
@@ -172,13 +166,7 @@ async fn get_self(
 #[serde(rename_all = "camelCase")]
 #[schema(examples(json!(PlayerRankingResponse {
     results: vec![PlayerWithRanking {
-        player: PlayerPublic {
-            id: 1,
-            username: "m1nt_".to_owned(),
-            account_type: AccountType::Team,
-            joined_at: time::OffsetDateTime::from_unix_timestamp(1684868184).unwrap(),
-            avatar_url: "https://avatars.akamai.steamstatic.com/fadb7d90654a38c196422ed308fc931f96440dde_full.jpg".to_owned()
-        },
+        player: PLAYERPUBLIC_EXAMPLE_1.clone(),
         skill_points: 4649
     }],
     total: 1
@@ -191,13 +179,7 @@ struct PlayerRankingResponse {
 #[derive(Serialize, ToSchema)]
 #[serde(rename_all = "camelCase")]
 #[schema(examples(json!(PlayerWithRanking {
-    player: PlayerPublic {
-        id: 1,
-        username: "m1nt_".to_owned(),
-        account_type: AccountType::Team,
-        joined_at: time::OffsetDateTime::from_unix_timestamp(1684868184).unwrap(),
-        avatar_url: "https://avatars.akamai.steamstatic.com/fadb7d90654a38c196422ed308fc931f96440dde_full.jpg".to_owned()
-    },
+    player: PLAYERPUBLIC_EXAMPLE_1.clone(),
     skill_points: 4649
 })))]
 struct PlayerWithRanking {
