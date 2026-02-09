@@ -1,7 +1,6 @@
 use diesel::{deserialize::FromSqlRow, expression::AsExpression};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use utoipa::ToSchema;
 
 /// Represents the three skill levels represented on the leaderboard.
 #[derive(
@@ -16,7 +15,6 @@ use utoipa::ToSchema;
     Copy,
     TryFromPrimitive,
     IntoPrimitive,
-    ToSchema,
 )]
 #[diesel(sql_type = diesel::sql_types::SmallInt)]
 #[repr(i16)]
@@ -24,6 +22,29 @@ pub enum League {
     Casual,
     Pro,
     Elite,
+}
+
+// utoipa does not support extensions in the schema derive macro... :(
+impl utoipa::ToSchema for League {
+    fn name() -> std::borrow::Cow<'static, str> {
+        std::borrow::Cow::Borrowed("League")
+    }
+}
+impl utoipa::PartialSchema for League {
+    fn schema() -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema> {
+        utoipa::openapi::ObjectBuilder::new()
+            .schema_type(utoipa::openapi::schema::Type::Integer)
+            .format(Some(utoipa::openapi::SchemaFormat::KnownFormat(
+                utoipa::openapi::KnownFormat::Int16,
+            )))
+            .enum_values(Some(vec![0i16, 1, 2]))
+            .extensions(Some(
+                utoipa::openapi::extensions::ExtensionsBuilder::new()
+                    .add("x-enum-varnames", vec!["Casual", "Pro", "Elite"])
+                    .build(),
+            ))
+            .into()
+    }
 }
 
 /// Represents a character/vehicle in the game.
@@ -60,7 +81,6 @@ pub enum Character {
     Mono = 17,
 }
 
-// utoipa does not support extensions in the schema derive macro... :(
 impl utoipa::ToSchema for Character {
     fn name() -> std::borrow::Cow<'static, str> {
         std::borrow::Cow::Borrowed("Character")

@@ -62,8 +62,6 @@ where
 //https://openapi-ts.dev/advanced#enum-extensions
 
 /// Represents the type of account a player has.
-///
-/// 0 = User, 1 = Moderator, 2 = Wavebreaker Team
 #[derive(
     AsExpression,
     FromSqlRow,
@@ -76,7 +74,6 @@ where
     Copy,
     TryFromPrimitive,
     IntoPrimitive,
-    ToSchema,
     ValueEnum,
 )]
 #[diesel(sql_type = diesel::sql_types::SmallInt)]
@@ -85,6 +82,34 @@ pub enum AccountType {
     User,
     Moderator,
     Team,
+}
+
+// utoipa does not support extensions in the schema derive macro... :(
+impl utoipa::ToSchema for AccountType {
+    fn name() -> std::borrow::Cow<'static, str> {
+        std::borrow::Cow::Borrowed("AccountType")
+    }
+}
+impl utoipa::PartialSchema for AccountType {
+    fn schema() -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema> {
+        utoipa::openapi::ObjectBuilder::new()
+            .schema_type(utoipa::openapi::schema::Type::Integer)
+            .format(Some(utoipa::openapi::SchemaFormat::KnownFormat(
+                utoipa::openapi::KnownFormat::Int16,
+            )))
+            .enum_values(Some(vec![0i16, 1, 2]))
+            .extensions(Some(
+                utoipa::openapi::extensions::ExtensionsBuilder::new()
+                    .add("x-enum-varnames", vec!["User", "Moderator", "Team"])
+                    .add("x-enum-descriptions", vec![
+                        "A regular user with no special permissions",
+                        "A moderator, allowed to delete songs, comments and change song metadata",
+                        "A member of the Wavebreaker team. Mostly for cosmetic purposes, currently has same permissions as Moderator"
+                    ])
+                    .build(),
+            ))
+            .into()
+    }
 }
 
 impl ToSql<SmallInt, Pg> for AccountType
