@@ -39,7 +39,6 @@ pub enum League {
     Copy,
     TryFromPrimitive,
     IntoPrimitive,
-    ToSchema,
 )]
 #[diesel(sql_type = diesel::sql_types::SmallInt)]
 #[repr(i16)]
@@ -59,6 +58,49 @@ pub enum Character {
     Pointman = 15,
     PusherElite = 16,
     Mono = 17,
+}
+
+// utoipa does not support extensions in the schema derive macro... :(
+impl utoipa::ToSchema for Character {
+    fn name() -> std::borrow::Cow<'static, str> {
+        std::borrow::Cow::Borrowed("Character")
+    }
+}
+impl utoipa::PartialSchema for Character {
+    fn schema() -> utoipa::openapi::RefOr<utoipa::openapi::schema::Schema> {
+        utoipa::openapi::ObjectBuilder::new()
+            .schema_type(utoipa::openapi::schema::Type::Integer)
+            .format(Some(utoipa::openapi::SchemaFormat::KnownFormat(
+                utoipa::openapi::KnownFormat::Int16,
+            )))
+            .enum_values(Some(vec![
+                0i16, 1, 2, 3, 4, 9, 10, 11, 12, 13, 14, 15, 16, 17,
+            ]))
+            .extensions(Some(
+                utoipa::openapi::extensions::ExtensionsBuilder::new()
+                    .add(
+                        "x-enum-varnames",
+                        vec![
+                            "PointmanPro",
+                            "DoubleVisionPro",
+                            "Vegas",
+                            "Pusher",
+                            "Eraser",
+                            "DoubleVision",
+                            "PointmanElite",
+                            "MonoPro",
+                            "EraserElite",
+                            "NinjaMono",
+                            "DoubleVisionElite",
+                            "Pointman",
+                            "PusherElite",
+                            "Mono",
+                        ],
+                    )
+                    .build(),
+            ))
+            .into()
+    }
 }
 
 /// Represents the three kinds of leaderboards available in the game.
