@@ -18,7 +18,7 @@ pub mod models;
 pub mod schema;
 mod util;
 
-use std::{io::stdout, str::FromStr, sync::Arc};
+use std::{io::stdout, mem, sync::Arc};
 
 use anyhow::{anyhow, Context};
 use axum::{body::Body, http::Request, Router};
@@ -36,7 +36,7 @@ use figment::{
 use fred::{clients::Pool as RedisPool, prelude::*, types::config::Config as RedisConfig};
 use meilisearch_sdk::client::Client as MeiliClient;
 use musicbrainz_rs::client::MusicBrainzClient;
-use sentry::{integrations::tower::NewSentryLayer, types::Dsn};
+use sentry::integrations::tower::NewSentryLayer;
 use serde::Deserialize;
 use steam_openid::SteamOpenId;
 use steam_rs::Steam;
@@ -157,10 +157,7 @@ async fn init_state(wavebreaker_config: Config) -> anyhow::Result<AppState> {
         .await
         .context("Clients failed to connect to Redis!")?;
 
-    let mut mb_client = MusicBrainzClient::default();
-    mb_client
-        .set_user_agent(WAVEBREAKER_USER_AGENT)
-        .expect("Setting the MusicBrainz client's user agent should not fail.");
+    let mb_client = MusicBrainzClient::new(WAVEBREAKER_USER_AGENT);
 
     let steam_openid = SteamOpenId::new(
         &wavebreaker_config.external.steam_realm,
@@ -207,25 +204,30 @@ fn main() -> anyhow::Result<()> {
         .extract()
         .context("Config should be valid!")?;
 
-    let dsn: Option<Dsn> = match &wavebreaker_config.external.sentry_dsn {
-        Some(dsn) => Some(Dsn::from_str(dsn).expect("Sentry DSN should be parseable!")),
-        None => None,
-    };
-    let _guard = sentry::init(sentry::ClientOptions {
-        dsn,
-        enable_logs: wavebreaker_config.external.sentry_logs.unwrap_or(true),
-        traces_sample_rate: wavebreaker_config
-            .external
-            .sentry_traces_sample_rate
-            .unwrap_or_default(),
-        send_default_pii: wavebreaker_config
-            .external
-            .sentry_send_pii
-            .unwrap_or_default(),
-        attach_stacktrace: true,
-        release: sentry::release_name!(),
-        ..sentry::ClientOptions::default()
-    });
+    if let Some(dsn) = &wavebreaker_config.external.sentry_dsn {
+        let guard = sentry::init(
+            sentry::ClientOptions::new()
+                .dsn(dsn)
+                .enable_logs(wavebreaker_config.external.sentry_logs.unwrap_or(true))
+                .traces_sample_rate(
+                    wavebreaker_config
+                        .external
+                        .sentry_traces_sample_rate
+                        .unwrap_or_default(),
+                )
+                .send_default_pii(
+                    wavebreaker_config
+                        .external
+                        .sentry_send_pii
+                        .unwrap_or_default(),
+                )
+                .attach_stacktrace(true)
+                .maybe_release(sentry::release_name!()),
+        );
+        // the guard would be dropped if i didn't do this. that would be Bad
+        // also, sentry docs say this is "permissible"
+        mem::forget(guard);
+    }
 
     let file_appender = RollingFileAppender::builder()
         .filename_suffix("wavebreaker.log")

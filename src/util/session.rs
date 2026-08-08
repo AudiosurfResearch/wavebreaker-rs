@@ -11,7 +11,7 @@ use diesel::prelude::*;
 use diesel_async::{AsyncPgConnection, RunQueryDsl};
 use fred::prelude::*;
 use futures::stream::TryStreamExt;
-use rand::{distr::Alphanumeric, Rng};
+use rand::{distr::Alphanumeric, RngExt};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use tracing::debug;
